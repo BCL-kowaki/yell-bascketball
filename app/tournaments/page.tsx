@@ -71,7 +71,7 @@ export default function TournamentsPage() {
   return (
     <Layout isLoggedIn={true} currentUser={{ name: "ユーザー" }}>
 
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="max-w-7xl mx-auto pt-2 pb-20 px-2 md:px-6">
         {/* Header */}
         {/* Statistics */}
         {/* Regions Grid */}
@@ -143,7 +143,7 @@ export default function TournamentsPage() {
             </p>
             <div className="flex items-center justify-center gap-4">
               <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white">大会主催者</Badge>
-              <Badge className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">クラブチーム</Badge>
+              <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white">クラブチーム</Badge>
               <Badge className="bg-gradient-to-r from-green-500 to-teal-500 text-white">ゲスト</Badge>
             </div>
           </div>

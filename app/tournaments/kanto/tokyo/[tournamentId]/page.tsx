@@ -33,7 +33,8 @@ import {
   CheckCircle,
   AlertCircle,
   Play,
-  Pause
+  Pause,
+  MoreHorizontal
 } from "lucide-react"
 import { Layout } from "@/components/layout"
 
@@ -199,7 +200,7 @@ export default function TournamentTimelinePage({ params }: TournamentTimelinePag
       case "official":
         return <Flag className="w-4 h-4 text-red-600" />
       case "team":
-        return <Users className="w-4 h-4 text-blue-600" />
+        return <Users className="w-4 h-4 text-orange-600" />
       case "user":
         return <MessageCircle className="w-4 h-4 text-gray-600" />
       default:
@@ -223,9 +224,9 @@ export default function TournamentTimelinePage({ params }: TournamentTimelinePag
   return (
     <Layout isLoggedIn={true} currentUser={{ name: "ユーザー" }}>
 
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-8">
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 mb-6 text-sm">
+        <div className="flex items-center gap-2 mb-6 text-xs md:text-sm flex-wrap">
           <Link href="/tournaments" className="text-gray-500 hover:text-gray-700">
             大会トップ
           </Link>
@@ -251,13 +252,9 @@ export default function TournamentTimelinePage({ params }: TournamentTimelinePag
                 className="w-full h-64 object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-              <div className="absolute bottom-6 left-6 text-white">
-                <h1 className="text-3xl font-bold mb-2">{tournament.title}</h1>
-                <div className="flex items-center gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4" />
-                    <span>{tournament.location}</span>
-                  </div>
+              <div className="absolute bottom-6 w-[90%] left-1/2 -translate-x-1/2 text-white">
+                <h1 className="text-2xl md:text-3xl font-bold mb-2">{tournament.title}</h1>
+                <div className="flex items-center gap-4 text-xs md:text-sm">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
                     <span>{tournament.startDate} - {tournament.endDate}</span>
@@ -267,9 +264,6 @@ export default function TournamentTimelinePage({ params }: TournamentTimelinePag
                     <span>{tournament.currentTeams}チーム参加</span>
                   </div>
                 </div>
-              </div>
-              <div className="absolute top-6 right-6">
-                {getStatusBadge(tournament.status)}
               </div>
             </div>
           </Card>
@@ -296,7 +290,7 @@ export default function TournamentTimelinePage({ params }: TournamentTimelinePag
               <TabsContent value="timeline" className="space-y-6">
                 {/* Post Creation */}
                 <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
-                  <CardContent className="p-6">
+                  <CardContent className="p-2">
                     <div className="flex items-start gap-4">
                       <Avatar>
                         <AvatarImage src="/placeholder.svg?height=40&width=40&text=U" />
@@ -310,11 +304,6 @@ export default function TournamentTimelinePage({ params }: TournamentTimelinePag
                           className="min-h-[100px] resize-none border-gray-200 focus:ring-orange-500 focus:border-orange-500"
                         />
                         <div className="flex items-center justify-between mt-4">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              {userRole === "organizer" ? "主催者" : userRole === "team" ? "チーム" : "観戦者"}として投稿
-                            </Badge>
-                          </div>
                           <Button onClick={handlePost} className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700">
                             <Send className="w-4 h-4 mr-2" />
                             投稿
@@ -327,112 +316,78 @@ export default function TournamentTimelinePage({ params }: TournamentTimelinePag
 
                 {/* Timeline Posts */}
                 {timelinePosts.map((post) => (
-                  <Card key={post.id} className={`border-0 shadow-lg bg-white/90 backdrop-blur-sm ${post.isPinned ? 'border-l-4 border-l-orange-500' : ''}`}>
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-4">
-                        <Avatar>
-                          <AvatarImage src={post.authorAvatar} />
-                          <AvatarFallback>{post.author.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="flex items-center gap-2">
-                              {getPostTypeIcon(post.type)}
-                              <span className="font-semibold text-gray-900">{post.author}</span>
-                              <Badge variant="outline" className="text-xs">
-                                {post.authorRole}
-                              </Badge>
-                            </div>
-                            {post.isPinned && (
-                              <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">
-                                <Pin className="w-3 h-3 mr-1" />
-                                ピン留め
-                              </Badge>
-                            )}
-                            <span className="text-sm text-gray-500 ml-auto">{post.timestamp}</span>
-                          </div>
-                          
-                          <div className="text-gray-800 whitespace-pre-line mb-4">
-                            {post.content}
-                          </div>
-
-                          {/* Match Result Display */}
-                          {post.matchResult && (
-                            <Card className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 mb-4">
-                              <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
-                                  <div className="text-center">
-                                    <div className="font-bold text-lg">{post.matchResult.winner}</div>
-                                    <div className="text-2xl font-bold text-green-600">{post.matchResult.score.split('-')[0]}</div>
-                                  </div>
-                                  <div className="text-center">
-                                    <Trophy className="w-8 h-8 text-yellow-500 mx-auto mb-1" />
-                                    <div className="text-sm font-medium">{post.matchResult.round}</div>
-                                  </div>
-                                  <div className="text-center">
-                                    <div className="font-bold text-lg">{post.matchResult.loser}</div>
-                                    <div className="text-2xl font-bold text-gray-600">{post.matchResult.score.split('-')[1]}</div>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          )}
-
-                          {/* Match Info Display */}
-                          {post.matchInfo && (
-                            <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 mb-4">
-                              <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
-                                  <div className="text-center">
-                                    <div className="font-bold text-lg">{post.matchInfo.team1}</div>
-                                  </div>
-                                  <div className="text-center">
-                                    <div className="text-sm font-medium mb-1">VS</div>
-                                    <Badge className="bg-blue-600 text-white">
-                                      <Play className="w-3 h-3 mr-1" />
-                                      まもなく開始
-                                    </Badge>
-                                  </div>
-                                  <div className="text-center">
-                                    <div className="font-bold text-lg">{post.matchInfo.team2}</div>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          )}
-
-                          {/* Images */}
-                          {post.images.length > 0 && (
-                            <div className="grid gap-2 mb-4">
-                              {post.images.map((image, index) => (
-                                <img
-                                  key={index}
-                                  src={image}
-                                  alt={`投稿画像 ${index + 1}`}
-                                  className="rounded-lg object-cover h-32 w-full"
-                                />
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Actions */}
-                          <div className="flex items-center gap-6 text-gray-500">
-                            <button className="flex items-center gap-2 hover:text-red-600 transition-colors">
-                              <Heart className="w-4 h-4" />
-                              <span>{post.likes}</span>
-                            </button>
-                            <button className="flex items-center gap-2 hover:text-blue-600 transition-colors">
-                              <MessageCircle className="w-4 h-4" />
-                              <span>{post.comments}</span>
-                            </button>
-                            <button className="flex items-center gap-2 hover:text-green-600 transition-colors">
-                              <Share2 className="w-4 h-4" />
-                              <span>{post.shares}</span>
-                            </button>
-                          </div>
+                  <Card key={post.id} className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+                    <CardHeader className="p-4 flex flex-row items-start gap-3">
+                      <Avatar>
+                        <AvatarImage src={post.authorAvatar} />
+                        <AvatarFallback>{post.author.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-gray-900">{post.author}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <span>{post.timestamp}</span>
                         </div>
                       </div>
+                      <div className="flex items-center gap-2">
+                        {post.isPinned && (
+                          <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100 font-normal text-xs">
+                            <Pin className="w-3 h-3 mr-1" />
+                          </Badge>
+                        )}
+                        <Button variant="ghost" size="icon" className="text-gray-500 w-8 h-8">
+                          <MoreHorizontal className="w-5 h-5" />
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    
+                    <CardContent className="px-4 pt-0 pb-2">
+                      <div className="text-gray-800 whitespace-pre-line mb-4">
+                        {post.content}
+                      </div>
+
+                      {/* Images */}
+                      {post.images.length > 0 && (
+                        <div className="grid gap-2 mb-4">
+                          {post.images.map((image, index) => (
+                            <img
+                              key={index}
+                              src={image}
+                              alt={`投稿画像 ${index + 1}`}
+                              className="rounded-lg object-cover h-32 w-full"
+                            />
+                          ))}
+                        </div>
+                      )}
                     </CardContent>
+
+                    <div className="px-4 pb-2 flex items-center justify-between text-sm text-gray-500">
+                      <div className="flex items-center gap-1">
+                        <Heart className="w-4 h-4" /> 
+                        <span>{post.likes}</span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span>{post.comments}件のコメント</span>
+                      </div>
+                    </div>
+                    
+                    <div className="mx-4 border-t border-gray-200"></div>
+
+                    <div className="p-1 flex items-center justify-around text-gray-600 font-medium text-sm">
+                      <button className="flex items-center justify-center gap-2 hover:bg-gray-100 rounded-md p-2 flex-1 transition-colors">
+                        <Heart className="w-5 h-5" />
+                        <span>いいね！</span>
+                      </button>
+                      <button className="flex items-center justify-center gap-2 hover:bg-gray-100 rounded-md p-2 flex-1 transition-colors">
+                        <MessageCircle className="w-5 h-5" />
+                        <span>コメント</span>
+                      </button>
+                      <button className="flex items-center justify-center gap-2 hover:bg-gray-100 rounded-md p-2 flex-1 transition-colors">
+                        <Share2 className="w-5 h-5" />
+                        <span>シェア</span>
+                      </button>
+                    </div>
                   </Card>
                 ))}
               </TabsContent>
@@ -468,7 +423,7 @@ export default function TournamentTimelinePage({ params }: TournamentTimelinePag
                         </div>
                       </div>
 
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="bg-blue-50 border border-orange-200 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
                           <Badge className="bg-blue-100 text-blue-800">準々決勝第2試合</Badge>
                           <span className="text-sm text-gray-500">2024-03-16 14:00 開始予定</span>
@@ -479,7 +434,7 @@ export default function TournamentTimelinePage({ params }: TournamentTimelinePag
                             <div className="text-lg text-gray-500">-</div>
                           </div>
                           <div className="text-center">
-                            <Clock className="w-6 h-6 text-blue-600 mx-auto" />
+                            <Clock className="w-6 h-6 text-orange-600 mx-auto" />
                             <div className="text-sm">開始前</div>
                           </div>
                           <div className="text-center">

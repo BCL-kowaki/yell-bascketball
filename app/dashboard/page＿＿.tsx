@@ -337,7 +337,7 @@ export default function TimelinePage() {
             <div className="flex items-start gap-4">
               <Avatar className="w-12 h-12 ring-2 ring-blue-100">
                 <AvatarImage src={mockUsers[0].avatar || "/placeholder.svg"} alt={mockUsers[0].name} />
-                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
+                <AvatarFallback className="bg-gradient-to-br from-orange-500 to-red-500 text-white font-semibold">
                   {mockUsers[0].name
                     .split(" ")
                     .map((n: string) => n[0])
@@ -357,20 +357,20 @@ export default function TimelinePage() {
           <CardContent>
             <div className="flex items-center justify-between pt-4 border-t border-gray-100">
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-full">
+                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-blue-50 rounded-full">
                   <ImageIcon className="w-5 h-5 mr-2" />
                   写真
                 </Button>
-                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-full">
+                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-blue-50 rounded-full">
                   <Smile className="w-5 h-5 mr-2" />
                   気分
                 </Button>
-                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-full">
+                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-blue-50 rounded-full">
                   <MapPin className="w-5 h-5 mr-2" />
                   場所
                 </Button>
                 <Link href="/instagram">
-                  <Button variant="ghost" size="sm" className="text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-full">
+                  <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-blue-50 rounded-full">
                     <Instagram className="w-5 h-5 mr-2" />
                     Instagram
                   </Button>
@@ -379,7 +379,7 @@ export default function TimelinePage() {
               <Button 
                 onClick={handleSubmitPost} 
                 disabled={!newPost.trim()} 
-                className="px-8 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
+                className="px-8 py-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
               >
                 投稿
               </Button>
@@ -403,7 +403,7 @@ export default function TimelinePage() {
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <div className="font-semibold text-gray-900 hover:text-blue-600 cursor-pointer transition-colors">{post.user.name}</div>
+                    <div className="font-semibold text-gray-900 hover:text-orange-600 cursor-pointer transition-colors">{post.user.name}</div>
                     <div className="text-sm text-gray-500">{post.timestamp}</div>
                   </div>
                 </div>
@@ -439,7 +439,7 @@ export default function TimelinePage() {
                 </div>
                 <div className="flex items-center gap-6">
                   {post.comments > 0 && (
-                    <button onClick={() => toggleComments(post.id)} className="hover:text-blue-600 cursor-pointer font-medium transition-colors">
+                    <button onClick={() => toggleComments(post.id)} className="hover:text-orange-600 cursor-pointer font-medium transition-colors">
                       {post.comments}件のコメント
                     </button>
                   )}
@@ -461,7 +461,7 @@ export default function TimelinePage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="flex-1 rounded-full py-3 text-gray-600 hover:text-blue-600 hover:bg-blue-50"
+                  className="flex-1 rounded-full py-3 text-gray-600 hover:text-orange-600 hover:bg-blue-50"
                   onClick={() => toggleComments(post.id)}
                 >
                   <MessageCircle className="w-5 h-5 mr-2" />
@@ -483,7 +483,7 @@ export default function TimelinePage() {
                   <div className="flex items-center gap-4 mb-6">
                     <Avatar className="w-10 h-10 ring-2 ring-blue-100">
                       <AvatarImage src={mockUsers[0].avatar || "/placeholder.svg"} alt={mockUsers[0].name} />
-                      <AvatarFallback className="text-sm bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
+                      <AvatarFallback className="text-sm bg-gradient-to-br from-orange-500 to-red-500 text-white font-semibold">
                         {mockUsers[0].name
                           .split(" ")
                           .map((n: string) => n[0])
@@ -500,7 +500,7 @@ export default function TimelinePage() {
                             [post.id]: e.target.value,
                           }))
                         }
-                        className="flex-1 rounded-full border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                        className="flex-1 rounded-full border-gray-200 focus:border-blue-500 focus:ring-orange-500"
                         onKeyPress={(e) => {
                           if (e.key === "Enter") {
                             handleSubmitComment(post.id)
@@ -511,7 +511,7 @@ export default function TimelinePage() {
                         size="sm"
                         onClick={() => handleSubmitComment(post.id)}
                         disabled={!newComment[post.id]?.trim()}
-                        className="rounded-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg"
+                        className="rounded-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg"
                       >
                         <Send className="w-4 h-4" />
                       </Button>
@@ -546,7 +546,7 @@ export default function TimelinePage() {
                               <Heart className={`w-3 h-3 ${comment.liked ? "fill-current" : ""}`} />
                               {comment.likes > 0 && <span className="font-medium">{comment.likes}</span>}
                             </button>
-                            <span className="hover:text-blue-600 cursor-pointer font-medium">返信</span>
+                            <span className="hover:text-orange-600 cursor-pointer font-medium">返信</span>
                             <span className="font-medium">{comment.timestamp}</span>
                           </div>
                         </div>

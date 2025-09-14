@@ -1,475 +1,552 @@
 "use client"
 import { useState } from "react"
-import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { 
-  TrendingUp, 
-  Users, 
-  Trophy, 
-  Bell, 
-  MessageCircle, 
-  Heart, 
-  Calendar,
-  Clock,
-  Star,
-  Target,
-  Activity,
-  Plus,
-  Search,
-  Settings
-} from "lucide-react"
+import { Textarea, Input } from "@/components/ui/textarea"
+import { Heart, MessageCircle, Share2, ImageIcon, Smile, MapPin, MoreHorizontal, Send, Instagram } from "lucide-react"
+import Link from "next/link"
+import { Navigation } from "@/components/navigation"
 import { Layout } from "@/components/layout"
 
-// Mock user data
-const mockUser = {
-  name: "田中 太郎",
-  avatar: "/placeholder.svg?height=80&width=80",
-  level: 15,
-  experience: 2840,
-  nextLevel: 3000,
-  rank: "エリート",
-  joinDate: "2023年1月",
-  totalPosts: 42,
-  totalLikes: 1280,
-  totalFollowers: 245,
-  totalFollowing: 180,
-}
-
-// Mock recent activities
-const mockRecentActivities = [
+// Mock users data
+const mockUsers = [
   {
     id: 1,
-    type: "post",
-    content: "新しいプロジェクトが始まりました！",
-    timestamp: "2時間前",
-    likes: 24,
-    comments: 5,
+    name: "田中 太郎",
+    avatar: "/placeholder.svg?height=40&width=40",
   },
   {
     id: 2,
-    type: "like",
-    content: "佐藤花子さんの投稿にいいねしました",
-    timestamp: "4時間前",
+    name: "佐藤 花子",
+    avatar: "/placeholder.svg?height=40&width=40",
   },
   {
     id: 3,
-    type: "comment",
-    content: "山田次郎さんの投稿にコメントしました",
-    timestamp: "6時間前",
+    name: "山田 次郎",
+    avatar: "/placeholder.svg?height=40&width=40",
   },
   {
     id: 4,
-    type: "follow",
-    content: "鈴木美咲さんをフォローしました",
-    timestamp: "1日前",
+    name: "鈴木 美咲",
+    avatar: "/placeholder.svg?height=40&width=40",
+  },
+  {
+    id: 5,
+    name: "高橋 健太",
+    avatar: "/placeholder.svg?height=40&width=40",
+  },
+  {
+    id: 6,
+    name: "伊藤 愛子",
+    avatar: "/placeholder.svg?height=40&width=40",
   },
 ]
 
-// Mock upcoming events
-const mockUpcomingEvents = [
+// Mock comments data structure
+const mockComments: { [key: number]: any[] } = {
+  1: [
+    {
+      id: 1,
+      user: mockUsers[2],
+      content: "素敵な写真ですね！どちらのカフェですか？",
+      timestamp: "25分前",
+      likes: 3,
+      liked: false,
+    },
+    {
+      id: 2,
+      user: mockUsers[0],
+      content: "渋谷の新しいカフェです。とても雰囲気が良かったです！",
+      timestamp: "20分前",
+      likes: 1,
+      liked: true,
+    },
+  ],
+  2: [
+    {
+      id: 3,
+      user: mockUsers[1],
+      content: "頑張ってください！応援しています。",
+      timestamp: "1時間前",
+      likes: 2,
+      liked: false,
+    },
+  ],
+  3: [
+    {
+      id: 4,
+      user: mockUsers[1],
+      content: "家族との時間は大切ですね。素敵な写真です！",
+      timestamp: "4時間前",
+      likes: 5,
+      liked: true,
+    },
+    {
+      id: 5,
+      user: mockUsers[2],
+      content: "お子さんたち、とても楽しそうですね！",
+      timestamp: "3時間前",
+      likes: 2,
+      liked: false,
+    },
+  ],
+  4: [
+    {
+      id: 6,
+      user: mockUsers[4],
+      content: "お疲れ様です！素敵な写真ですね。",
+      timestamp: "15分前",
+      likes: 1,
+      liked: false,
+    },
+  ],
+  5: [
+    {
+      id: 7,
+      user: mockUsers[3],
+      content: "素晴らしい演奏ですね！",
+      timestamp: "30分前",
+      likes: 3,
+      liked: true,
+    },
+  ],
+  6: [
+    {
+      id: 8,
+      user: mockUsers[5],
+      content: "おいしそう！レシピを教えてください。",
+      timestamp: "1時間前",
+      likes: 2,
+      liked: false,
+    },
+  ],
+}
+
+// Mock timeline posts
+const mockTimelinePosts = [
   {
     id: 1,
-    title: "春のフレンドリーカップ",
-    date: "2024年3月15日",
-    time: "14:00",
-    participants: 128,
-    status: "参加中",
+    user: mockUsers[1],
+    content: "今日は素晴らしい天気でした！渋谷で友達とカフェ巡りを楽しみました。新しいお店を発見できて嬉しいです。",
+    image: "/placeholder.svg?height=400&width=600",
+    likes: 42,
+    comments: 8,
+    shares: 3,
+    timestamp: "30分前",
+    liked: false,
   },
   {
     id: 2,
-    title: "エリートチャンピオンシップ",
-    date: "2024年4月1日",
-    time: "10:00",
-    participants: 64,
-    status: "予約済み",
+    user: mockUsers[2],
+    content: "新しいプロジェクトが始まりました！チーム一同で頑張ります。技術的な挑戦が多そうですが、とても楽しみです。",
+    likes: 28,
+    comments: 5,
+    shares: 2,
+    timestamp: "2時間前",
+    liked: true,
+  },
+  {
+    id: 3,
+    user: mockUsers[0],
+    content: "週末は家族と一緒に公園でピクニックをしました。子供たちがとても喜んでいて、良い思い出になりました。",
+    image: "/placeholder.svg?height=400&width=600",
+    likes: 56,
+    comments: 12,
+    shares: 4,
+    timestamp: "5時間前",
+    liked: false,
+  },
+  {
+    id: 4,
+    user: mockUsers[3],
+    content: "今日は一日中プログラミングの勉強をしていました。新しいフレームワークを学ぶのは大変ですが、とても楽しいです！",
+    likes: 35,
+    comments: 4,
+    shares: 1,
+    timestamp: "1時間前",
+    liked: false,
+  },
+  {
+    id: 5,
+    user: mockUsers[4],
+    content: "久しぶりにギターを弾きました。昔の曲を思い出しながら演奏するのは懐かしくて楽しいですね。",
+    image: "/placeholder.svg?height=400&width=600",
+    likes: 67,
+    comments: 7,
+    shares: 5,
+    timestamp: "3時間前",
+    liked: true,
+  },
+  {
+    id: 6,
+    user: mockUsers[5],
+    content: "今日は料理に挑戦しました！新しいレシピを試してみて、家族に好評でした。料理は本当に楽しいですね。",
+    image: "/placeholder.svg?height=400&width=600",
+    likes: 89,
+    comments: 18,
+    shares: 8,
+    timestamp: "4時間前",
+    liked: false,
+  },
+  {
+    id: 7,
+    user: mockUsers[1],
+    content:
+      "読書の秋ですね。最近読んだ本がとても面白くて、一気に読み終えてしまいました。おすすめの本があれば教えてください！",
+    likes: 19,
+    comments: 15,
+    shares: 1,
+    timestamp: "1日前",
+    liked: true,
+  },
+  {
+    id: 8,
+    user: mockUsers[2],
+    content: "今日はジムでトレーニングをしました。新しいメニューに挑戦して、とても充実した時間でした。",
+    likes: 45,
+    comments: 6,
+    shares: 2,
+    timestamp: "6時間前",
+    liked: false,
+  },
+  {
+    id: 9,
+    user: mockUsers[3],
+    content: "夜の散歩が好きです。街の灯りを見ながら歩くのは、とてもリラックスできます。",
+    likes: 23,
+    comments: 3,
+    shares: 1,
+    timestamp: "8時間前",
+    liked: true,
+  },
+  {
+    id: 10,
+    user: mockUsers[4],
+    content: "今日は友達と映画を見に行きました。とても感動的な作品で、久しぶりに涙が出ました。",
+    likes: 78,
+    comments: 22,
+    shares: 12,
+    timestamp: "1日前",
+    liked: false,
   },
 ]
 
-// Mock quick stats
-const mockQuickStats = [
-  {
-    title: "今週の投稿",
-    value: "8",
-    change: "+2",
-    trend: "up",
-    icon: TrendingUp,
-  },
-  {
-    title: "獲得いいね",
-    value: "156",
-    change: "+23",
-    trend: "up",
-    icon: Heart,
-  },
-  {
-    title: "参加大会",
-    value: "3",
-    change: "+1",
-    trend: "up",
-    icon: Trophy,
-  },
-  {
-    title: "新規フォロワー",
-    value: "12",
-    change: "+5",
-    trend: "up",
-    icon: Users,
-  },
-]
+export default function TimelinePage() {
+  const [posts, setPosts] = useState(mockTimelinePosts)
+  const [newPost, setNewPost] = useState("")
+  const [comments, setComments] = useState(mockComments)
+  const [showComments, setShowComments] = useState<{ [key: number]: boolean }>({})
+  const [newComment, setNewComment] = useState<{ [key: number]: string }>({})
 
-export default function HomePage() {
-  const [isLoggedIn] = useState(true) // ログイン状態を管理
-
-  const getProgressPercentage = () => {
-    return (mockUser.experience / mockUser.nextLevel) * 100
-  }
-
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case "post":
-        return <Plus className="w-4 h-4 text-blue-600" />
-      case "like":
-        return <Heart className="w-4 h-4 text-red-500" />
-      case "comment":
-        return <MessageCircle className="w-4 h-4 text-green-600" />
-      case "follow":
-        return <Users className="w-4 h-4 text-purple-600" />
-      default:
-        return <Activity className="w-4 h-4 text-gray-600" />
-    }
-  }
-
-  if (!isLoggedIn) {
-    return (
-      <Layout isLoggedIn={false}>
-        <div className="flex items-center justify-center min-h-[80vh] p-4">
-        <div className="max-w-md w-full space-y-8">
-          <div className="text-center">
-            <h1 className="font-serif text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
-              SocialConnect
-            </h1>
-            <p className="text-gray-600 text-lg">友達や世界中の人々とつながろう</p>
-          </div>
-
-          <div className="space-y-4">
-            <Link href="/login" className="block">
-              <Button className="w-full h-12 text-lg bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200">
-                ログイン
-              </Button>
-            </Link>
-
-            <Link href="/register" className="block">
-              <Button variant="outline" className="w-full h-12 text-lg border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50">
-                新しいアカウントを作成
-              </Button>
-            </Link>
-          </div>
-
-          <div className="text-center">
-            <Link href="/timeline" className="text-blue-600 hover:text-blue-700 hover:underline">
-              ゲストとしてタイムラインを見る
-            </Link>
-          </div>
-        </div>
-        </div>
-      </Layout>
+  const handleLike = (postId: number) => {
+    setPosts(
+      posts.map((post) =>
+        post.id === postId
+          ? {
+              ...post,
+              liked: !post.liked,
+              likes: post.liked ? post.likes - 1 : post.likes + 1,
+            }
+          : post,
+      ),
     )
   }
 
+  const handleCommentLike = (postId: number, commentId: number) => {
+    setComments((prevComments) => ({
+      ...prevComments,
+      [postId]:
+        prevComments[postId]?.map((comment) =>
+          comment.id === commentId
+            ? {
+                ...comment,
+                liked: !comment.liked,
+                likes: comment.liked ? comment.likes - 1 : comment.likes + 1,
+              }
+            : comment,
+        ) || [],
+    }))
+  }
+
+  const toggleComments = (postId: number) => {
+    setShowComments((prev) => ({
+      ...prev,
+      [postId]: !prev[postId],
+    }))
+  }
+
+  const handleSubmitComment = (postId: number) => {
+    const commentText = newComment[postId]?.trim()
+    if (commentText) {
+      const newCommentObj = {
+        id: Date.now(),
+        user: mockUsers[0],
+        content: commentText,
+        timestamp: "今",
+        likes: 0,
+        liked: false,
+      }
+
+      setComments((prevComments) => ({
+        ...prevComments,
+        [postId]: [...(prevComments[postId] || []), newCommentObj],
+      }))
+
+      setPosts(
+        posts.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                comments: post.comments + 1,
+              }
+            : post,
+        ),
+      )
+
+      setNewComment((prev) => ({
+        ...prev,
+        [postId]: "",
+      }))
+    }
+  }
+
+  const handleSubmitPost = () => {
+    if (newPost.trim()) {
+      const newPostObj = {
+        id: posts.length + 1,
+        user: mockUsers[0],
+        content: newPost,
+        likes: 0,
+        comments: 0,
+        shares: 0,
+        timestamp: "今",
+        liked: false,
+      }
+      setPosts([newPostObj, ...posts])
+      setNewPost("")
+    }
+  }
+
   return (
-    <Layout isLoggedIn={true} currentUser={{ name: mockUser.name }}>
-
-      <div className="max-w-6xl mx-auto p-6">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                おかえりなさい、{mockUser.name}さん！
-              </h1>
-              <p className="text-gray-600">今日も素晴らしい一日を過ごしましょう。</p>
+    <Layout isLoggedIn={true} currentUser={{ name: "ユーザー" }}>
+      <div className="max-w-6xl pt-2 pb-20 px-2 md:px-6 space-y-4 md:space-y-8">
+        {/* Create Post */}
+        <Card className="w-full border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+          <CardHeader className="pb-4">
+            <div className="flex items-start gap-4">
+              <Avatar className="w-12 h-12 ring-2 ring-orange-100">
+                <AvatarImage src={mockUsers[0].avatar || "/placeholder.svg"} alt={mockUsers[0].name} />
+                <AvatarFallback className="bg-gradient-to-br from-orange-500 to-red-500 text-white font-semibold">
+                  {mockUsers[0].name
+                    .split(" ")
+                    .map((n: string) => n[0])
+                    .join("")}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <Textarea 
+                  placeholder={`${mockUsers[0].name || 'ユーザー'}さん、今何をしていますか？`}
+                  value={newPost}
+                  onChange={(e) => setNewPost(e.target.value)}
+                  className="min-h-[100px] resize-none border-none shadow-none focus-visible:ring-0 text-base bg-transparent placeholder:text-gray-400"
+                />
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
-                <Search className="w-4 h-4 mr-2" />
-                検索
-              </Button>
-              <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
-                <Settings className="w-4 h-4" />
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-full">
+                  <ImageIcon className="w-5 h-5 mr-2" />
+                  写真
+                </Button>
+                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-full">
+                  <MapPin className="w-5 h-5 mr-2" />
+                  場所
+                </Button>
+              </div>
+              <Button 
+                onClick={handleSubmitPost} 
+                disabled={!newPost.trim()} 
+                className="px-8 py-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                投稿
               </Button>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - User Profile & Quick Stats */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* User Profile Card */}
-            <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="text-center mb-6">
-                  <Avatar className="w-20 h-20 mx-auto mb-4 ring-4 ring-blue-100">
-                    <AvatarImage src={mockUser.avatar} alt={mockUser.name} />
-                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xl font-semibold">
-                      {mockUser.name.split(" ").map((n: string) => n[0]).join("")}
+                {/* Timeline Posts */}
+        {posts.map((post) => (
+          <Card key={post.id} className="w-full border-0 shadow-lg bg-white/90 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <Avatar className="w-12 h-12 ring-2 ring-gray-100">
+                    <AvatarImage src={post.user.avatar || "/placeholder.svg"} alt={post.user.name} />
+                    <AvatarFallback className="bg-gradient-to-br from-orange-500 to-red-500 text-white font-semibold">
+                      {post.user.name
+                        .split(" ")
+                        .map((n: string) => n[0])
+                        .join("")}
                     </AvatarFallback>
                   </Avatar>
-                  <h2 className="text-xl font-bold text-gray-900 mb-1">{mockUser.name}</h2>
-                  <div className="flex items-center justify-center gap-2 mb-3">
-                    <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white">
-                      <Star className="w-3 h-3 mr-1" />
-                      {mockUser.rank}
-                    </Badge>
-                    <Badge variant="outline" className="border-blue-200 text-blue-600">
-                      Lv.{mockUser.level}
-                    </Badge>
-                  </div>
-                  
-                  {/* Experience Bar */}
-                  <div className="mb-4">
-                    <div className="flex justify-between text-sm text-gray-600 mb-1">
-                      <span>経験値</span>
-                      <span>{mockUser.experience} / {mockUser.nextLevel}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${getProgressPercentage()}%` }}
-                      ></div>
-                    </div>
+                  <div>
+                    <div className="font-semibold text-gray-900 hover:text-orange-600 cursor-pointer transition-colors">{post.user.name}</div>
+                    <div className="text-sm text-gray-500">{post.timestamp}</div>
                   </div>
                 </div>
+                <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full">
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="px-6 pb-4">
+              <p className="mb-6 text-gray-800 leading-relaxed">{post.content}</p>
 
-                {/* User Stats */}
-                <div className="grid grid-cols-2 gap-4 text-center">
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-2xl font-bold text-gray-900">{mockUser.totalPosts}</p>
-                    <p className="text-sm text-gray-600">投稿</p>
+              {post.image && (
+                <div className="mb-6 rounded-lg overflow-hidden border border-gray-100">
+                  <img
+                    src={post.image || "/placeholder.svg"}
+                    alt="Post content"
+                    className="w-full h-auto cursor-pointer hover:scale-[1.02] transition-transform duration-300"
+                  />
+                </div>
+              )}
+
+              {/* Engagement Stats */}
+              <div className="flex items-center justify-between py-3 mb-4 text-sm text-gray-500 border-b border-gray-100">
+                <div className="flex items-center gap-4">
+                  {post.likes > 0 && (
+                    <span className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-gradient-to-r from-red-500 to-pink-500 rounded-full flex items-center justify-center shadow-sm">
+                        <Heart className="w-3 h-3 text-white fill-current" />
+                      </div>
+                      <span className="font-medium">{post.likes}</span>
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-6">
+                  {post.comments > 0 && (
+                    <button onClick={() => toggleComments(post.id)} className="hover:text-orange-600 cursor-pointer font-medium transition-colors">
+                      {post.comments}件のコメント
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-around pt-2 mb-6">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`flex-1 rounded-full py-3 ${post.liked ? "text-red-500 bg-red-50 hover:bg-red-100" : "text-gray-600 hover:text-red-500 hover:bg-red-50"}`}
+                  onClick={() => handleLike(post.id)}
+                >
+                  <Heart className={`w-5 h-5 mr-2 ${post.liked ? "fill-current" : ""}`} />
+                  <span className="font-medium">{post.liked ? "いいね済み" : "いいね"}</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex-1 rounded-full py-3 text-gray-600 hover:text-orange-600 hover:bg-orange-50"
+                  onClick={() => toggleComments(post.id)}
+                >
+                  <MessageCircle className="w-5 h-5 mr-2" />
+                  <span className="font-medium">コメント</span>
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="flex-1 rounded-full py-3 text-gray-600 hover:text-green-600 hover:bg-green-50"
+                >
+                  <Share2 className="w-5 h-5 mr-2" />
+                  <span className="font-medium">シェア</span>
+                </Button>
+              </div>
+
+              {showComments[post.id] && (
+                <div className="border-t border-gray-100 pt-6">
+                  {/* Comment Input */}
+                  <div className="flex items-center gap-4 mb-6">
+                    <Avatar className="w-10 h-10 ring-2 ring-orange-100">
+                      <AvatarImage src={mockUsers[0].avatar || "/placeholder.svg"} alt={mockUsers[0].name} />
+                      <AvatarFallback className="text-sm bg-gradient-to-br from-orange-500 to-red-500 text-white font-semibold">
+                        {mockUsers[0].name
+                          .split(" ")
+                          .map((n: string) => n[0])
+                          .join("")}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 flex items-center gap-3">
+                      <Input
+                        placeholder="コメントを書く..."
+                        value={newComment[post.id] || ""}
+                        onChange={(e) =>
+                          setNewComment((prev) => ({
+                            ...prev,
+                            [post.id]: e.target.value,
+                          }))
+                        }
+                        className="flex-1 rounded-full border-gray-200 focus:border-orange-500 focus:ring-orange-500"
+                        onKeyPress={(e) => {
+                          if (e.key === "Enter") {
+                            handleSubmitComment(post.id)
+                          }
+                        }}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => handleSubmitComment(post.id)}
+                        disabled={!newComment[post.id]?.trim()}
+                        className="rounded-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg"
+                      >
+                        <Send className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-2xl font-bold text-gray-900">{mockUser.totalLikes}</p>
-                    <p className="text-sm text-gray-600">いいね</p>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-2xl font-bold text-gray-900">{mockUser.totalFollowers}</p>
-                    <p className="text-sm text-gray-600">フォロワー</p>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-2xl font-bold text-gray-900">{mockUser.totalFollowing}</p>
-                    <p className="text-sm text-gray-600">フォロー中</p>
+
+                  {/* Comments List */}
+                  <div className="space-y-4">
+                    {comments[post.id]?.map((comment) => (
+                      <div key={comment.id} className="flex items-start gap-4">
+                        <Avatar className="w-10 h-10 ring-2 ring-gray-100">
+                          <AvatarImage src={comment.user.avatar || "/placeholder.svg"} alt={comment.user.name} />
+                          <AvatarFallback className="text-sm bg-gradient-to-br from-orange-500 to-red-500 text-white font-semibold">
+                            {comment.user.name
+                              .split(" ")
+                              .map((n: string) => n[0])
+                              .join("")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="bg-gray-50 rounded-2xl px-4 py-3 shadow-sm">
+                            <div className="font-semibold text-sm mb-2 text-gray-900">{comment.user.name}</div>
+                            <p className="text-sm text-gray-700 leading-relaxed">{comment.content}</p>
+                          </div>
+                          <div className="flex items-center gap-6 mt-2 text-xs text-gray-500">
+                            <button
+                              onClick={() => handleCommentLike(post.id, comment.id)}
+                              className={`flex items-center gap-1 hover:text-red-500 transition-colors ${
+                                comment.liked ? "text-red-500" : ""
+                              }`}
+                            >
+                              <Heart className={`w-3 h-3 ${comment.liked ? "fill-current" : ""}`} />
+                              {comment.likes > 0 && <span className="font-medium">{comment.likes}</span>}
+                            </button>
+                            <span className="hover:text-orange-600 cursor-pointer font-medium">返信</span>
+                            <span className="font-medium">{comment.timestamp}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Quick Stats */}
-            <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-blue-600" />
-                  今週の統計
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {mockQuickStats.map((stat, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-white rounded-lg">
-                        <stat.icon className="w-4 h-4 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">{stat.title}</p>
-                        <p className="text-lg font-bold text-gray-900">{stat.value}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className={`text-sm font-semibold ${stat.trend === "up" ? "text-green-600" : "text-red-600"}`}>
-                        {stat.change}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Center Column - Recent Activities */}
-          <div className="lg:col-span-1 space-y-6">
-            <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-blue-600" />
-                  最近のアクティビティ
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {mockRecentActivities.map((activity) => (
-                  <div key={activity.id} className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors">
-                    <div className="p-2 bg-gray-100 rounded-full">
-                      {getActivityIcon(activity.type)}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-gray-900">{activity.content}</p>
-                      <div className="flex items-center gap-4 mt-1">
-                        <span className="text-xs text-gray-500">{activity.timestamp}</span>
-                        {activity.likes && (
-                          <span className="text-xs text-gray-500 flex items-center gap-1">
-                            <Heart className="w-3 h-3" />
-                            {activity.likes}
-                          </span>
-                        )}
-                        {activity.comments && (
-                          <span className="text-xs text-gray-500 flex items-center gap-1">
-                            <MessageCircle className="w-3 h-3" />
-                            {activity.comments}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Quick Actions */}
-            <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-bold text-gray-900">クイックアクション</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Link href="/timeline">
-                  <Button variant="ghost" className="w-full justify-start text-left h-auto p-4 hover:bg-gray-50">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-100 rounded-lg">
-                        <Plus className="w-4 h-4 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">新しい投稿を作成</p>
-                        <p className="text-sm text-gray-500">今の気持ちを共有しよう</p>
-                      </div>
-                    </div>
-                  </Button>
-                </Link>
-                <Link href="/cupmatch">
-                  <Button variant="ghost" className="w-full justify-start text-left h-auto p-4 hover:bg-gray-50">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-purple-100 rounded-lg">
-                        <Trophy className="w-4 h-4 text-purple-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">大会に参加</p>
-                        <p className="text-sm text-gray-500">新しいチャレンジを見つけよう</p>
-                      </div>
-                    </div>
-                  </Button>
-                </Link>
-                <Link href="/profile">
-                  <Button variant="ghost" className="w-full justify-start text-left h-auto p-4 hover:bg-gray-50">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-green-100 rounded-lg">
-                        <Users className="w-4 h-4 text-green-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">友達を探す</p>
-                        <p className="text-sm text-gray-500">新しいつながりを作ろう</p>
-                      </div>
-                    </div>
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Column - Upcoming Events & Notifications */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Upcoming Events */}
-            <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-blue-600" />
-                  今後のイベント
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {mockUpcomingEvents.map((event) => (
-                  <div key={event.id} className="p-4 border border-gray-100 rounded-lg hover:shadow-md transition-shadow">
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-semibold text-gray-900">{event.title}</h3>
-                      <Badge className={`${
-                        event.status === "参加中" 
-                          ? "bg-green-100 text-green-800" 
-                          : "bg-blue-100 text-blue-800"
-                      }`}>
-                        {event.status}
-                      </Badge>
-                    </div>
-                    <div className="space-y-1 text-sm text-gray-600">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-3 h-3" />
-                        <span>{event.date} {event.time}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Users className="w-3 h-3" />
-                        <span>{event.participants}人参加</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Notifications */}
-            <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <Bell className="w-5 h-5 text-blue-600" />
-                  通知
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <div className="p-1 bg-blue-100 rounded-full">
-                      <Trophy className="w-3 h-3 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-blue-900">大会の結果</p>
-                      <p className="text-xs text-blue-700">春のフレンドリーカップで3位になりました！</p>
-                      <p className="text-xs text-blue-600 mt-1">1時間前</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <div className="p-1 bg-green-100 rounded-full">
-                      <Users className="w-3 h-3 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-green-900">新しいフォロワー</p>
-                      <p className="text-xs text-green-700">高橋健太さんがあなたをフォローしました</p>
-                      <p className="text-xs text-green-600 mt-1">3時間前</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <div className="p-1 bg-purple-100 rounded-full">
-                      <Heart className="w-3 h-3 text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-purple-900">いいね</p>
-                      <p className="text-xs text-purple-700">佐藤花子さんがあなたの投稿にいいねしました</p>
-                      <p className="text-xs text-purple-600 mt-1">5時間前</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </Layout>
   )

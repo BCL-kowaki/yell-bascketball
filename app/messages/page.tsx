@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Search, MessageCircle, Send, Phone, Video, MoreHorizontal, Plus, Home, ArrowLeft, Menu } from "lucide-react"
+import { Search, MessageCircle, Send, Phone, Video, MoreHorizontal, Plus, Home, ArrowLeft, Menu, ChevronLeft } from "lucide-react"
 import Link from "next/link"
 
 interface Conversation {
@@ -141,7 +141,7 @@ export default function MessagesPage() {
   const ConversationItem = ({ conversation }: { conversation: Conversation }) => (
     <div
       className={`p-3 md:p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
-        selectedConversation === conversation.id ? "bg-green-50 border-r-4 border-r-green-500 md:border-l-4 md:border-l-green-500 md:border-r-0" : ""
+        selectedConversation === conversation.id ? "bg-orange-50 border-r-4 border-r-orange-500 md:border-l-4 md:border-l-orange-500 md:border-r-0" : ""
       }`}
       onClick={() => handleConversationSelect(conversation.id)}
     >
@@ -149,12 +149,12 @@ export default function MessagesPage() {
         <div className="relative">
           <Avatar className="h-11 w-11 md:h-12 md:w-12">
             <AvatarImage src={conversation.avatar || "/placeholder.svg"} alt={conversation.name} />
-            <AvatarFallback className="bg-gradient-to-br from-blue-400 to-purple-500 text-white font-medium">
+            <AvatarFallback className="bg-gradient-to-br from-orange-400 to-red-500 text-white font-medium">
               {conversation.name.charAt(0)}
             </AvatarFallback>
           </Avatar>
           {conversation.isOnline && (
-            <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-green-500 border-2 border-white rounded-full"></div>
+            <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-orange-500 border-2 border-white rounded-full"></div>
           )}
         </div>
         <div className="flex-1 min-w-0">
@@ -187,12 +187,12 @@ export default function MessagesPage() {
       <div
         className={`max-w-[75%] md:max-w-xs lg:max-w-md px-3 py-2 rounded-2xl shadow-sm ${
           message.isOwn 
-            ? "bg-green-500 text-white rounded-br-md" 
+            ? "bg-orange-500 text-white rounded-br-md" 
             : "bg-white text-gray-900 rounded-bl-md border border-gray-100"
         }`}
       >
         <p className="text-sm leading-relaxed">{message.content}</p>
-        <p className={`text-xs mt-1 ${message.isOwn ? "text-green-100" : "text-gray-500"}`}>
+        <p className={`text-xs mt-1 ${message.isOwn ? "text-orange-100" : "text-gray-500"}`}>
           {message.timestamp}
         </p>
       </div>
@@ -222,7 +222,7 @@ export default function MessagesPage() {
             {/* Desktop: Always show logo */}
             <Link 
               href="/" 
-              className="font-serif text-xl md:text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent hover:opacity-80 transition-opacity"
+              className="font-serif text-xl md:text-2xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent hover:opacity-80 transition-opacity"
             >
               YeLL
             </Link>
@@ -232,13 +232,13 @@ export default function MessagesPage() {
               <div className="flex items-center space-x-2 md:hidden">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={selectedConv.avatar} alt={selectedConv.name} />
-                  <AvatarFallback className="bg-gradient-to-br from-blue-400 to-purple-500 text-white text-sm">
+                  <AvatarFallback className="bg-gradient-to-br from-orange-400 to-red-500 text-white text-sm">
                     {selectedConv.name.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <h2 className="font-medium text-gray-900 text-sm">{selectedConv.name}</h2>
-                  <p className="text-xs text-green-500">{selectedConv.isOnline ? 'オンライン' : 'オフライン'}</p>
+                  <p className="text-xs text-orange-500">{selectedConv.isOnline ? 'オンライン' : 'オフライン'}</p>
                 </div>
               </div>
             )}
@@ -279,7 +279,7 @@ export default function MessagesPage() {
           <div className="p-3 md:p-4 border-b border-gray-100 bg-white">
             <div className="flex items-center justify-between mb-3 md:mb-4">
               <h1 className="text-lg md:text-xl font-bold text-gray-900">チャット</h1>
-              <Button size="sm" className="bg-green-500 hover:bg-green-600 p-2">
+              <Button size="sm" className="bg-orange-500 hover:bg-orange-600 p-2">
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
@@ -313,13 +313,13 @@ export default function MessagesPage() {
                 <div className="flex items-center space-x-3">
                   <Avatar className="h-10 w-10">
                     <AvatarImage src={selectedConv.avatar} alt={selectedConv.name} />
-                    <AvatarFallback className="bg-gradient-to-br from-blue-400 to-purple-500 text-white">
+                    <AvatarFallback className="bg-gradient-to-br from-orange-400 to-red-500 text-white">
                       {selectedConv.name.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                   <div>
                     <h2 className="font-semibold text-gray-900">{selectedConv.name}</h2>
-                    <p className="text-sm text-green-500">{selectedConv.isOnline ? 'オンライン' : 'オフライン'}</p>
+                    <p className="text-sm text-orange-500">{selectedConv.isOnline ? 'オンライン' : 'オフライン'}</p>
                   </div>
                 </div>
                 <div className="flex space-x-2">
@@ -352,12 +352,12 @@ export default function MessagesPage() {
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    className="flex-1 border-gray-300 focus:border-green-500 focus:ring-green-500"
+                    className="flex-1 border-gray-300 focus:border-orange-500 focus:ring-orange-500"
                   />
                   <Button
                     onClick={handleSendMessage}
                     disabled={!newMessage.trim()}
-                    className="bg-green-500 hover:bg-green-600 px-4"
+                    className="bg-orange-500 hover:bg-orange-600 px-4"
                   >
                     <Send className="h-4 w-4" />
                   </Button>
@@ -367,8 +367,8 @@ export default function MessagesPage() {
           ) : (
             <div className="flex-1 flex items-center justify-center bg-gray-50 p-8">
               <div className="text-center max-w-sm">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <MessageCircle className="h-8 w-8 text-green-500" />
+                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <MessageCircle className="h-8 w-8 text-orange-500" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">チャットを始めよう</h3>
                 <p className="text-gray-600 text-sm leading-relaxed">

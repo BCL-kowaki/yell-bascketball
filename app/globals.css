@@ -11,7 +11,7 @@
   --card-foreground: oklch(0.25 0.005 106.423); /* #242526 Dark gray for card text */
   --popover: oklch(1 0 0); /* #FFFFFF White for popovers */
   --popover-foreground: oklch(0.25 0.005 106.423); /* #242526 Dark gray for popover text */
-  --primary: oklch(0.55 0.18 258.338); /* #1877F2 Facebook Blue for primary actions */
+  --primary: oklch(0.7 0.18 50); /* #FF8A00 Energetic Orange for primary actions */
   --primary-foreground: oklch(1 0 0); /* #FFFFFF White text on primary buttons */
   --secondary: oklch(0.65 0.15 142.495); /* #42B72A Green for accents */
   --secondary-foreground: oklch(1 0 0); /* #FFFFFF White text on secondary buttons */
@@ -23,7 +23,7 @@
   --destructive-foreground: oklch(1 0 0); /* #FFFFFF White text on destructive buttons */
   --border: oklch(0.92 0.005 106.423); /* #E4E6EB Light gray for borders */
   --input: oklch(1 0 0); /* #FFFFFF White for input backgrounds */
-  --ring: oklch(0.55 0.18 258.338 / 0.5); /* Soft blue ring for focus states */
+  --ring: oklch(0.7 0.18 50 / 0.5); /* Soft orange ring for focus states */
   --chart-1: oklch(0.6 0.15 258.338);
   --chart-2: oklch(0.7 0.12 180);
   --chart-3: oklch(0.65 0.18 85);
@@ -37,7 +37,7 @@
   --sidebar-accent: oklch(0.65 0.15 142.495); /* #42B72A Sidebar accent color */
   --sidebar-accent-foreground: oklch(1 0 0); /* #FFFFFF Sidebar accent text */
   --sidebar-border: oklch(0.92 0.005 106.423); /* #E4E6EB Sidebar border color */
-  --sidebar-ring: oklch(0.55 0.18 258.338 / 0.5); /* Sidebar focus ring */
+  --sidebar-ring: oklch(0.7 0.18 50 / 0.5); /* Sidebar focus ring */
 }
 
 .dark {
@@ -47,7 +47,7 @@
   --card-foreground: oklch(0.95 0.005 106.423);
   --popover: oklch(0.18 0.005 106.423);
   --popover-foreground: oklch(0.95 0.005 106.423);
-  --primary: oklch(0.6 0.18 258.338);
+  --primary: oklch(0.75 0.2 55);
   --primary-foreground: oklch(0.15 0.005 106.423);
   --secondary: oklch(0.3 0.005 106.423);
   --secondary-foreground: oklch(0.95 0.005 106.423);
@@ -119,6 +119,6 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground text-sm;
   }
 }

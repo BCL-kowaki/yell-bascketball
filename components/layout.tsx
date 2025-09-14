@@ -23,7 +23,7 @@ export function Layout({ children, isLoggedIn = false, currentUser }: LayoutProp
         <SidebarMenu isLoggedIn={isLoggedIn} currentUser={currentUser} />
         
         {/* Main Content */}
-        <main className="flex-1 min-h-screen">
+        <main className="flex-1 min-h-screen min-w-0">
           {children}
         </main>
       </div>

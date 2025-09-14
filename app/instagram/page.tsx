@@ -194,7 +194,7 @@ export default function InstagramPage() {
                 <div className="text-center space-y-6">
                   {!isConnected ? (
                     <>
-                      <div className="w-24 h-24 mx-auto bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 rounded-full flex items-center justify-center">
+                      <div className="w-24 h-24 mx-auto bg-gradient-to-br from-orange-500 via-pink-500 to-orange-500 rounded-full flex items-center justify-center">
                         <Instagram className="w-12 h-12 text-white" />
                       </div>
                       <div>
@@ -219,7 +219,7 @@ export default function InstagramPage() {
                       </div>
                       <Button
                         onClick={handleConnectInstagram}
-                        className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-8 py-3"
+                        className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-8 py-3"
                       >
                         <Instagram className="w-5 h-5 mr-2" />
                         Instagramと連携する

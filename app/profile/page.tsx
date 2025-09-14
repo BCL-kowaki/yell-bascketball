@@ -56,16 +56,15 @@ export default function ProfilePage() {
 
   return (
     <Layout isLoggedIn={true} currentUser={{ name: "田中 太郎" }}>
-
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto pb-20">
         {/* Cover Photo & Profile Info */}
         <div className="relative">
-          <div className="h-64 bg-muted overflow-hidden">
+          <div className="h-48 md:h-64 bg-muted overflow-hidden">
             <img src={mockUser.coverImage || "/placeholder.svg"} alt="Cover" className="w-full h-full object-cover" />
           </div>
 
-          <div className="absolute -bottom-16 left-8">
-            <Avatar className="w-32 h-32 border-4 border-card">
+          <div className="absolute -bottom-12 md:-bottom-16 left-4 md:left-8">
+            <Avatar className="w-24 h-24 md:w-32 md:h-32 border-4 border-card">
               <AvatarImage src={mockUser.avatar || "/placeholder.svg"} alt={mockUser.name} />
               <AvatarFallback className="text-2xl">
                 {mockUser.name
@@ -76,22 +75,22 @@ export default function ProfilePage() {
             </Avatar>
           </div>
 
-          <div className="absolute bottom-4 right-4">
-            <Button size="sm" variant="outline" className="bg-card">
-              <Camera className="w-4 h-4 mr-2" />
+          <div className="absolute bottom-2 right-2 md:bottom-4 md:right-4">
+            <Button size="sm" variant="outline" className="bg-card text-xs md:text-sm">
+              <Camera className="w-4 h-4 mr-1 md:mr-2" />
               カバー写真を変更
             </Button>
           </div>
         </div>
 
         {/* Profile Header */}
-        <div className="bg-card px-8 pt-20 pb-6 border-b border-border">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <h1 className="font-serif text-3xl font-bold mb-2">{mockUser.name}</h1>
-              <p className="text-muted-foreground mb-4">{mockUser.bio}</p>
+        <div className="bg-card px-4 md:px-8 pt-16 md:pt-20 pb-6 border-b border-border">
+          <div className="flex flex-col md:flex-row items-start justify-between">
+            <div className="flex-1 mb-4 md:mb-0">
+              <h1 className="font-serif text-2xl md:text-3xl font-bold mb-2">{mockUser.name}</h1>
+              <p className="text-muted-foreground mb-4 text-sm md:text-base">{mockUser.bio}</p>
 
-              <div className="flex items-center gap-6 text-sm text-muted-foreground mb-4">
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-6 text-sm text-muted-foreground mb-4">
                 <div className="flex items-center gap-1">
                   <MapPin className="w-4 h-4" />
                   {mockUser.location}
@@ -102,43 +101,44 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-4 md:gap-6">
                 <div className="text-center">
-                  <div className="font-semibold text-lg">{mockUser.posts}</div>
-                  <div className="text-sm text-muted-foreground">投稿</div>
+                  <div className="font-semibold text-base md:text-lg">{mockUser.posts}</div>
+                  <div className="text-xs md:text-sm text-muted-foreground">投稿</div>
                 </div>
                 <div className="text-center">
-                  <div className="font-semibold text-lg">{mockUser.followers}</div>
-                  <div className="text-sm text-muted-foreground">フォロワー</div>
+                  <div className="font-semibold text-base md:text-lg">{mockUser.followers}</div>
+                  <div className="text-xs md:text-sm text-muted-foreground">フォロワー</div>
                 </div>
                 <div className="text-center">
-                  <div className="font-semibold text-lg">{mockUser.following}</div>
-                  <div className="text-sm text-muted-foreground">フォロー中</div>
+                  <div className="font-semibold text-base md:text-lg">{mockUser.following}</div>
+                  <div className="text-xs md:text-sm text-muted-foreground">フォロー中</div>
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-2">
-              <Button variant={isFollowing ? "outline" : "default"} onClick={() => setIsFollowing(!isFollowing)}>
+            <div className="flex gap-2 w-full md:w-auto">
+              <Button variant={isFollowing ? "outline" : "default"} onClick={() => setIsFollowing(!isFollowing)} className="flex-1 md:flex-initial">
                 <Users className="w-4 h-4 mr-2" />
                 {isFollowing ? "フォロー中" : "フォローする"}
               </Button>
-              <Button variant="outline">メッセージ</Button>
+              <Button variant="outline" className="flex-1 md:flex-initial">メッセージ</Button>
             </div>
           </div>
         </div>
 
         {/* Profile Content */}
-        <div className="p-6">
+        <div className="p-2 md:p-6">
           <Tabs defaultValue="posts" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3 bg-white">
               <TabsTrigger value="posts">投稿</TabsTrigger>
               <TabsTrigger value="about">基本情報</TabsTrigger>
+              <TabsTrigger value="photos">写真</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="posts" className="space-y-6 mt-6">
+            <TabsContent value="posts" className="space-y-4 md:space-y-6 mt-4 md:mt-6">
               {mockPosts.map((post) => (
-                <Card key={post.id}>
+                <Card key={post.id} className="w-full border-0 shadow-lg bg-white/90 backdrop-blur-sm">
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-3">
                       <Avatar>
@@ -163,7 +163,7 @@ export default function ProfilePage() {
                         <img src={post.image || "/placeholder.svg"} alt="Post content" className="w-full h-auto" />
                       </div>
                     )}
-                    <div className="flex items-center gap-6 pt-3 border-t border-border">
+                    <div className="flex items-center gap-2 md:gap-6 pt-3 border-t border-border">
                       <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
                         <Heart className="w-4 h-4 mr-2" />
                         {post.likes}
@@ -172,18 +172,14 @@ export default function ProfilePage() {
                         <MessageCircle className="w-4 h-4 mr-2" />
                         {post.comments}
                       </Button>
-                      <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
-                        <Share2 className="w-4 h-4 mr-2" />
-                        シェア
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </TabsContent>
 
-            <TabsContent value="about" className="mt-6">
-              <Card>
+            <TabsContent value="about" className="mt-4 md:mt-6">
+              <Card className="w-full border-0 shadow-lg bg-white/90 backdrop-blur-sm">
                 <CardHeader>
                   <h3 className="font-semibold text-lg">基本情報</h3>
                 </CardHeader>
@@ -209,9 +205,9 @@ export default function ProfilePage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="photos" className="mt-6">
-              <div className="grid grid-cols-3 gap-4">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
+            <TabsContent value="photos" className="mt-4 md:mt-6">
+              <div className="grid grid-cols-3 gap-1 md:gap-4">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
                   <div key={i} className="aspect-square bg-muted rounded-lg overflow-hidden">
                     <img
                       src={`/placeholder.svg?height=200&width=200&query=photo+${i}`}

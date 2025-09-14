@@ -26,7 +26,8 @@ import {
   Phone,
   Mail,
   ExternalLink,
-  Flag
+  Flag,
+  MoreHorizontal
 } from "lucide-react"
 import { Layout } from "@/components/layout"
 
@@ -161,7 +162,7 @@ export default function TeamPage({ params }: TeamPageProps) {
   const getPostTypeIcon = (type: string) => {
     switch (type) {
       case "official":
-        return <Flag className="w-4 h-4 text-blue-600" />
+        return <Flag className="w-4 h-4 text-orange-600" />
       case "player":
         return <Users className="w-4 h-4 text-green-600" />
       case "fan":
@@ -176,7 +177,7 @@ export default function TeamPage({ params }: TeamPageProps) {
       case "captain":
         return <Crown className="w-4 h-4 text-yellow-600" />
       case "coach":
-        return <Shield className="w-4 h-4 text-blue-600" />
+        return <Shield className="w-4 h-4 text-orange-600" />
       default:
         return <Users className="w-4 h-4 text-gray-600" />
     }
@@ -184,15 +185,14 @@ export default function TeamPage({ params }: TeamPageProps) {
 
   return (
     <Layout isLoggedIn={true} currentUser={{ name: "ユーザー" }}>
-
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-8">
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 mb-6 text-sm">
+        <div className="flex items-center gap-2 mb-6 text-xs md:text-sm flex-wrap">
           <Link href="/teams" className="text-gray-500 hover:text-gray-700">
             チーム一覧
           </Link>
-          <span className="text-gray-400">/</span>
-          <span className="text-blue-600 font-medium">{team.name}</span>
+          <ChevronLeft className="w-4 h-4 text-gray-400 rotate-180" />
+          <span className="text-orange-600 font-medium">{team.name}</span>
         </div>
 
         {/* Team Header */}
@@ -202,81 +202,60 @@ export default function TeamPage({ params }: TeamPageProps) {
               <img 
                 src={team.coverImage} 
                 alt={team.name}
-                className="w-full h-64 object-cover"
+                className="w-full h-48 md:h-64 object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
               
-              {/* Team Info Overlay */}
-              <div className="absolute bottom-6 left-6 text-white">
-                <div className="flex items-center gap-4 mb-4">
+              <div className="absolute bottom-6 w-[90%] left-1/2 -translate-x-1/2 text-white">
+                <div className="flex flex-col md:flex-row items-center gap-4">
                   <Avatar className="w-20 h-20 border-4 border-white">
                     <AvatarImage src={team.logo} />
-                    <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-2xl font-bold">
+                    <AvatarFallback className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-2xl font-bold">
                       {team.shortName.slice(0, 2)}
                     </AvatarFallback>
                   </Avatar>
-                  <div>
-                    <h1 className="text-3xl font-bold mb-2">{team.name}</h1>
-                    <div className="flex items-center gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4" />
-                        <span>{team.district}</span>
-                      </div>
+                  <div className="text-center md:text-left">
+                    <h1 className="text-2xl md:text-3xl font-bold mb-1">{team.name}</h1>
+                    <div className="flex items-center justify-center md:justify-start gap-2 text-xs md:text-sm">
+                      <MapPin className="w-4 h-4" />
+                      <span>{team.district}</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="absolute bottom-6 right-6 flex gap-2">
+              <div className="absolute top-4 right-4 flex gap-2">
                 <Button
                   variant={team.isFollowing ? "outline" : "default"}
-                  className={`${team.isFollowing ? "bg-white/90 text-gray-900 hover:bg-white" : "bg-blue-600 hover:bg-blue-700"}`}
+                  className={`${team.isFollowing ? "bg-white/90 text-gray-900 hover:bg-white" : "bg-orange-500 hover:bg-orange-600 text-white"}`}
+                  size="sm"
                 >
-                  {team.isFollowing ? (
-                    <>
-                      <UserMinus className="w-4 h-4 mr-2" />
-                      フォロー中
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="w-4 h-4 mr-2" />
-                      フォロー
-                    </>
-                  )}
-                </Button>
-                <Button variant="outline" className="bg-white/90 text-gray-900 hover:bg-white">
-                  <Share2 className="w-4 h-4 mr-2" />
-                  シェア
+                  {team.isFollowing ? <UserMinus className="w-4 h-4 mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
+                  {team.isFollowing ? "フォロー中" : "フォロー"}
                 </Button>
                 {userRole === "admin" && (
-                  <Button variant="outline" className="bg-white/90 text-gray-900 hover:bg-white">
-                    <Settings className="w-4 h-4 mr-2" />
-                    設定
+                  <Button variant="outline" size="sm" className="bg-white/90 text-gray-900 hover:bg-white">
+                    <Settings className="w-4 h-4" />
                   </Button>
                 )}
               </div>
             </div>
           </Card>
         </div>
+        
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Timeline and Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <Tabs value={selectedTab} onValueChange={setSelectedTab}>
               <TabsList className="grid w-full grid-cols-2 bg-white/90 backdrop-blur-sm border border-gray-200 mb-6">
-                <TabsTrigger value="timeline" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white">
-                  タイムライン
-                </TabsTrigger>
-                <TabsTrigger value="about" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white">
-                チーム情報
-                </TabsTrigger>
+                <TabsTrigger value="timeline">タイムライン</TabsTrigger>
+                <TabsTrigger value="about">チーム情報</TabsTrigger>
               </TabsList>
 
               <TabsContent value="timeline" className="space-y-6">
                 {/* Post Creation */}
                 <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
-                  <CardContent className="p-6">
+                  <CardContent className="p-2">
                     <div className="flex items-start gap-4">
                       <Avatar>
                         <AvatarImage src="/placeholder.svg?height=40&width=40&text=U" />
@@ -287,10 +266,10 @@ export default function TeamPage({ params }: TeamPageProps) {
                           placeholder="チームについて投稿する..."
                           value={newPost}
                           onChange={(e) => setNewPost(e.target.value)}
-                          className="min-h-[100px] resize-none border-gray-200 focus:ring-blue-500 focus:border-blue-500"
+                          className="min-h-[100px] resize-none border-gray-200 focus:ring-orange-500 focus:border-orange-500"
                         />
-                        <div className="flex items-center justify-between mt-4">
-                          <Button onClick={handlePost} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                        <div className="flex items-center justify-end mt-2">
+                          <Button onClick={handlePost} className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
                             <Send className="w-4 h-4 mr-2" />
                             投稿
                           </Button>
@@ -302,85 +281,100 @@ export default function TeamPage({ params }: TeamPageProps) {
 
                 {/* Timeline Posts */}
                 {teamPosts.map((post) => (
-                  <Card key={post.id} className={`border-0 shadow-lg bg-white/90 backdrop-blur-sm ${post.isPinned ? 'border-l-4 border-l-blue-500' : ''}`}>
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-4">
-                        <Avatar>
-                          <AvatarImage src={post.authorAvatar} />
-                          <AvatarFallback>{post.author.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-gray-900">{post.author}</span>
-                            </div>
-                            {post.isPinned && (
-                              <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-                                <Pin className="w-3 h-3 mr-1" />
-                                ピン留め
-                              </Badge>
-                            )}
-                            <span className="text-sm text-gray-500 ml-auto">{post.timestamp}</span>
-                          </div>
-                          
-                          <div className="text-gray-800 whitespace-pre-line mb-4">
-                            {post.content}
-                          </div>
-
-                          {/* Match Result Display */}
-                          {post.matchResult && (
-                            <Card className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 mb-4">
-                              <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
-                                  <div className="text-center">
-                                    <div className="font-bold text-lg">{post.matchResult.homeTeam}</div>
-                                    <div className="text-2xl font-bold text-green-600">{post.matchResult.homeScore}</div>
-                                  </div>
-                                  <div className="text-center">
-                                    <Trophy className="w-8 h-8 text-yellow-500 mx-auto mb-1" />
-                                    <div className="text-sm font-medium">勝利</div>
-                                  </div>
-                                  <div className="text-center">
-                                    <div className="font-bold text-lg">{post.matchResult.awayTeam}</div>
-                                    <div className="text-2xl font-bold text-gray-600">{post.matchResult.awayScore}</div>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          )}
-
-                          {/* Images */}
-                          {post.images.length > 0 && (
-                            <div className="grid grid-cols-1 gap-2 mb-4">
-                              {post.images.map((image, index) => (
-                                <img
-                                  key={index}
-                                  src={image}
-                                  alt={`投稿画像 ${index + 1}`}
-                                  className="rounded-lg object-cover h-32 w-full"
-                                />
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Actions */}
-                          <div className="flex items-center gap-6 text-gray-500">
-                            <button className="flex items-center gap-2 hover:text-red-600 transition-colors">
-                              <Heart className="w-4 h-4" />
-                              <span>{post.likes}</span>
-                            </button>
-                            <button className="flex items-center gap-2 hover:text-blue-600 transition-colors">
-                              <MessageCircle className="w-4 h-4" />
-                              <span>{post.comments}</span>
-                            </button>
-                            <button className="flex items-center gap-2 hover:text-green-600 transition-colors">
-                              <Share2 className="w-4 h-4" />
-                              <span>{post.shares}</span>
-                            </button>
-                          </div>
+                  <Card key={post.id} className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+                    <CardHeader className="p-4 flex flex-row items-start gap-3">
+                      <Avatar>
+                        <AvatarImage src={post.authorAvatar} />
+                        <AvatarFallback>{post.author.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-gray-900">{post.author}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <span>{post.timestamp}</span>
                         </div>
                       </div>
+                      <div className="flex items-center gap-2">
+                        {post.isPinned && (
+                          <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100 font-normal text-xs">
+                            <Pin className="w-3 h-3 mr-1" />
+                          </Badge>
+                        )}
+                        <Button variant="ghost" size="icon" className="text-gray-500 w-8 h-8">
+                          <MoreHorizontal className="w-5 h-5" />
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    
+                    <CardContent className="px-4 pt-0 pb-2">
+                      <div className="text-gray-800 whitespace-pre-line mb-4">
+                        {post.content}
+                      </div>
+
+                      {/* Match Result Display */}
+                      {post.matchResult && (
+                        <Card className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 mb-4">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="text-center">
+                                <div className="font-bold text-lg">{post.matchResult.homeTeam}</div>
+                                <div className="text-2xl font-bold text-green-600">{post.matchResult.homeScore}</div>
+                              </div>
+                              <div className="text-center">
+                                <Trophy className="w-8 h-8 text-yellow-500 mx-auto mb-1" />
+                                <div className="text-sm font-medium">勝利</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="font-bold text-lg">{post.matchResult.awayTeam}</div>
+                                <div className="text-2xl font-bold text-gray-600">{post.matchResult.awayScore}</div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Images */}
+                      {post.images.length > 0 && (
+                        <div className="grid grid-cols-1 gap-2 mb-4">
+                          {post.images.map((image, index) => (
+                            <img
+                              key={index}
+                              src={image}
+                              alt={`投稿画像 ${index + 1}`}
+                              className="rounded-lg object-cover h-32 w-full"
+                            />
+                          ))}
+                        </div>
+                      )}
                     </CardContent>
+
+                    <div className="px-4 pb-2 flex items-center justify-between text-sm text-gray-500">
+                      <div className="flex items-center gap-1">
+                        <Heart className="w-4 h-4" /> 
+                        <span>{post.likes}</span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span>{post.comments}件のコメント</span>
+                      </div>
+                    </div>
+                    
+                    <div className="mx-4 border-t border-gray-200"></div>
+
+                    <div className="p-1 flex items-center justify-around text-gray-600 font-medium text-sm">
+                      <button className="flex items-center justify-center gap-2 hover:bg-gray-100 rounded-md p-2 flex-1 transition-colors">
+                        <Heart className="w-5 h-5" />
+                        <span>いいね！</span>
+                      </button>
+                      <button className="flex items-center justify-center gap-2 hover:bg-gray-100 rounded-md p-2 flex-1 transition-colors">
+                        <MessageCircle className="w-5 h-5" />
+                        <span>コメント</span>
+                      </button>
+                      <button className="flex items-center justify-center gap-2 hover:bg-gray-100 rounded-md p-2 flex-1 transition-colors">
+                        <Share2 className="w-5 h-5" />
+                        <span>シェア</span>
+                      </button>
+                    </div>
                   </Card>
                 ))}
               </TabsContent>
@@ -388,7 +382,7 @@ export default function TeamPage({ params }: TeamPageProps) {
                 <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Globe className="w-5 h-5 text-blue-600" />
+                      <Globe className="w-5 h-5 text-orange-600" />
                       チーム情報
                     </CardTitle>
                   </CardHeader>
@@ -433,7 +427,7 @@ export default function TeamPage({ params }: TeamPageProps) {
                           </div>
                           <div className="flex items-center gap-2">
                             <ExternalLink className="w-4 h-4 text-gray-500" />
-                            <a href={team.contact.website} className="text-blue-600 hover:underline">
+                            <a href={team.contact.website} className="text-orange-600 hover:underline">
                               公式サイト
                             </a>
                           </div>

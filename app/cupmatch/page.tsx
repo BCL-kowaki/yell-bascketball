@@ -138,7 +138,7 @@ export default function CupMatchPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50">
       {/* Header Navigation */}
       <HeaderNavigation isLoggedIn={true} />
 
@@ -147,7 +147,7 @@ export default function CupMatchPage() {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
             <Trophy className="w-8 h-8 text-yellow-500" />
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
               カップマッチ
             </h1>
             <Trophy className="w-8 h-8 text-yellow-500" />
@@ -163,7 +163,7 @@ export default function CupMatchPage() {
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-blue-100 rounded-full">
-                  <Trophy className="w-6 h-6 text-blue-600" />
+                  <Trophy className="w-6 h-6 text-orange-600" />
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">総大会数</p>
@@ -219,13 +219,13 @@ export default function CupMatchPage() {
         {/* Tabs */}
         <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-3 bg-white/90 backdrop-blur-sm border border-gray-200">
-            <TabsTrigger value="tournaments" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white">
+            <TabsTrigger value="tournaments" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-red-500 data-[state=active]:text-white">
               大会一覧
             </TabsTrigger>
-            <TabsTrigger value="leaderboard" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white">
+            <TabsTrigger value="leaderboard" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-red-500 data-[state=active]:text-white">
               ランキング
             </TabsTrigger>
-            <TabsTrigger value="matches" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white">
+            <TabsTrigger value="matches" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-red-500 data-[state=active]:text-white">
               最近の対戦
             </TabsTrigger>
           </TabsList>
@@ -258,7 +258,7 @@ export default function CupMatchPage() {
                       <span className="text-gray-500">賞金</span>
                       <span className="font-semibold text-green-600">{match.prize}</span>
                     </div>
-                    <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-200">
+                    <Button className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-200">
                       {match.status === "active" ? "参加する" : match.status === "upcoming" ? "予約する" : "詳細を見る"}
                     </Button>
                   </CardContent>
@@ -280,7 +280,7 @@ export default function CupMatchPage() {
                 <div className="space-y-4">
                   {mockLeaderboard.map((player, index) => (
                     <div key={player.rank} className="flex items-center gap-4 p-4 rounded-lg hover:bg-gray-50 transition-colors">
-                      <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold text-lg">
+                      <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold text-lg">
                         {player.rank}
                       </div>
                       <Avatar className="w-12 h-12 ring-2 ring-gray-100">
@@ -320,7 +320,7 @@ export default function CupMatchPage() {
                       <div className="flex items-center gap-4">
                         <Avatar className="w-12 h-12 ring-2 ring-gray-100">
                           <AvatarImage src={match.player1.avatar} alt={match.player1.name} />
-                          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
+                          <AvatarFallback className="bg-gradient-to-br from-orange-500 to-red-500 text-white font-semibold">
                             {match.player1.name.split(" ").map((n: string) => n[0]).join("")}
                           </AvatarFallback>
                         </Avatar>

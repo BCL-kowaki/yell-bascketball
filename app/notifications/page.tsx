@@ -125,7 +125,7 @@ export default function NotificationsPage() {
   const unreadCount = notifications.filter((n) => !n.isRead).length
 
   const NotificationCard = ({ notification }: { notification: Notification }) => (
-    <Card className={`mb-3 ${!notification.isRead ? "bg-blue-50 border-blue-200" : ""}`}>
+    <Card className={`mb-3 ${!notification.isRead ? "bg-blue-50 border-orange-200" : ""}`}>
       <CardContent className="p-4">
         <div className="flex items-start space-x-3">
           <div className="relative">

@@ -256,7 +256,7 @@ export default function TeamsPage() {
       case "u12":
         return <Crown className="w-4 h-4 text-yellow-600" />
       case "u15":
-        return <Shield className="w-4 h-4 text-blue-600" />
+        return <Shield className="w-4 h-4 text-orange-600" />
       case "u18":
         return <Target className="w-4 h-4 text-purple-600" />
       default:
@@ -283,7 +283,7 @@ export default function TeamsPage() {
 
   return (
     <Layout isLoggedIn={true} currentUser={{ name: "ユーザー" }}>
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="max-w-7xl mx-auto pt-2 pb-20 px-2 md:px-6">
         {/* Search and Filter */}
         <div className="mb-8">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-6">
@@ -294,7 +294,7 @@ export default function TeamsPage() {
                 placeholder="チーム名、地域、リーグで検索..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border-gray-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white"
+                className="w-full pl-10 pr-4 py-2 border-gray-200 rounded-lg focus:ring-orange-500 focus:border-blue-500 bg-white"
               />
             </div>
             <div className="flex items-center gap-4">
@@ -302,7 +302,7 @@ export default function TeamsPage() {
                 <Filter className="w-4 h-4 text-gray-500" />
                 <span className="text-sm text-gray-600">カテゴリー</span>
               </div>
-              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+              <Button className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
                 <Plus className="w-4 h-4 mr-2" />
                 チーム作成
               </Button>
@@ -384,7 +384,7 @@ export default function TeamsPage() {
                   <div className="absolute bottom-4 left-4">
                     <Avatar className="w-12 h-12 border-2 border-white">
                       <AvatarImage src={team.logo} />
-                      <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold">
+                      <AvatarFallback className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold">
                         {team.shortName.slice(0, 2)}
                       </AvatarFallback>
                     </Avatar>
@@ -393,7 +393,7 @@ export default function TeamsPage() {
                 
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                    <CardTitle className="text-lg font-bold text-gray-900 group-hover:text-orange-600 transition-colors">
                       {team.name}
                     </CardTitle>
                     <ChevronRight className="w-5 h-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
@@ -417,7 +417,7 @@ export default function TeamsPage() {
                     <Button
                       size="sm"
                       variant={team.isFollowing ? "outline" : "default"}
-                      className={team.isFollowing ? "" : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"}
+                      className={team.isFollowing ? "" : "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"}
                       onClick={(e) => {
                         e.preventDefault()
                         // Handle follow/unfollow

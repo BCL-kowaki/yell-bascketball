@@ -34,7 +34,7 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser }: HeaderNavi
         {/* Left side - Logo and Search */}
         <div className="flex items-center gap-6 flex-1">
           {/* Logo */}
-          <Link href="/timeline" className="font-serif text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <Link href="/" className="font-serif text-2xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
             YeLL
           </Link>
 
@@ -47,7 +47,7 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser }: HeaderNavi
                 placeholder="検索..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-gray-50 border-gray-200 rounded-full focus:bg-white focus:border-blue-500 focus:ring-blue-500"
+                className="pl-10 pr-4 py-2 bg-gray-50 border-gray-200 rounded-full focus:bg-white focus:border-blue-500 focus:ring-orange-500"
               />
             </div>
           </form>
@@ -66,7 +66,7 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser }: HeaderNavi
                     variant="ghost"
                     className={`px-3 py-2 rounded-lg transition-colors ${
                       isActive("/settings")
-                        ? "text-blue-600 bg-blue-50 font-semibold"
+                        ? "text-orange-600 bg-blue-50 font-semibold"
                         : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                     }`}
                   >
@@ -76,7 +76,7 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser }: HeaderNavi
 
                 {/* User Profile */}
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                  <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
                     {currentUser?.name?.charAt(0) || 'U'}
                   </div>
                 </div>
@@ -90,7 +90,7 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser }: HeaderNavi
                   </Button>
                 </Link>
                 <Link href="/register">
-                  <Button className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200">
+                  <Button className="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200">
                     新規登録
                   </Button>
                 </Link>
