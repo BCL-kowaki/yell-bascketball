@@ -5,15 +5,17 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Camera, MapPin, Calendar, Users, Heart, MessageCircle, Share2 } from "lucide-react"
+import { Camera, MapPin, Calendar, Users, Heart, MessageCircle, Share2, Shield, Trophy } from "lucide-react"
 import Link from "next/link"
 import { Layout } from "@/components/layout"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 
 // Mock user data
 const mockUser = {
   id: 1,
   name: "田中 太郎",
-  email: "tanaka@example.com",
+  email: "user1@example.com",
   bio: "東京のバスケットボールチームに所属",
   location: "東京, 日本",
   joinDate: "2023年1月",
@@ -23,6 +25,14 @@ const mockUser = {
   avatar: "/placeholder.svg?height=120&width=120",
   coverImage: "/placeholder.svg?height=300&width=800",
 }
+
+// Mock data for involved teams and tournaments
+const mockInvolvedTournaments = [
+  { id: "tokyo-spring-championship", name: "東京春季バスケットボール選手権", image: "/placeholder.svg?height=40&width=40&text=春" },
+]
+const mockInvolvedTeams = [
+  { id: "albirex-tokyo", name: "アルバルク東京", logo: "/placeholder.svg?height=40&width=40&text=東" },
+]
 
 // Mock posts data
 const mockPosts = [
@@ -53,6 +63,7 @@ const mockPosts = [
 
 export default function ProfilePage() {
   const [isFollowing, setIsFollowing] = useState(false)
+  const [showInvolvement, setShowInvolvement] = useState(true)
 
   return (
     <Layout isLoggedIn={true} currentUser={{ name: "田中 太郎" }}>
@@ -200,6 +211,67 @@ export default function ProfilePage() {
                       <Badge variant="secondary">プログラミング</Badge>
                       <Badge variant="secondary">読書</Badge>
                     </div>
+                  </div>
+
+                  <div className="border-t pt-4 mt-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-medium">関わっている大会・チーム</h4>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="show-involvement"
+                          checked={showInvolvement}
+                          onCheckedChange={setShowInvolvement}
+                        />
+                        <Label htmlFor="show-involvement" className="text-sm text-muted-foreground">
+                          {showInvolvement ? "公開" : "非公開"}
+                        </Label>
+                      </div>
+                    </div>
+
+                    {showInvolvement && (
+                      <div className="space-y-4">
+                        <div>
+                          <h5 className="font-semibold text-sm mb-2 text-muted-foreground">大会</h5>
+                          {mockInvolvedTournaments.length > 0 ? (
+                            <div className="space-y-2">
+                              {mockInvolvedTournaments.map(t => (
+                                <Link href={`/tournaments/kanto/tokyo/${t.id}`} key={t.id}>
+                                  <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50">
+                                    <Avatar className="w-8 h-8 rounded-md">
+                                      <AvatarImage src={t.image} />
+                                      <AvatarFallback className="rounded-md"><Trophy className="w-4 h-4" /></AvatarFallback>
+                                    </Avatar>
+                                    <span className="font-medium text-sm">{t.name}</span>
+                                  </div>
+                                </Link>
+                              ))}
+                            </div>
+                          ) : (
+                             <p className="text-sm text-muted-foreground">関わっている大会はありません。</p>
+                          )}
+                        </div>
+                         <div>
+                          <h5 className="font-semibold text-sm mb-2 text-muted-foreground">チーム</h5>
+                          {mockInvolvedTeams.length > 0 ? (
+                             <div className="space-y-2">
+                              {mockInvolvedTeams.map(t => (
+                                <Link href={`/teams/${t.id}`} key={t.id}>
+                                  <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50">
+                                     <Avatar className="w-8 h-8">
+                                      <AvatarImage src={t.logo} />
+                                      <AvatarFallback><Shield className="w-4 h-4" /></AvatarFallback>
+                                    </Avatar>
+                                    <span className="font-medium text-sm">{t.name}</span>
+                                  </div>
+                                </Link>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">関わっているチームはありません。</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

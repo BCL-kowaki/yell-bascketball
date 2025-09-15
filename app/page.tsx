@@ -1,13 +1,74 @@
 "use client"
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Textarea, Input } from "@/components/ui/textarea"
-import { Heart, MessageCircle, Share2, ImageIcon, Smile, MapPin, MoreHorizontal, Send, Instagram } from "lucide-react"
-import Link from "next/link"
-import { Navigation } from "@/components/navigation"
+import { Heart, MessageCircle, Share2, ImageIcon, MapPin, MoreHorizontal, Send, FileText, Search, X, Loader2 } from "lucide-react"
 import { Layout } from "@/components/layout"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Input as DialogInput } from "@/components/ui/input"
+import { useToast } from "@/hooks/use-toast"
+
+type Place = {
+  id: string
+  name: string
+  address: string
+}
+
+type LinkPreviewData = {
+  url: string
+  title: string
+  description: string
+  image: string
+}
+
+type Reply = {
+  id: number
+  user: {
+    id: number
+    name: string
+    avatar: string
+  }
+  content: string
+  timestamp: string
+  likes: number
+  liked: boolean
+}
+
+type Comment = {
+  id: number
+  user: {
+    id: number
+    name: string
+    avatar: string
+  }
+  content: string
+  timestamp: string
+  likes: number
+  liked: boolean
+  replies: Reply[]
+}
+
+type Post = {
+  id: number
+  user: {
+    id: number
+    name: string
+    avatar: string
+  }
+  content: string
+  image?: string
+  pdfName?: string
+  pdfUrl?: string
+  location?: Place
+  linkPreview?: LinkPreviewData
+  likes: number
+  comments: number
+  shares: number
+  timestamp: string
+  liked: boolean
+}
 
 // Mock users data
 const mockUsers = [
@@ -44,7 +105,7 @@ const mockUsers = [
 ]
 
 // Mock comments data structure
-const mockComments: { [key: number]: any[] } = {
+const mockComments: { [key: number]: Comment[] } = {
   1: [
     {
       id: 1,
@@ -53,6 +114,24 @@ const mockComments: { [key: number]: any[] } = {
       timestamp: "25分前",
       likes: 3,
       liked: false,
+      replies: [
+        {
+          id: 101,
+          user: mockUsers[1],
+          content: "ありがとうございます！これは渋谷の「STREAMER COFFEE COMPANY」ですよ！",
+          timestamp: "15分前",
+          likes: 2,
+          liked: false,
+        },
+        {
+          id: 102,
+          user: mockUsers[2],
+          content: "そうなんですね！今度行ってみます！",
+          timestamp: "10分前",
+          likes: 1,
+          liked: true,
+        },
+      ],
     },
     {
       id: 2,
@@ -61,6 +140,7 @@ const mockComments: { [key: number]: any[] } = {
       timestamp: "20分前",
       likes: 1,
       liked: true,
+      replies: [],
     },
   ],
   2: [
@@ -71,6 +151,7 @@ const mockComments: { [key: number]: any[] } = {
       timestamp: "1時間前",
       likes: 2,
       liked: false,
+      replies: [],
     },
   ],
   3: [
@@ -81,6 +162,7 @@ const mockComments: { [key: number]: any[] } = {
       timestamp: "4時間前",
       likes: 5,
       liked: true,
+      replies: [],
     },
     {
       id: 5,
@@ -89,6 +171,7 @@ const mockComments: { [key: number]: any[] } = {
       timestamp: "3時間前",
       likes: 2,
       liked: false,
+      replies: [],
     },
   ],
   4: [
@@ -99,6 +182,7 @@ const mockComments: { [key: number]: any[] } = {
       timestamp: "15分前",
       likes: 1,
       liked: false,
+      replies: [],
     },
   ],
   5: [
@@ -109,6 +193,7 @@ const mockComments: { [key: number]: any[] } = {
       timestamp: "30分前",
       likes: 3,
       liked: true,
+      replies: [],
     },
   ],
   6: [
@@ -119,12 +204,13 @@ const mockComments: { [key: number]: any[] } = {
       timestamp: "1時間前",
       likes: 2,
       liked: false,
+      replies: [],
     },
   ],
 }
 
 // Mock timeline posts
-const mockTimelinePosts = [
+const mockTimelinePosts: Post[] = [
   {
     id: 1,
     user: mockUsers[1],
@@ -232,12 +318,57 @@ const mockTimelinePosts = [
   },
 ]
 
+// Mock location data
+const mockPlaces: Place[] = [
+  { id: "1", name: "東京タワー", address: "東京都港区芝公園４丁目２−８" },
+  { id: "2", name: "東京スカイツリー", address: "東京都墨田区押上１丁目１−２" },
+  { id: "3", name: "渋谷スクランブル交差点", address: "東京都渋谷区道玄坂２丁目２" },
+  { id: "4", name: "新宿御苑", address: "東京都新宿区内藤町１１" },
+  { id: "5", name: "浅草寺", address: "東京都台東区浅草２丁目３−１" },
+  { id: "6", name: "東京駅", address: "東京都千代田区丸の内１丁目" },
+  { id: "7", name: "皇居", address: "東京都千代田区千代田１−１" },
+]
+
+// Mock Link Preview Data
+const mockLinkPreviews: { [key: string]: LinkPreviewData } = {
+  "https://www.yell-com.com": {
+    url: "https://www.yell-com.com",
+    title: "Yell-Com",
+    description: "スポーツで繋がる新しいコミュニケーションの場",
+    image: "/placeholder.svg?height=200&width=400&text=Yell-Com",
+  },
+  "https://bleague.jp": {
+    url: "https://bleague.jp",
+    title: "B.LEAGUE（Bリーグ）公式サイト",
+    description: "日本のプロバスケットボールリーグ「B.LEAGUE」の公式サイトです。",
+    image: "/placeholder.svg?height=200&width=400&text=B.LEAGUE",
+  },
+}
+
+
 export default function TimelinePage() {
-  const [posts, setPosts] = useState(mockTimelinePosts)
+  const [posts, setPosts] = useState<Post[]>(mockTimelinePosts)
   const [newPost, setNewPost] = useState("")
+  const [selectedPdf, setSelectedPdf] = useState<File | null>(null)
+  const [pdfPreview, setPdfPreview] = useState<string | null>(null)
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null)
+  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false)
+  const [locationSearch, setLocationSearch] = useState("")
+  const [locationResults, setLocationResults] = useState<Place[]>([])
+  const [linkPreview, setLinkPreview] = useState<LinkPreviewData | null>(null)
+  const [isFetchingPreview, setIsFetchingPreview] = useState(false)
+
+  const [locationError, setLocationError] = useState<string | null>(null)
+  const pdfInputRef = useRef<HTMLInputElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
   const [comments, setComments] = useState(mockComments)
   const [showComments, setShowComments] = useState<{ [key: number]: boolean }>({})
   const [newComment, setNewComment] = useState<{ [key: number]: string }>({})
+  const [replyingTo, setReplyingTo] = useState<{ postId: number; commentId: number } | null>(null)
+  const [replyContent, setReplyContent] = useState("")
+  const { toast } = useToast()
 
   const handleLike = (postId: number) => {
     setPosts(
@@ -253,20 +384,35 @@ export default function TimelinePage() {
     )
   }
 
-  const handleCommentLike = (postId: number, commentId: number) => {
-    setComments((prevComments) => ({
-      ...prevComments,
-      [postId]:
-        prevComments[postId]?.map((comment) =>
-          comment.id === commentId
-            ? {
-                ...comment,
-                liked: !comment.liked,
-                likes: comment.liked ? comment.likes - 1 : comment.likes + 1,
-              }
-            : comment,
-        ) || [],
-    }))
+  const handleCommentLike = (postId: number, commentId: number, replyId?: number) => {
+    setComments((prevComments) => {
+      const updatedCommentsForPost = prevComments[postId]?.map((comment) => {
+        if (comment.id === commentId) {
+          if (replyId) {
+            // Like a reply
+            const updatedReplies = comment.replies.map((reply) =>
+              reply.id === replyId
+                ? { ...reply, liked: !reply.liked, likes: reply.liked ? reply.likes - 1 : reply.likes + 1 }
+                : reply
+            );
+            return { ...comment, replies: updatedReplies };
+          } else {
+            // Like a comment
+            return {
+              ...comment,
+              liked: !comment.liked,
+              likes: comment.liked ? comment.likes - 1 : comment.likes + 1,
+            };
+          }
+        }
+        return comment;
+      });
+
+      return {
+        ...prevComments,
+        [postId]: updatedCommentsForPost || [],
+      };
+    });
   }
 
   const toggleComments = (postId: number) => {
@@ -279,13 +425,14 @@ export default function TimelinePage() {
   const handleSubmitComment = (postId: number) => {
     const commentText = newComment[postId]?.trim()
     if (commentText) {
-      const newCommentObj = {
+      const newCommentObj: Comment = {
         id: Date.now(),
         user: mockUsers[0],
         content: commentText,
         timestamp: "今",
         likes: 0,
         liked: false,
+        replies: [],
       }
 
       setComments((prevComments) => ({
@@ -311,9 +458,157 @@ export default function TimelinePage() {
     }
   }
 
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0]
+      setSelectedImage(file)
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handlePdfSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0]
+      setSelectedPdf(file)
+      if (pdfPreview) {
+        URL.revokeObjectURL(pdfPreview)
+      }
+      setPdfPreview(URL.createObjectURL(file))
+    }
+  }
+
+  const handleSubmitReply = (postId: number, commentId: number) => {
+    if (replyContent.trim()) {
+      const newReplyObj: Reply = {
+        id: Date.now(),
+        user: mockUsers[0],
+        content: replyContent,
+        timestamp: "今",
+        likes: 0,
+        liked: false,
+      };
+
+      setComments((prevComments) => ({
+        ...prevComments,
+        [postId]: prevComments[postId].map((comment) =>
+          comment.id === commentId
+            ? { ...comment, replies: [...comment.replies, newReplyObj] }
+            : comment
+        ),
+      }));
+
+      setReplyContent("");
+      setReplyingTo(null);
+    }
+  };
+
+  const fetchLinkPreview = async (url: string) => {
+    if (isFetchingPreview) return
+    setIsFetchingPreview(true)
+
+    // Simulate API call delay
+    await new Promise((resolve) => setTimeout(resolve, 800))
+
+    const matchedDomain = Object.keys(mockLinkPreviews).find((domain) => url.includes(domain))
+    if (matchedDomain) {
+      setLinkPreview(mockLinkPreviews[matchedDomain])
+    } else {
+      // Generic preview for any other link
+      setLinkPreview({
+        url,
+        title: "プレビューを取得できませんでした",
+        description: "指定されたURLのプレビューは表示できません。",
+        image: "/placeholder.svg?height=200&width=400&text=No+Preview",
+      })
+    }
+    setIsFetchingPreview(false)
+  }
+
+  const handleShare = (postId: number) => {
+    const postUrl = `${window.location.origin}#post-${postId}`
+    navigator.clipboard.writeText(postUrl).then(() => {
+      toast({
+        title: "リンクをコピーしました",
+        description: "投稿へのリンクがクリップボードにコピーされました。",
+      })
+    }).catch(err => {
+      console.error("リンクのコピーに失敗しました:", err)
+      toast({
+        title: "コピーに失敗しました",
+        variant: "destructive",
+      })
+    })
+  }
+
+  useEffect(() => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g
+    const urls = newPost.match(urlRegex)
+
+    if (urls && urls[0]) {
+      if (linkPreview?.url !== urls[0]) {
+        fetchLinkPreview(urls[0])
+      }
+    } else {
+      setLinkPreview(null)
+    }
+  }, [newPost])
+
+  useEffect(() => {
+    if (locationSearch.trim() === "") {
+      setLocationResults([])
+      return
+    }
+
+    const results = mockPlaces.filter((place) =>
+      place.name.toLowerCase().includes(locationSearch.toLowerCase()) ||
+      place.address.toLowerCase().includes(locationSearch.toLowerCase())
+    )
+    setLocationResults(results)
+  }, [locationSearch])
+
+  const handlePdfButtonClick = () => {
+    pdfInputRef.current?.click()
+  }
+
+  const handleImageButtonClick = () => {
+    imageInputRef.current?.click()
+  }
+
+  const handleLocationButtonClick = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocationError(null)
+        },
+        (error) => {
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              setLocationError("位置情報の取得が拒否されました。")
+              break
+            case error.POSITION_UNAVAILABLE:
+              setLocationError("位置情報が利用できません。")
+              break
+            case error.TIMEOUT:
+              setLocationError("位置情報の取得がタイムアウトしました。")
+              break
+            default:
+              setLocationError("位置情報の取得中にエラーが発生しました。")
+              break
+          }
+        },
+      )
+    } else {
+      setLocationError("お使いのブラウザは位置情報取得に対応していません。")
+    }
+  }
+
   const handleSubmitPost = () => {
-    if (newPost.trim()) {
-      const newPostObj = {
+    if (newPost.trim() || selectedPdf || selectedImage || selectedPlace) {
+      const newPostObj: Post = {
         id: posts.length + 1,
         user: mockUsers[0],
         content: newPost,
@@ -323,8 +618,28 @@ export default function TimelinePage() {
         timestamp: "今",
         liked: false,
       }
+      if (selectedPdf && pdfPreview) {
+        newPostObj.pdfName = selectedPdf.name
+        newPostObj.pdfUrl = pdfPreview
+      }
+      if (imagePreview) {
+        newPostObj.image = imagePreview
+      }
+      if (selectedPlace) {
+        newPostObj.location = selectedPlace
+      }
+      if (linkPreview) {
+        newPostObj.linkPreview = linkPreview
+      }
       setPosts([newPostObj, ...posts])
       setNewPost("")
+      setSelectedPdf(null)
+      setPdfPreview(null)
+      setSelectedImage(null)
+      setImagePreview(null)
+      setSelectedPlace(null)
+      setLinkPreview(null)
+      setLocationError(null)
     }
   }
 
@@ -357,22 +672,161 @@ export default function TimelinePage() {
           <CardContent>
             <div className="flex items-center justify-between pt-4 border-t border-gray-100">
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-full">
-                  <ImageIcon className="w-5 h-5 mr-2" />
-                  写真
+                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-full" onClick={handleImageButtonClick}>
+                  <ImageIcon className="w-5 h-5 md:mr-2" />
+                  <span className="hidden md:inline">写真</span>
                 </Button>
-                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-full">
-                  <MapPin className="w-5 h-5 mr-2" />
-                  場所
+                <input
+                  type="file"
+                  ref={imageInputRef}
+                  onChange={handleImageSelect}
+                  accept="image/*"
+                  style={{ display: "none" }}
+                />
+                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-full" onClick={handlePdfButtonClick}>
+                  <FileText className="w-5 h-5 md:mr-2" />
+                  <span className="hidden md:inline">PDF</span>
                 </Button>
+                <input
+                  type="file"
+                  ref={pdfInputRef}
+                  onChange={handlePdfSelect}
+                  accept=".pdf"
+                  style={{ display: "none" }}
+                />
+
+                <Dialog open={isLocationDialogOpen} onOpenChange={setIsLocationDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-full">
+                      <MapPin className="w-5 h-5 md:mr-2" />
+                      <span className="hidden md:inline">場所</span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>場所を検索</DialogTitle>
+                    </DialogHeader>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <DialogInput 
+                        placeholder="場所を検索..." 
+                        value={locationSearch}
+                        onChange={(e) => setLocationSearch(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {locationResults.map((place) => (
+                        <div 
+                          key={place.id} 
+                          className="p-2 hover:bg-gray-100 rounded-md cursor-pointer"
+                          onClick={() => {
+                            setSelectedPlace(place)
+                            setIsLocationDialogOpen(false)
+                            setLocationSearch("")
+                          }}
+                        >
+                          <div className="font-semibold">{place.name}</div>
+                          <div className="text-sm text-gray-500">{place.address}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
               </div>
               <Button 
                 onClick={handleSubmitPost} 
-                disabled={!newPost.trim()} 
+                disabled={!newPost.trim() && !selectedPdf && !selectedImage && !selectedPlace} 
                 className="px-8 py-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
               >
                 投稿
               </Button>
+            </div>
+            <div className="pt-4 space-y-2">
+              {isFetchingPreview && (
+                <div className="flex items-center gap-2 text-gray-500 text-sm p-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>プレビューを読み込んでいます...</span>
+                </div>
+              )}
+              {linkPreview && !isFetchingPreview && (
+                <div className="relative border rounded-lg overflow-hidden">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute top-2 right-2 h-6 w-6 p-0 rounded-full bg-black/50 text-white hover:bg-black/70 hover:text-white z-10"
+                    onClick={() => setLinkPreview(null)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                  <a href={linkPreview.url} target="_blank" rel="noopener noreferrer" className="block hover:bg-gray-50 transition-colors">
+                    <img src={linkPreview.image} alt={linkPreview.title} className="w-full h-32 object-cover" />
+                    <div className="p-3">
+                      <div className="font-semibold text-sm text-gray-800 truncate">{linkPreview.title}</div>
+                      <div className="text-xs text-gray-500 line-clamp-2">{linkPreview.description}</div>
+                    </div>
+                  </a>
+                </div>
+              )}
+              {imagePreview && (
+                <div className="relative">
+                  <img src={imagePreview} alt="Selected preview" className="rounded-lg max-h-40 w-auto" />
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="absolute top-2 right-2 rounded-full h-6 w-6 p-0"
+                    onClick={() => {
+                      setSelectedImage(null)
+                      setImagePreview(null)
+                      if (imageInputRef.current) {
+                        imageInputRef.current.value = ""
+                      }
+                    }}
+                  >
+                    X
+                  </Button>
+                </div>
+              )}
+              {selectedPlace && (
+                <div className="relative text-sm text-green-600 p-2 border border-green-200 bg-green-50 rounded-lg flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4" />
+                    <span>{selectedPlace.name}</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 rounded-full hover:bg-green-100"
+                    onClick={() => setSelectedPlace(null)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+              {selectedPdf && (
+                <div className="relative text-sm text-gray-500 p-2 border rounded-lg flex items-center justify-between">
+                  <span>選択中のPDF: {selectedPdf.name}</span>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="rounded-full h-6 w-6 p-0"
+                    onClick={() => {
+                      setSelectedPdf(null)
+                      if (pdfPreview) {
+                        URL.revokeObjectURL(pdfPreview)
+                        setPdfPreview(null)
+                      }
+                      if (pdfInputRef.current) {
+                        pdfInputRef.current.value = ""
+                      }
+                    }}
+                  >
+                    X
+                  </Button>
+                </div>
+              )}
+              {locationError && <div className="text-sm text-red-500">{locationError}</div>}
             </div>
           </CardContent>
         </Card>
@@ -404,6 +858,50 @@ export default function TimelinePage() {
             </CardHeader>
             <CardContent className="px-6 pb-4">
               <p className="mb-6 text-gray-800 leading-relaxed">{post.content}</p>
+              
+              {post.linkPreview && (
+                <div className="mb-4 border rounded-lg overflow-hidden">
+                   <a href={post.linkPreview.url} target="_blank" rel="noopener noreferrer" className="block hover:bg-gray-50 transition-colors">
+                    <img src={post.linkPreview.image} alt={post.linkPreview.title} className="w-full h-48 object-cover" />
+                    <div className="p-4">
+                      <div className="font-semibold text-gray-800 truncate">{post.linkPreview.title}</div>
+                      <div className="text-sm text-gray-500 line-clamp-2">{post.linkPreview.description}</div>
+                    </div>
+                  </a>
+                </div>
+              )}
+
+              {post.location && (
+                <div className="mb-4 text-sm text-gray-500 flex items-center gap-2 p-3 rounded-lg bg-gray-50 border">
+                  <MapPin className="w-5 h-5 text-orange-500" />
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-gray-800">{post.location.name}</span>
+                    <span className="text-xs">{post.location.address}</span>
+                  </div>
+                </div>
+              )}
+
+              {post.pdfUrl && (
+                <div className="mb-6">
+                  <div className="p-4 rounded-t-lg border border-b-0 border-gray-200 bg-gray-50 flex items-center gap-4">
+                    <FileText className="w-8 h-8 text-red-500" />
+                    <a
+                      href={post.pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline font-medium"
+                    >
+                      {post.pdfName}
+                    </a>
+                  </div>
+                  <iframe
+                    src={post.pdfUrl}
+                    width="100%"
+                    height="500px"
+                    className="rounded-b-lg border border-gray-200"
+                  ></iframe>
+                </div>
+              )}
 
               {post.image && (
                 <div className="mb-6 rounded-lg overflow-hidden border border-gray-100">
@@ -460,6 +958,7 @@ export default function TimelinePage() {
                   variant="ghost" 
                   size="sm" 
                   className="flex-1 rounded-full py-3 text-gray-600 hover:text-green-600 hover:bg-green-50"
+                  onClick={() => handleShare(post.id)}
                 >
                   <Share2 className="w-5 h-5 mr-2" />
                   <span className="font-medium">シェア</span>
@@ -535,9 +1034,86 @@ export default function TimelinePage() {
                               <Heart className={`w-3 h-3 ${comment.liked ? "fill-current" : ""}`} />
                               {comment.likes > 0 && <span className="font-medium">{comment.likes}</span>}
                             </button>
-                            <span className="hover:text-orange-600 cursor-pointer font-medium">返信</span>
+                            <button
+                              onClick={() => {
+                                if (replyingTo?.commentId === comment.id) {
+                                  setReplyingTo(null)
+                                } else {
+                                  setReplyingTo({ postId: post.id, commentId: comment.id })
+                                }
+                              }}
+                              className="hover:text-orange-600 cursor-pointer font-medium"
+                            >
+                              返信
+                            </button>
                             <span className="font-medium">{comment.timestamp}</span>
                           </div>
+
+                          {/* Replies */}
+                          <div className="mt-4 pl-8 space-y-4 border-l-2 border-gray-100">
+                            {comment.replies.map((reply) => (
+                              <div key={reply.id} className="flex items-start gap-3">
+                                <Avatar className="w-8 h-8">
+                                  <AvatarImage src={reply.user.avatar || "/placeholder.svg"} alt={reply.user.name} />
+                                  <AvatarFallback className="text-xs">
+                                    {reply.user.name.split(" ").map((n: string) => n[0]).join("")}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1">
+                                  <div className="bg-white rounded-xl px-3 py-2 shadow-sm border">
+                                    <div className="font-semibold text-xs mb-1 text-gray-800">{reply.user.name}</div>
+                                    <p className="text-xs text-gray-600">{reply.content}</p>
+                                  </div>
+                                  <div className="flex items-center gap-4 mt-1 text-xs text-gray-400">
+                                    <button
+                                      onClick={() => handleCommentLike(post.id, comment.id, reply.id)}
+                                      className={`flex items-center gap-1 hover:text-red-500 transition-colors ${
+                                        reply.liked ? "text-red-500" : ""
+                                      }`}
+                                    >
+                                      <Heart className={`w-3 h-3 ${reply.liked ? "fill-current" : ""}`} />
+                                      {reply.likes > 0 && <span className="font-medium text-xs">{reply.likes}</span>}
+                                    </button>
+                                    <span className="font-medium">{reply.timestamp}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Reply Input */}
+                          {replyingTo?.postId === post.id && replyingTo?.commentId === comment.id && (
+                            <div className="flex items-center gap-2 mt-4 pl-8">
+                              <Avatar className="w-8 h-8">
+                                <AvatarImage src={mockUsers[0].avatar || "/placeholder.svg"} alt={mockUsers[0].name} />
+                                <AvatarFallback className="text-xs">
+                                  {mockUsers[0].name.split(" ").map((n: string) => n[0]).join("")}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 flex items-center gap-2">
+                                <Input
+                                  placeholder={`${comment.user.name}に返信...`}
+                                  value={replyContent}
+                                  onChange={(e) => setReplyContent(e.target.value)}
+                                  className="flex-1 rounded-full text-sm"
+                                  onKeyPress={(e) => {
+                                    if (e.key === "Enter") {
+                                      handleSubmitReply(post.id, comment.id)
+                                    }
+                                  }}
+                                />
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSubmitReply(post.id, comment.id)}
+                                  disabled={!replyContent.trim()}
+                                  className="rounded-full bg-gradient-to-r from-orange-500 to-red-500 text-white"
+                                >
+                                  <Send className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+
                         </div>
                       </div>
                     ))}

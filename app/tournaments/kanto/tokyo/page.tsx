@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   Filter,
   Search,
+  PlusCircle,
 } from "lucide-react"
 import { Layout } from "@/components/layout"
 
@@ -25,6 +26,7 @@ const tokyoTournaments = [
     level: "U12",
     image: "/placeholder.svg?height=200&width=400&text=春季選手権",
     featured: true,
+    status: "approved",
   },
   {
     id: "shibuya-street-ball",
@@ -35,6 +37,7 @@ const tokyoTournaments = [
     level: "U12",
     image: "/placeholder.svg?height=200&width=400&text=ストリートボール",
     featured: true,
+    status: "approved",
   },
   {
     id: "tokyo-women-league",
@@ -45,6 +48,7 @@ const tokyoTournaments = [
     level: "U12",
     image: "/placeholder.svg?height=200&width=400&text=女子リーグ",
     featured: false,
+    status: "approved",
   },
   {
     id: "junior-development-cup",
@@ -55,6 +59,7 @@ const tokyoTournaments = [
     level: "U12",
     image: "/placeholder.svg?height=200&width=400&text=ジュニア育成",
     featured: false,
+    status: "approved",
   },
   {
     id: "veteran-masters-tournament",
@@ -65,6 +70,8 @@ const tokyoTournaments = [
     level: "U12",
     image: "/placeholder.svg?height=200&width=400&text=ベテラン大会",
     featured: false,
+    status: "approved",
+    editors: ["user@example.com"],
   },
   {
     id: "corporate-league",
@@ -75,6 +82,19 @@ const tokyoTournaments = [
     level: "U12",
     image: "/placeholder.svg?height=200&width=400&text=ベテラン大会",
     featured: false,
+    status: "approved",
+  },
+  {
+    id: "pending-tournament-example",
+    title: "（承認待ち）未来のスター発掘トーナメント",
+    organizer: "Yellジュニア委員会",
+    startDate: "2024-09-01",
+    endDate: "2024-09-02",
+    level: "U12",
+    image: "/placeholder.svg?height=200&width=400&text=承認待ち",
+    featured: false,
+    status: "pending_approval",
+    editors: ["creator@example.com"],
   }
 ]
 
@@ -93,8 +113,10 @@ export default function TokyoTournamentsPage() {
   }
 
   const filteredTournaments = tokyoTournaments.filter(tournament => {
-    const matchesSearch = tournament.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         tournament.organizer.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesStatus = tournament.status === "approved"
+    const matchesSearch = (tournament.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         tournament.organizer.toLowerCase().includes(searchTerm.toLowerCase())) &&
+                         matchesStatus
     
     if (selectedTab === "all") return matchesSearch
     if (selectedTab === "featured") return matchesSearch && tournament.featured
@@ -117,6 +139,16 @@ export default function TokyoTournamentsPage() {
           <span className="text-red-600 font-medium">東京都</span>
         </div>
         {/* Header */}
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-800">東京都の大会</h1>
+          <Link href="/tournaments/create" target="_blank" rel="noopener noreferrer">
+            <Button className="bg-gradient-to-r from-red-600 to-orange-500 text-white">
+              <PlusCircle className="w-4 h-4 mr-2" />
+              大会を作成
+            </Button>
+          </Link>
+        </div>
+
         {/* Statistics */}
         {/* Search and Filter */}
         <div className="mb-8">

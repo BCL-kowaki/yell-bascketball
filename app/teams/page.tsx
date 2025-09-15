@@ -19,7 +19,8 @@ import {
   Shield,
   Globe,
   Lock,
-  UserPlus
+  UserPlus,
+  PlusCircle
 } from "lucide-react"
 import { Layout } from "@/components/layout"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -80,7 +81,9 @@ const mockTeams = [
     isVerified: true,
     lastActivity: "2時間前",
     category: "u12",
-    privacy: "public"
+    privacy: "public",
+    status: "approved",
+    editors: ["user@example.com"],
   },
   {
     id: "chiba-jets",
@@ -96,7 +99,9 @@ const mockTeams = [
     isVerified: true,
     lastActivity: "30分前",
     category: "u12",
-    privacy: "public"
+    privacy: "public",
+    status: "approved",
+    editors: ["user@example.com"],
   },
   {
     id: "yokohama-corsairs",
@@ -112,7 +117,9 @@ const mockTeams = [
     isVerified: true,
     lastActivity: "1時間前",
     category: "u12",
-    privacy: "public"
+    privacy: "public",
+    status: "approved",
+    editors: ["user@example.com"],
   },
   {
     id: "tokyo-university",
@@ -128,7 +135,9 @@ const mockTeams = [
     isVerified: false,
     lastActivity: "3時間前",
     category: "u15",
-    privacy: "public"
+    privacy: "public",
+    status: "approved",
+    editors: ["user@example.com"],
   },
   {
     id: "shibuya-streetball",
@@ -144,7 +153,9 @@ const mockTeams = [
     isVerified: false,
     lastActivity: "5時間前",
     category: "u18",
-    privacy: "public"
+    privacy: "public",
+    status: "approved",
+    editors: ["user@example.com"],
   },
   {
     id: "waseda-basketball",
@@ -160,7 +171,9 @@ const mockTeams = [
     isVerified: true,
     lastActivity: "1時間前",
     category: "u15",
-    privacy: "public"
+    privacy: "public",
+    status: "approved",
+    editors: ["user@example.com"],
   },
   // 大阪のチーム（近畿エリア）
   {
@@ -177,7 +190,9 @@ const mockTeams = [
     isVerified: true,
     lastActivity: "4時間前",
     category: "u12",
-    privacy: "public"
+    privacy: "public",
+    status: "approved",
+    editors: ["user@example.com"],
   },
   // 福岡のチーム（九州エリア）
   {
@@ -194,7 +209,9 @@ const mockTeams = [
     isVerified: true,
     lastActivity: "1時間前",
     category: "u12",
-    privacy: "public"
+    privacy: "public",
+    status: "approved",
+    editors: ["user@example.com"],
   },
   // 北海道のチーム
   {
@@ -211,7 +228,27 @@ const mockTeams = [
     isVerified: true,
     lastActivity: "6時間前",
     category: "u12",
-    privacy: "public"
+    privacy: "public",
+    status: "approved",
+    editors: ["user@example.com"],
+  },
+  {
+    id: "pending-team-example",
+    name: "（承認待ち）未来のスターズ",
+    shortName: "未来",
+    logo: "/placeholder.svg?height=80&width=80&text=未",
+    coverImage: "/placeholder.svg?height=200&width=400&text=承認待ちチーム",
+    location: "東京都",
+    area: "kanto",
+    prefecture: "東京都",
+    league: "U12",
+    isFollowing: false,
+    isVerified: false,
+    lastActivity: "N/A",
+    category: "u12",
+    privacy: "private",
+    status: "pending_approval",
+    editors: ["creator@example.com"],
   }
 ]
 
@@ -240,9 +277,11 @@ export default function TeamsPage() {
   }
 
   const filteredTeams = mockTeams.filter(team => {
-    const matchesSearch = team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesStatus = team.status === "approved"
+    const matchesSearch = (team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          team.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         team.league.toLowerCase().includes(searchTerm.toLowerCase())
+                         team.league.toLowerCase().includes(searchTerm.toLowerCase())) &&
+                         matchesStatus
     
     const matchesCategory = selectedCategory === "all" || team.category === selectedCategory
     const matchesArea = selectedArea === "all" || team.area === selectedArea
@@ -284,7 +323,20 @@ export default function TeamsPage() {
   return (
     <Layout isLoggedIn={true} currentUser={{ name: "ユーザー" }}>
       <div className="max-w-7xl mx-auto pt-2 pb-20 px-2 md:px-6">
-        {/* Search and Filter */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold text-gray-800">チームを探す</h1>
+            <p className="text-gray-500">あなたの地域やお気に入りのチームを見つけよう</p>
+          </div>
+          <Link href="/teams/create" target="_blank" rel="noopener noreferrer">
+            <Button className="bg-gradient-to-r from-orange-500 to-red-500 text-white">
+              <PlusCircle className="w-4 h-4 mr-2" />
+              新規チーム作成
+            </Button>
+          </Link>
+        </div>
+
+        {/* Search and Filters */}
         <div className="mb-8">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-6">
             <div className="relative w-full md:flex-1 md:max-w-md">
@@ -302,10 +354,7 @@ export default function TeamsPage() {
                 <Filter className="w-4 h-4 text-gray-500" />
                 <span className="text-sm text-gray-600">カテゴリー</span>
               </div>
-              <Button className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
-                <Plus className="w-4 h-4 mr-2" />
-                チーム作成
-              </Button>
+              {/* The "チーム作成" button is now handled by the Link component above */}
             </div>
           </div>
 
