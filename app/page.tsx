@@ -6,6 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Textarea, Input } from "@/components/ui/textarea"
 import { Heart, MessageCircle, Share2, ImageIcon, MapPin, MoreHorizontal, Send, FileText, Search, X, Loader2 } from "lucide-react"
 import { Layout } from "@/components/layout"
+import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
+import { listPosts, createPost as createDbPost, toggleLike as toggleDbLike, addComment as addDbComment, updatePostCounts, getCurrentUserEmail } from "@/lib/api"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input as DialogInput } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
@@ -52,6 +54,7 @@ type Comment = {
 
 type Post = {
   id: number
+  dbId?: string
   user: {
     id: number
     name: string
@@ -347,6 +350,7 @@ const mockLinkPreviews: { [key: string]: LinkPreviewData } = {
 
 
 export default function TimelinePage() {
+  ensureAmplifyConfigured()
   const [posts, setPosts] = useState<Post[]>(mockTimelinePosts)
   const [newPost, setNewPost] = useState("")
   const [selectedPdf, setSelectedPdf] = useState<File | null>(null)
@@ -370,18 +374,56 @@ export default function TimelinePage() {
   const [replyContent, setReplyContent] = useState("")
   const { toast } = useToast()
 
-  const handleLike = (postId: number) => {
-    setPosts(
-      posts.map((post) =>
-        post.id === postId
-          ? {
-              ...post,
-              liked: !post.liked,
-              likes: post.liked ? post.likes - 1 : post.likes + 1,
-            }
-          : post,
-      ),
-    )
+  // 初期ロードでDBから投稿を取得
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const dbPosts = await listPosts(50)
+        const mapped: Post[] = dbPosts.map((p, idx) => ({
+          id: idx + 1, // ローカル用の連番ID
+          dbId: p.id,
+          user: mockUsers[0], // 簡易表示（将来: authorで表示）
+          content: p.content,
+          image: p.imageUrl ?? undefined,
+          pdfName: p.pdfName ?? undefined,
+          pdfUrl: p.pdfUrl ?? undefined,
+          location: p.locationName ? { id: "-", name: p.locationName, address: p.locationAddress || "" } : undefined,
+          linkPreview: p.linkUrl
+            ? {
+                url: p.linkUrl,
+                title: p.linkTitle || "",
+                description: p.linkDescription || "",
+                image: p.linkImage || "/placeholder.svg?height=200&width=400&text=Link",
+              }
+            : undefined,
+          likes: p.likesCount ?? 0,
+          comments: p.commentsCount ?? 0,
+          shares: 0,
+          timestamp: p.createdAt || "",
+          liked: false,
+        }))
+        if (mapped.length) setPosts(mapped)
+      } catch (e) {
+        console.error("Failed to load posts", e)
+      }
+    })()
+  }, [])
+
+  const handleLike = async (postId: number) => {
+    const target = posts.find(p => p.id === postId)
+    if (!target) return
+    const email = await getCurrentUserEmail()
+    if (!email || !target.dbId) {
+      // ローカルのみ反映
+      setPosts(posts.map(p => p.id === postId ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 } : p))
+      return
+    }
+    try {
+      const res = await toggleDbLike(target.dbId, email, target.likes)
+      setPosts(posts.map(p => p.id === postId ? { ...p, liked: res.liked, likes: res.likes } : p))
+    } catch (e) {
+      console.error("toggle like failed", e)
+    }
   }
 
   const handleCommentLike = (postId: number, commentId: number, replyId?: number) => {
@@ -422,7 +464,7 @@ export default function TimelinePage() {
     }))
   }
 
-  const handleSubmitComment = (postId: number) => {
+  const handleSubmitComment = async (postId: number) => {
     const commentText = newComment[postId]?.trim()
     if (commentText) {
       const newCommentObj: Comment = {
@@ -455,6 +497,18 @@ export default function TimelinePage() {
         ...prev,
         [postId]: "",
       }))
+
+      // DBへ書き込み
+      try {
+        const post = posts.find(p => p.id === postId)
+        if (post?.dbId) {
+          const email = await getCurrentUserEmail()
+          await addDbComment(post.dbId, commentText, email)
+          await updatePostCounts(post.dbId, { commentsCount: post.comments + 1 })
+        }
+      } catch (e) {
+        console.error("add comment failed", e)
+      }
     }
   }
 
@@ -606,32 +660,55 @@ export default function TimelinePage() {
     }
   }
 
-  const handleSubmitPost = () => {
+  const handleSubmitPost = async () => {
     if (newPost.trim() || selectedPdf || selectedImage || selectedPlace) {
-      const newPostObj: Post = {
-        id: posts.length + 1,
-        user: mockUsers[0],
-        content: newPost,
-        likes: 0,
-        comments: 0,
-        shares: 0,
-        timestamp: "今",
-        liked: false,
+      // まずDBへ保存
+      try {
+        const email = await getCurrentUserEmail()
+        const created = await createDbPost({
+          content: newPost,
+          imageUrl: imagePreview || null,
+          pdfUrl: pdfPreview || null,
+          pdfName: selectedPdf?.name || null,
+          locationName: selectedPlace?.name || null,
+          locationAddress: selectedPlace?.address || null,
+          linkUrl: linkPreview?.url || null,
+          linkTitle: linkPreview?.title || null,
+          linkDescription: linkPreview?.description || null,
+          linkImage: linkPreview?.image || null,
+          likesCount: 0,
+          commentsCount: 0,
+          authorEmail: email,
+        })
+
+        const newPostObj: Post = {
+          id: Date.now(),
+          dbId: created.id,
+          user: mockUsers[0],
+          content: newPost,
+          likes: 0,
+          comments: 0,
+          shares: 0,
+          timestamp: "今",
+          liked: false,
+        }
+        if (selectedPdf && pdfPreview) {
+          newPostObj.pdfName = selectedPdf.name
+          newPostObj.pdfUrl = pdfPreview
+        }
+        if (imagePreview) {
+          newPostObj.image = imagePreview
+        }
+        if (selectedPlace) {
+          newPostObj.location = selectedPlace
+        }
+        if (linkPreview) {
+          newPostObj.linkPreview = linkPreview
+        }
+        setPosts([newPostObj, ...posts])
+      } catch (e) {
+        console.error("create post failed", e)
       }
-      if (selectedPdf && pdfPreview) {
-        newPostObj.pdfName = selectedPdf.name
-        newPostObj.pdfUrl = pdfPreview
-      }
-      if (imagePreview) {
-        newPostObj.image = imagePreview
-      }
-      if (selectedPlace) {
-        newPostObj.location = selectedPlace
-      }
-      if (linkPreview) {
-        newPostObj.linkPreview = linkPreview
-      }
-      setPosts([newPostObj, ...posts])
       setNewPost("")
       setSelectedPdf(null)
       setPdfPreview(null)

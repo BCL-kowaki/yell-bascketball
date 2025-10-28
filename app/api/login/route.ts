@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import * as jose from 'jose'
 
 // モックユーザーデータ（実際のアプリケーションではデータベースから取得）
 const mockUsers = [
@@ -34,8 +35,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 成功レスポンス
-    return NextResponse.json(
+    // JWTの生成
+    const secret = new TextEncoder().encode(
+      process.env.JWT_SECRET || 'your-secure-jwt-secret-key-goes-here' // 後で.env.localに移動
+    )
+    const alg = 'HS256'
+
+    const jwt = await new jose.SignJWT({ 'urn:example:claim': true, sub: user.id, email: user.email })
+      .setProtectedHeader({ alg })
+      .setIssuedAt()
+      .setIssuer('urn:example:issuer')
+      .setAudience('urn:example:audience')
+      .setExpirationTime('2h')
+      .sign(secret)
+    
+    // CookieにJWTを設定
+    const response = NextResponse.json(
       { 
         message: 'ログインに成功しました',
         user: {
@@ -47,6 +62,17 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     )
+
+    response.cookies.set('accessToken', jwt, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV !== 'development',
+      sameSite: 'strict',
+      maxAge: 60 * 60 * 2, // 2 hours
+      path: '/',
+    })
+
+    // 成功レスポンス
+    return response
 
   } catch (error) {
     console.error('ログインエラー:', error)

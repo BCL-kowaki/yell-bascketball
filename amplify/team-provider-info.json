@@ -1,0 +1,23 @@
+{
+  "staging": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-yellbackend-staging-e87ca-authRole",
+      "UnauthRoleArn": "arn:aws:iam::661984796222:role/amplify-yellbackend-staging-e87ca-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::661984796222:role/amplify-yellbackend-staging-e87ca-authRole",
+      "Region": "ap-northeast-1",
+      "DeploymentBucketName": "amplify-yellbackend-staging-e87ca-deployment",
+      "UnauthRoleName": "amplify-yellbackend-staging-e87ca-unauthRole",
+      "StackName": "amplify-yellbackend-staging-e87ca",
+      "StackId": "arn:aws:cloudformation:ap-northeast-1:661984796222:stack/amplify-yellbackend-staging-e87ca/cce0d300-add9-11f0-9efe-0e2d854aff85",
+      "AmplifyAppId": "dotkcfxppnehu"
+    },
+    "categories": {
+      "auth": {
+        "yellbackend": {}
+      },
+      "api": {
+        "yellbackend": {}
+      }
+    }
+  }
+}

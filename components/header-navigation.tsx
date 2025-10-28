@@ -1,10 +1,10 @@
 "use client"
 import { useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Trophy, Settings, User, Users, MessageCircle } from "lucide-react"
+import { Search, Trophy, Settings, User, Users, MessageCircle, LogOut } from "lucide-react"
 
 interface HeaderNavigationProps {
   isLoggedIn?: boolean
@@ -16,12 +16,22 @@ interface HeaderNavigationProps {
 
 export function HeaderNavigation({ isLoggedIn = false, currentUser }: HeaderNavigationProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     // TODO: Implement search functionality
     console.log("Searching for:", searchQuery)
+  }
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/logout', { method: 'POST' })
+      router.push('/login')
+    } catch (error) {
+      console.error('ログアウトに失敗しました:', error)
+    }
   }
 
   const isActive = (path: string) => {
@@ -80,6 +90,14 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser }: HeaderNavi
                     {currentUser?.name?.charAt(0) || 'U'}
                   </div>
                 </div>
+                {/* Logout Button */}
+                <Button
+                  variant="ghost"
+                  onClick={handleLogout}
+                  className="px-3 py-2 rounded-lg text-gray-600 hover:text-red-600 hover:bg-red-50"
+                >
+                  <LogOut className="w-4 h-4" />
+                </Button>
               </>
             ) : (
               /* Guest user - only show login/register buttons */

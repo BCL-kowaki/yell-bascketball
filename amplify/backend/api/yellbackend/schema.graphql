@@ -1,0 +1,42 @@
+type User @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  firstName: String!
+  lastName: String!
+  email: String!
+}
+
+# タイムライン投稿
+type Post @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  content: String!
+  imageUrl: String
+  pdfUrl: String
+  pdfName: String
+  locationName: String
+  locationAddress: String
+  linkUrl: String
+  linkTitle: String
+  linkDescription: String
+  linkImage: String
+  likesCount: Int!
+  commentsCount: Int!
+  authorEmail: String
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+}
+
+# コメント
+type Comment @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  postId: ID!
+  authorEmail: String
+  content: String!
+  createdAt: AWSDateTime
+}
+
+# いいね（重複防止用）
+type Like @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  postId: ID! @index(name: "byPostAndUser", sortKeyFields: ["userEmail"], queryField: "likesByPostAndUser")
+  userEmail: String!
+}

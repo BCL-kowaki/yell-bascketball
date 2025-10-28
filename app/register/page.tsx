@@ -4,12 +4,16 @@ import type React from "react"
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
+import { signUp } from "aws-amplify/auth"
 import { HeaderNavigation } from "@/components/header-navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function RegisterPage() {
+  ensureAmplifyConfigured()
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -29,43 +33,43 @@ export default function RegisterPage() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
 
+  const router = useRouter()
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError("")
     setSuccess("")
 
+    if (formData.password !== formData.confirmPassword) {
+      setError("パスワードが一致しません")
+      setIsLoading(false)
+      return
+    }
+
     try {
-      const response = await fetch('/api/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
+      await signUp({
+        username: formData.email,
+        password: formData.password,
+        options: {
+          userAttributes: {
+            email: formData.email,
+            given_name: formData.firstName,
+            family_name: formData.lastName,
+          },
+        }
       })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.error || '登録に失敗しました')
-        return
-      }
-
-      setSuccess(data.message)
-      console.log("Registration successful:", data)
       
-      // フォームをリセット
-      setFormData({
-        firstName: "",
-        lastName: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
+      const params = new URLSearchParams({
+        email: formData.email,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
       })
+      router.push(`/confirm-signup?${params.toString()}`)
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Registration error:", error)
-      setError('ネットワークエラーが発生しました')
+      setError(error.message || '登録に失敗しました')
     } finally {
       setIsLoading(false)
     }

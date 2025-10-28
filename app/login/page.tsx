@@ -5,12 +5,15 @@ import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { signIn, getCurrentUser } from "aws-amplify/auth"
+import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
 import { HeaderNavigation } from "@/components/header-navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function LoginPage() {
+  ensureAmplifyConfigured()
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -25,36 +28,62 @@ export default function LoginPage() {
     setSuccess("")
 
     try {
-      const response = await fetch('/api/login', {
+      // 0) 既にサインイン済みか確認
+      let signedIn = false
+      let loginId: string | undefined
+      try {
+        const u = await getCurrentUser()
+        signedIn = !!u
+        // Amplify v6: loginId にメールが入る
+        // 型安全ではないが存在すれば利用
+        // @ts-ignore
+        loginId = u?.signInDetails?.loginId
+      } catch (_) {
+        signedIn = false
+      }
+
+      // 1) 未サインインなら Cognito でサインイン
+      if (!signedIn) {
+        await signIn({ username: email, password })
+        loginId = email
+      }
+
+      // 2) アプリのセッションクッキー発行（HTTP-only）
+      const res = await fetch('/api/session', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: loginId || email }),
       })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.error || 'ログインに失敗しました')
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        setError(d.error || 'セッション発行に失敗しました')
         return
       }
 
-      setSuccess("ログインに成功しました！タイムラインページに移動します...")
-      console.log("Login successful:", data)
+      setSuccess("ログインに成功しました！ホームへ移動します...")
       
       // フォームをリセット
       setEmail("")
       setPassword("")
 
-      // ログイン成功後、タイムラインページにリダイレクト
-      setTimeout(() => {
-        router.push('/timeline')
-      }, 1500) // 1.5秒後にリダイレクト（成功メッセージを表示するため）
+      // ログイン成功後、ホームにリダイレクト
+      router.replace('/')
 
-    } catch (error) {
+    } catch (error: any) {
+      // 既にサインイン済みの場合
+      if (error?.name === 'UserAlreadyAuthenticatedException') {
+        const res = await fetch('/api/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        })
+        if (res.ok) {
+          router.replace('/')
+          return
+        }
+      }
       console.error("Login error:", error)
-      setError('ネットワークエラーが発生しました')
+      setError(error?.message || 'ログインに失敗しました')
     } finally {
       setIsLoading(false)
     }
