@@ -19,5 +19,26 @@
         "yellbackend": {}
       }
     }
+  },
+  "main": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-yellbackend-main-945bd-authRole",
+      "UnauthRoleArn": "arn:aws:iam::979188187394:role/amplify-yellbackend-main-945bd-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::979188187394:role/amplify-yellbackend-main-945bd-authRole",
+      "Region": "ap-northeast-1",
+      "DeploymentBucketName": "amplify-yellbackend-main-945bd-deployment",
+      "UnauthRoleName": "amplify-yellbackend-main-945bd-unauthRole",
+      "StackName": "amplify-yellbackend-main-945bd",
+      "StackId": "arn:aws:cloudformation:ap-northeast-1:979188187394:stack/amplify-yellbackend-main-945bd/094402a0-b518-11f0-bce5-0a225c0a80c9",
+      "AmplifyAppId": "dbczw5aaydtop"
+    },
+    "categories": {
+      "auth": {
+        "yellbackend": {}
+      },
+      "api": {
+        "yellbackend": {}
+      }
+    }
   }
 }
