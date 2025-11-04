@@ -7,6 +7,8 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
 import { signUp } from "aws-amplify/auth"
+import { generateClient } from 'aws-amplify/api'
+import { createUser } from '@/src/graphql/mutations'
 import { HeaderNavigation } from "@/components/header-navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -48,7 +50,8 @@ export default function RegisterPage() {
     }
 
     try {
-      await signUp({
+      // Cognitoにユーザーを登録
+      const { isSignUpComplete, userId, nextStep } = await signUp({
         username: formData.email,
         password: formData.password,
         options: {
@@ -60,12 +63,39 @@ export default function RegisterPage() {
         }
       })
       
-      const params = new URLSearchParams({
-        email: formData.email,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-      })
-      router.push(`/confirm-signup?${params.toString()}`)
+      // メール確認が必要な場合は確認画面へ
+      if (nextStep.signUpStep === 'CONFIRM_SIGN_UP') {
+        const params = new URLSearchParams({
+          email: formData.email,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+        })
+        router.push(`/confirm-signup?${params.toString()}`)
+      } else {
+        // メール確認が不要な場合は、直接DynamoDBに保存
+        try {
+          const client = generateClient()
+          await client.graphql({
+            query: createUser,
+            variables: {
+              input: {
+                email: formData.email,
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+              }
+            }
+          })
+          
+          setSuccess('登録が完了しました！ログインページに移動します。')
+          setTimeout(() => {
+            router.push('/login')
+          }, 2000)
+        } catch (dbError) {
+          console.error("Database save error:", dbError)
+          // Cognitoには登録されているので、警告のみ表示
+          setError('アカウントは作成されましたが、プロフィール情報の保存に失敗しました。')
+        }
+      }
 
     } catch (error: any) {
       console.error("Registration error:", error)
