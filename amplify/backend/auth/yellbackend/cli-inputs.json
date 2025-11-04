@@ -5,7 +5,9 @@
     "allowUnauthenticatedIdentities": false,
     "resourceNameTruncated": "yellba525e4d8f",
     "userPoolName": "yellbackend",
-    "autoVerifiedAttributes": [],
+    "autoVerifiedAttributes": [
+      "email"
+    ],
     "mfaConfiguration": "OFF",
     "mfaTypes": [
       "SMS Text Message"
