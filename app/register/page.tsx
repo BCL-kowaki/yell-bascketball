@@ -13,6 +13,7 @@ import { HeaderNavigation } from "@/components/header-navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Eye, EyeOff } from "lucide-react"
 
 export default function RegisterPage() {
   ensureAmplifyConfigured()
@@ -34,6 +35,8 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const router = useRouter()
 
@@ -63,38 +66,44 @@ export default function RegisterPage() {
         }
       })
       
-      // メール確認が必要な場合は確認画面へ
-      if (nextStep.signUpStep === 'CONFIRM_SIGN_UP') {
-        const params = new URLSearchParams({
-          email: formData.email,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-        })
-        router.push(`/confirm-signup?${params.toString()}`)
-      } else {
-        // メール確認が不要な場合は、直接DynamoDBに保存
-        try {
-          const client = generateClient()
-          await client.graphql({
-            query: createUser,
-            variables: {
-              input: {
-                email: formData.email,
-                firstName: formData.firstName,
-                lastName: formData.lastName,
-              }
+      console.log('SignUp result:', { isSignUpComplete, nextStep })
+      
+      // メール確認の有無に関わらず、DynamoDBに保存
+      console.log('Saving to DynamoDB...')
+      try {
+        const client = generateClient()
+        const result = await client.graphql({
+          query: createUser,
+          variables: {
+            input: {
+              email: formData.email,
+              firstName: formData.firstName,
+              lastName: formData.lastName,
             }
+          }
+        })
+        console.log('DynamoDB save successful:', result)
+        
+        // メール確認が必要な場合は確認画面へ
+        if (nextStep.signUpStep === 'CONFIRM_SIGN_UP') {
+          console.log('Redirecting to confirmation page')
+          const params = new URLSearchParams({
+            email: formData.email,
+            firstName: formData.firstName,
+            lastName: formData.lastName,
           })
-          
+          router.push(`/confirm-signup?${params.toString()}`)
+        } else {
+          // メール確認が不要な場合は、ログイン画面へ
           setSuccess('登録が完了しました！ログインページに移動します。')
           setTimeout(() => {
             router.push('/login')
           }, 2000)
-        } catch (dbError) {
-          console.error("Database save error:", dbError)
-          // Cognitoには登録されているので、警告のみ表示
-          setError('アカウントは作成されましたが、プロフィール情報の保存に失敗しました。')
         }
+      } catch (dbError) {
+        console.error("Database save error:", dbError)
+        // Cognitoには登録されているので、警告のみ表示
+        setError('アカウントは作成されましたが、プロフィール情報の保存に失敗しました。')
       }
 
     } catch (error: any) {
@@ -152,25 +161,45 @@ export default function RegisterPage() {
                 required
               />
 
-              <Input
-                name="password"
-                type="password"
-                placeholder="パスワード"
-                value={formData.password}
-                onChange={handleChange}
-                className="h-12"
-                required
-              />
+              <div className="relative">
+                <Input
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="パスワード"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="h-12 pr-12"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  aria-label={showPassword ? "パスワードを隠す" : "パスワードを表示"}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
 
-              <Input
-                name="confirmPassword"
-                type="password"
-                placeholder="パスワードを再入力"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className="h-12"
-                required
-              />
+              <div className="relative">
+                <Input
+                  name="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="パスワードを再入力"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  className="h-12 pr-12"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  aria-label={showConfirmPassword ? "パスワードを隠す" : "パスワードを表示"}
+                >
+                  {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
 
               {error && (
                 <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">

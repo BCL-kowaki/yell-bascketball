@@ -6,7 +6,7 @@
     "resourceNameTruncated": "yellba525e4d8f",
     "userPoolName": "yellbackend",
     "autoVerifiedAttributes": [
-      "email"
+      "phone_number"
     ],
     "mfaConfiguration": "OFF",
     "mfaTypes": [
