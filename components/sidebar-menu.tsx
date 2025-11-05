@@ -2,6 +2,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { 
   Users, 
   Trophy, 
@@ -99,17 +100,27 @@ export function SidebarMenu({ isLoggedIn = false, currentUser }: SidebarMenuProp
         {/* User Profile Section */}
         {isLoggedIn && currentUser && (
           <div className="p-4 border-b border-gray-200/50">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                {currentUser.name?.charAt(0) || 'U'}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-medium text-gray-900 truncate">
-                  {currentUser.name || 'ユーザー'}
+            <Link href="/profile">
+              <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
+                <Avatar className="w-10 h-10 border-2 border-orange-500">
+                  <AvatarImage 
+                    src={currentUser.avatar || "/placeholder-user.jpg"} 
+                    alt={currentUser.name || 'ユーザー'} 
+                  />
+                  <AvatarFallback className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold text-sm">
+                    {currentUser.name?.charAt(0)?.toUpperCase() || 
+                     currentUser.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 
+                     'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium text-gray-900 truncate">
+                    {currentUser.name || 'ユーザー'}
+                  </div>
+                  <div className="text-xs text-gray-500">オンライン</div>
                 </div>
-                <div className="text-xs text-gray-500">オンライン</div>
               </div>
-            </div>
+            </Link>
           </div>
         )}
 

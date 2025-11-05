@@ -198,7 +198,7 @@ export default function TeamPage({ params }: TeamPageProps) {
   
   if (!team) {
     return (
-      <Layout isLoggedIn={true} currentUser={{ name: "ユーザー" }}>
+      <Layout>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-gray-900 mb-4">チームが見つかりません</h1>
@@ -331,7 +331,7 @@ export default function TeamPage({ params }: TeamPageProps) {
   }
 
   return (
-    <Layout isLoggedIn={true} currentUser={{ name: "ユーザー" }}>
+    <Layout>
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-8">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 mb-6 text-xs md:text-sm flex-wrap">

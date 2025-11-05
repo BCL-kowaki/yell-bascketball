@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Search, Trophy, Settings, User, Users, MessageCircle, LogOut } from "lucide-react"
 
 interface HeaderNavigationProps {
@@ -85,11 +86,21 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser }: HeaderNavi
                 </Link>
 
                 {/* User Profile */}
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                    {currentUser?.name?.charAt(0) || 'U'}
+                <Link href="/profile">
+                  <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
+                    <Avatar className="w-8 h-8 border-2 border-orange-500">
+                      <AvatarImage 
+                        src={currentUser?.avatar || "/placeholder-user.jpg"} 
+                        alt={currentUser?.name || 'ユーザー'} 
+                      />
+                      <AvatarFallback className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold text-xs">
+                        {currentUser?.name?.charAt(0)?.toUpperCase() || 
+                         currentUser?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 
+                         'U'}
+                      </AvatarFallback>
+                    </Avatar>
                   </div>
-                </div>
+                </Link>
                 {/* Logout Button */}
                 <Button
                   variant="ghost"

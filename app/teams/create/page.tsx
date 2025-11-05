@@ -26,7 +26,6 @@ const regions = {
 
 export default function CreateTeamPage() {
   const { toast } = useToast()
-  const currentUser = { name: "ユーザー" }
 
   const [formData, setFormData] = useState({
     name: "",
@@ -98,7 +97,7 @@ export default function CreateTeamPage() {
   }
 
   return (
-    <Layout isLoggedIn={true} currentUser={currentUser}>
+    <Layout>
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="mb-6">
           <Link href="/teams">

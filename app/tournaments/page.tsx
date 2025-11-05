@@ -69,7 +69,7 @@ const regions = [
 
 export default function TournamentsPage() {
   return (
-    <Layout isLoggedIn={true} currentUser={{ name: "ユーザー" }}>
+    <Layout>
 
       <div className="max-w-7xl mx-auto pt-2 pb-20 px-2 md:px-6">
         {/* Header */}

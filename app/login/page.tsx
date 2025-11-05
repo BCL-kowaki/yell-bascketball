@@ -5,8 +5,11 @@ import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { signIn, getCurrentUser } from "aws-amplify/auth"
+import { signIn, getCurrentUser, fetchUserAttributes } from "aws-amplify/auth"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
+import { getUserByEmail } from "@/lib/api"
+import { generateClient } from 'aws-amplify/api'
+import { createUser } from '@/src/graphql/mutations'
 import { HeaderNavigation } from "@/components/header-navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -50,7 +53,35 @@ export default function LoginPage() {
         loginId = email
       }
 
-      // 2) アプリのセッションクッキー発行（HTTP-only）
+      // 2) DynamoDBにユーザーが存在するか確認、なければ作成
+      try {
+        const userEmail = loginId || email
+        const dbUser = await getUserByEmail(userEmail)
+        
+        if (!dbUser) {
+          // DynamoDBにユーザーが存在しない場合、Cognitoから情報を取得して作成
+          console.log('User not found in DynamoDB, creating...')
+          const attributes = await fetchUserAttributes()
+          
+          const client = generateClient()
+          await client.graphql({
+            query: createUser,
+            variables: {
+              input: {
+                email: userEmail,
+                firstName: attributes.given_name || '',
+                lastName: attributes.family_name || '',
+              }
+            }
+          })
+          console.log('User created in DynamoDB')
+        }
+      } catch (dbError) {
+        console.error('DynamoDB user check/create error:', dbError)
+        // エラーがあってもログインは続行
+      }
+
+      // 3) アプリのセッションクッキー発行（HTTP-only）
       const res = await fetch('/api/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

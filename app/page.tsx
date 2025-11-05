@@ -721,7 +721,7 @@ export default function TimelinePage() {
   }
 
   return (
-    <Layout isLoggedIn={true} currentUser={{ name: "ユーザー" }}>
+    <Layout>
       <div className="max-w-6xl pt-2 pb-20 px-2 md:px-6 space-y-4 md:space-y-8">
         {/* Create Post */}
         <Card className="w-full border-0 shadow-lg bg-white/90 backdrop-blur-sm">

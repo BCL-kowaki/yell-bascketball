@@ -52,7 +52,7 @@ const kinkiPrefectures = [
 
 export default function KinkiPage() {
   return (
-    <Layout isLoggedIn={true} currentUser={{ name: "ユーザー" }}>
+    <Layout>
       <div className="max-w-7xl mx-auto p-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 mb-6 text-sm">

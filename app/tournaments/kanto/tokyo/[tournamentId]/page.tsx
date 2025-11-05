@@ -381,7 +381,7 @@ export default function TournamentTimelinePage({ params }: TournamentTimelinePag
   }
 
   return (
-    <Layout isLoggedIn={true} currentUser={{ name: "ユーザー" }}>
+    <Layout>
 
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-8">
         {/* Breadcrumb */}

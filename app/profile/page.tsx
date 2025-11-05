@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
-import { getCurrentUserEmail, getUserByEmail, updateUser, type DbUser } from "@/lib/api"
+import { getUserByEmail, updateUser, type DbUser } from "@/lib/api"
 import { CATEGORIES, REGION_BLOCKS, PREFECTURES_BY_REGION, DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS } from "@/lib/regionData"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -67,22 +67,43 @@ export default function ProfilePage() {
 
   const loadUserProfile = async () => {
     try {
-      const email = await getCurrentUserEmail()
-      if (!email) {
+      // セッションを確認してメールアドレスを取得
+      const sessionRes = await fetch('/api/session')
+      if (!sessionRes.ok) {
+        console.log('Session not found, redirecting to login')
         router.push('/login')
         return
       }
 
-      const userData = await getUserByEmail(email)
-      if (!userData) {
+      const sessionData = await sessionRes.json()
+      const email = sessionData.email
+      
+      if (!email) {
+        console.error('Could not get email from session')
         toast({
           title: "エラー",
-          description: "ユーザー情報が見つかりません",
+          description: "ユーザー情報の取得に失敗しました。ログインし直してください。",
           variant: "destructive",
         })
+        setTimeout(() => router.push('/login'), 2000)
         return
       }
 
+      console.log('Loading profile for email:', email)
+      const userData = await getUserByEmail(email)
+      
+      if (!userData) {
+        console.error('User not found in DynamoDB for email:', email)
+        toast({
+          title: "エラー",
+          description: "ユーザー情報が見つかりません。ログインし直してください。",
+          variant: "destructive",
+        })
+        setTimeout(() => router.push('/login'), 2000)
+        return
+      }
+
+      console.log('User profile loaded successfully:', userData)
       setUser(userData)
       setEditForm({
         firstName: userData.firstName,
@@ -102,8 +123,22 @@ export default function ProfilePage() {
       if (userData.prefecture) {
         setAvailableDistricts(DISTRICTS_BY_PREFECTURE[userData.prefecture] || DEFAULT_DISTRICTS)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load user profile:", error)
+      // 認証エラーの場合はログインページにリダイレクト
+      if (
+        error?.name === 'NotAuthorizedException' || 
+        error?.name === 'UserNotFoundException' ||
+        error?.name === 'UserUnAuthenticatedException'
+      ) {
+        toast({
+          title: "認証エラー",
+          description: "ログインが必要です",
+          variant: "destructive",
+        })
+        router.push('/login')
+        return
+      }
       toast({
         title: "エラー",
         description: "プロフィールの読み込みに失敗しました",
@@ -205,7 +240,7 @@ export default function ProfilePage() {
 
   if (!user) {
     return (
-      <Layout isLoggedIn={false} currentUser={null}>
+      <Layout isLoggedIn={false} currentUser={undefined}>
         <div className="max-w-6xl mx-auto pb-20 p-8 text-center">
           <p className="text-muted-foreground">ユーザー情報が見つかりません</p>
         </div>
@@ -216,7 +251,7 @@ export default function ProfilePage() {
   const displayName = `${user.lastName} ${user.firstName}`
 
   return (
-    <Layout isLoggedIn={true} currentUser={{ name: displayName }}>
+    <Layout isLoggedIn={true} currentUser={{ name: displayName, avatar: user.avatar || undefined }}>
       <div className="max-w-6xl mx-auto pb-20">
         {/* Cover Photo & Profile Info */}
         <div className="relative">

@@ -1,7 +1,7 @@
 "use client"
 
 import { generateClient } from "aws-amplify/api"
-import { getCurrentUser } from "aws-amplify/auth"
+import { getCurrentUser, fetchUserAttributes } from "aws-amplify/auth"
 
 const client = generateClient()
 
@@ -41,10 +41,13 @@ export type DbUser = {
 
 export async function getCurrentUserEmail(): Promise<string | undefined> {
   try {
-    const u = await getCurrentUser()
-    // @ts-ignore
-    return u?.signInDetails?.loginId as string | undefined
-  } catch {
+    // まず現在のユーザーが存在するか確認
+    await getCurrentUser()
+    // Cognitoのユーザー属性から直接メールアドレスを取得
+    const attributes = await fetchUserAttributes()
+    return attributes.email || attributes.preferred_username || undefined
+  } catch (error) {
+    console.error('getCurrentUserEmail error:', error)
     return undefined
   }
 }

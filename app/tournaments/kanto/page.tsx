@@ -59,7 +59,7 @@ const kantoPrefectures = [
 export default function KantoPage() {
 
   return (
-    <Layout isLoggedIn={true} currentUser={{ name: "ユーザー" }}>
+    <Layout>
       <div className="max-w-7xl mx-auto px-2 py-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 mb-6 text-sm">
