@@ -8,6 +8,10 @@ export const getUser = /* GraphQL */ `
       firstName
       lastName
       email
+      bio
+      location
+      avatar
+      coverImage
       createdAt
       updatedAt
       __typename
@@ -26,6 +30,10 @@ export const listUsers = /* GraphQL */ `
         firstName
         lastName
         email
+        bio
+        location
+        avatar
+        coverImage
         createdAt
         updatedAt
         __typename

@@ -23,6 +23,18 @@ export type DbPost = {
   createdAt?: string | null
 }
 
+export type DbUser = {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  bio?: string | null
+  location?: string | null
+  avatar?: string | null
+  coverImage?: string | null
+  createdAt?: string | null
+}
+
 export async function getCurrentUserEmail(): Promise<string | undefined> {
   try {
     const u = await getCurrentUser()
@@ -31,6 +43,38 @@ export async function getCurrentUserEmail(): Promise<string | undefined> {
   } catch {
     return undefined
   }
+}
+
+export async function getUserByEmail(email: string): Promise<DbUser | null> {
+  const query = /* GraphQL */ `
+    query ListUsers($filter: ModelUserFilterInput) {
+      listUsers(filter: $filter) {
+        items {
+          id firstName lastName email bio location avatar coverImage createdAt
+        }
+      }
+    }
+  `
+  const { data } = await client.graphql({ 
+    query, 
+    variables: { filter: { email: { eq: email } } } 
+  }) as any
+  return data?.listUsers?.items?.[0] ?? null
+}
+
+export async function updateUser(id: string, input: Partial<DbUser>): Promise<DbUser> {
+  const mutation = /* GraphQL */ `
+    mutation UpdateUser($input: UpdateUserInput!) {
+      updateUser(input: $input) {
+        id firstName lastName email bio location avatar coverImage createdAt
+      }
+    }
+  `
+  const { data } = await client.graphql({ 
+    query: mutation, 
+    variables: { input: { id, ...input } } 
+  }) as any
+  return data.updateUser
 }
 
 const postFields = `

@@ -3,6 +3,10 @@ type User @model @auth(rules: [{allow: public}]) {
   firstName: String!
   lastName: String!
   email: String!
+  bio: String
+  location: String
+  avatar: String
+  coverImage: String
 }
 
 # タイムライン投稿
