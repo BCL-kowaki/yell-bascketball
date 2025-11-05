@@ -7,6 +7,10 @@ type User @model @auth(rules: [{allow: public}]) {
   location: String
   avatar: String
   coverImage: String
+  category: String
+  regionBlock: String
+  prefecture: String
+  district: String
 }
 
 # タイムライン投稿

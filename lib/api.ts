@@ -32,6 +32,10 @@ export type DbUser = {
   location?: string | null
   avatar?: string | null
   coverImage?: string | null
+  category?: string | null
+  regionBlock?: string | null
+  prefecture?: string | null
+  district?: string | null
   createdAt?: string | null
 }
 
@@ -50,7 +54,8 @@ export async function getUserByEmail(email: string): Promise<DbUser | null> {
     query ListUsers($filter: ModelUserFilterInput) {
       listUsers(filter: $filter) {
         items {
-          id firstName lastName email bio location avatar coverImage createdAt
+          id firstName lastName email bio location avatar coverImage 
+          category regionBlock prefecture district createdAt
         }
       }
     }
@@ -66,7 +71,8 @@ export async function updateUser(id: string, input: Partial<DbUser>): Promise<Db
   const mutation = /* GraphQL */ `
     mutation UpdateUser($input: UpdateUserInput!) {
       updateUser(input: $input) {
-        id firstName lastName email bio location avatar coverImage createdAt
+        id firstName lastName email bio location avatar coverImage 
+        category regionBlock prefecture district createdAt
       }
     }
   `

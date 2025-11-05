@@ -12,6 +12,10 @@ export const getUser = /* GraphQL */ `
       location
       avatar
       coverImage
+      category
+      regionBlock
+      prefecture
+      district
       createdAt
       updatedAt
       __typename
@@ -34,6 +38,10 @@ export const listUsers = /* GraphQL */ `
         location
         avatar
         coverImage
+        category
+        regionBlock
+        prefecture
+        district
         createdAt
         updatedAt
         __typename

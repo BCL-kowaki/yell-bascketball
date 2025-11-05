@@ -12,6 +12,10 @@ export const onCreateUser = /* GraphQL */ `
       location
       avatar
       coverImage
+      category
+      regionBlock
+      prefecture
+      district
       createdAt
       updatedAt
       __typename
@@ -29,6 +33,10 @@ export const onUpdateUser = /* GraphQL */ `
       location
       avatar
       coverImage
+      category
+      regionBlock
+      prefecture
+      district
       createdAt
       updatedAt
       __typename
@@ -46,6 +54,10 @@ export const onDeleteUser = /* GraphQL */ `
       location
       avatar
       coverImage
+      category
+      regionBlock
+      prefecture
+      district
       createdAt
       updatedAt
       __typename

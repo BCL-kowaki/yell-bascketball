@@ -3,7 +3,9 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
 import { getCurrentUserEmail, getUserByEmail, updateUser, type DbUser } from "@/lib/api"
+import { CATEGORIES, REGION_BLOCKS, PREFECTURES_BY_REGION, DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS } from "@/lib/regionData"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
@@ -26,13 +28,42 @@ export default function ProfilePage() {
     lastName: "",
     bio: "",
     location: "",
+    category: "",
+    regionBlock: "",
+    prefecture: "",
+    district: "",
   })
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
+  const [availablePrefectures, setAvailablePrefectures] = useState<string[]>([])
+  const [availableDistricts, setAvailableDistricts] = useState<string[]>([])
 
   useEffect(() => {
     loadUserProfile()
   }, [])
+
+  // 地域ブロックが変更されたら、都道府県リストを更新
+  useEffect(() => {
+    if (editForm.regionBlock) {
+      setAvailablePrefectures(PREFECTURES_BY_REGION[editForm.regionBlock] || [])
+      // 地域ブロック変更時は都道府県と地区をリセット
+      setEditForm(prev => ({ ...prev, prefecture: "", district: "" }))
+      setAvailableDistricts([])
+    } else {
+      setAvailablePrefectures([])
+    }
+  }, [editForm.regionBlock])
+
+  // 都道府県が変更されたら、地区リストを更新
+  useEffect(() => {
+    if (editForm.prefecture) {
+      setAvailableDistricts(DISTRICTS_BY_PREFECTURE[editForm.prefecture] || DEFAULT_DISTRICTS)
+      // 都道府県変更時は地区をリセット
+      setEditForm(prev => ({ ...prev, district: "" }))
+    } else {
+      setAvailableDistricts([])
+    }
+  }, [editForm.prefecture])
 
   const loadUserProfile = async () => {
     try {
@@ -58,7 +89,19 @@ export default function ProfilePage() {
         lastName: userData.lastName,
         bio: userData.bio || "",
         location: userData.location || "",
+        category: userData.category || "",
+        regionBlock: userData.regionBlock || "",
+        prefecture: userData.prefecture || "",
+        district: userData.district || "",
       })
+      
+      // 既存データに基づいて選択肢を設定
+      if (userData.regionBlock) {
+        setAvailablePrefectures(PREFECTURES_BY_REGION[userData.regionBlock] || [])
+      }
+      if (userData.prefecture) {
+        setAvailableDistricts(DISTRICTS_BY_PREFECTURE[userData.prefecture] || DEFAULT_DISTRICTS)
+      }
     } catch (error) {
       console.error("Failed to load user profile:", error)
       toast({
@@ -105,6 +148,10 @@ export default function ProfilePage() {
         location: editForm.location || null,
         avatar: avatarPreview || user.avatar,
         coverImage: coverPreview || user.coverImage,
+        category: editForm.category || null,
+        regionBlock: editForm.regionBlock || null,
+        prefecture: editForm.prefecture || null,
+        district: editForm.district || null,
       })
 
       toast({
@@ -135,6 +182,10 @@ export default function ProfilePage() {
         lastName: user.lastName,
         bio: user.bio || "",
         location: user.location || "",
+        category: user.category || "",
+        regionBlock: user.regionBlock || "",
+        prefecture: user.prefecture || "",
+        district: user.district || "",
       })
     }
     setAvatarPreview(null)
@@ -253,6 +304,70 @@ export default function ProfilePage() {
                     value={editForm.location}
                     onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
                   />
+                  
+                  {/* カテゴリ選択 */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">カテゴリ</label>
+                    <Select value={editForm.category} onValueChange={(value) => setEditForm({ ...editForm, category: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="カテゴリを選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CATEGORIES.map((cat) => (
+                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* 地域ブロック選択 */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">地域ブロック</label>
+                    <Select value={editForm.regionBlock} onValueChange={(value) => setEditForm({ ...editForm, regionBlock: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="地域ブロックを選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {REGION_BLOCKS.map((region) => (
+                          <SelectItem key={region} value={region}>{region}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* 都道府県選択 */}
+                  {availablePrefectures.length > 0 && (
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">都道府県</label>
+                      <Select value={editForm.prefecture} onValueChange={(value) => setEditForm({ ...editForm, prefecture: value })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="都道府県を選択" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availablePrefectures.map((pref) => (
+                            <SelectItem key={pref} value={pref}>{pref}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* 地区選択 */}
+                  {availableDistricts.length > 0 && (
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">地区</label>
+                      <Select value={editForm.district} onValueChange={(value) => setEditForm({ ...editForm, district: value })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="地区を選択" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableDistricts.map((dist) => (
+                            <SelectItem key={dist} value={dist}>{dist}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <>
@@ -341,10 +456,26 @@ export default function ProfilePage() {
                       <p className="text-muted-foreground">{user.bio}</p>
                     </div>
                   )}
+                  {user.category && (
+                    <div>
+                      <h4 className="font-medium mb-2">カテゴリ</h4>
+                      <p className="text-muted-foreground">{user.category}</p>
+                    </div>
+                  )}
                   {user.location && (
                     <div>
                       <h4 className="font-medium mb-2">場所</h4>
                       <p className="text-muted-foreground">{user.location}</p>
+                    </div>
+                  )}
+                  {(user.regionBlock || user.prefecture || user.district) && (
+                    <div>
+                      <h4 className="font-medium mb-2">地域情報</h4>
+                      <div className="text-muted-foreground space-y-1">
+                        {user.regionBlock && <p>地域ブロック: {user.regionBlock}</p>}
+                        {user.prefecture && <p>都道府県: {user.prefecture}</p>}
+                        {user.district && <p>地区: {user.district}</p>}
+                      </div>
                     </div>
                   )}
                   <div>
