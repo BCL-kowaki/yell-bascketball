@@ -17,6 +17,9 @@
       },
       "api": {
         "yellbackend": {}
+      },
+      "storage": {
+        "yellstorage": {}
       }
     }
   },
@@ -38,6 +41,9 @@
       },
       "api": {
         "yellbackend": {}
+      },
+      "storage": {
+        "yellstorage": {}
       }
     }
   }

@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "serviceConfiguration": {
+    "serviceName": "S3",
+    "permissions": {
+      "auth": {
+        "yellbackend": [
+          "CREATE_AND_UPDATE",
+          "READ",
+          "DELETE"
+        ]
+      }
+    },
+    "bucketName": "yellstorage-main",
+    "resourceName": "yellstorage"
+  }
+}
+
