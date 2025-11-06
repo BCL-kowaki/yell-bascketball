@@ -115,8 +115,22 @@ export default function LoginPage() {
           return
         }
       }
+      
+      // ユーザーが存在しない場合
+      if (error?.name === 'UserNotFoundException') {
+        setError('メールアドレスまたはパスワードが正しくありません。アカウントが存在しない可能性があります。')
+        return
+      }
+      
+      // パスワードが間違っている場合
+      if (error?.name === 'NotAuthorizedException') {
+        setError('メールアドレスまたはパスワードが正しくありません。')
+        return
+      }
+      
+      // その他のエラー
       console.error("Login error:", error)
-      setError(error?.message || 'ログインに失敗しました')
+      setError(error?.message || 'ログインに失敗しました。メールアドレスとパスワードを確認してください。')
     } finally {
       setIsLoading(false)
     }
