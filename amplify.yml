@@ -17,7 +17,6 @@ frontend:
     baseDirectory: .
     files:
       - '.next/**/*'
-      - '.next/required-server-files.json'
       - 'public/**/*'
       - 'package.json'
       - 'package-lock.json'
