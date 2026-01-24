@@ -14,9 +14,15 @@ frontend:
       commands:
         - npm run build
   artifacts:
-    baseDirectory: .next
+    baseDirectory: .
     files:
-      - '**/*'
+      - '.next/**/*'
+      - '.next/required-server-files.json'
+      - 'public/**/*'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'next.config.mjs'
+      - 'node_modules/**/*'
   cache:
     paths:
       - node_modules/**/*
