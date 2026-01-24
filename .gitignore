@@ -29,6 +29,13 @@ next-env.d.ts
 # IDE settings
 .vscode/
 
+# Amplify backup directories
+amplify-backup/
+amplify_backup_old/
+
+# Claude settings
+.claude/
+
 #amplify-do-not-edit-begin
 amplify/\#current-cloud-backend
 amplify/.config/local-*
