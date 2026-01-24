@@ -1,18 +1,14 @@
 {
-  "version": 1,
-  "serviceConfiguration": {
-    "serviceName": "S3",
-    "permissions": {
-      "auth": {
-        "yellbackend": [
-          "CREATE_AND_UPDATE",
-          "READ",
-          "DELETE"
-        ]
-      }
-    },
-    "bucketName": "yellstorage-main",
-    "resourceName": "yellstorage"
-  }
+  "resourceName": "yellstorage",
+  "policyUUID": "5da043da",
+  "bucketName": "yell-storage-dev",
+  "storageAccess": "auth",
+  "guestAccess": [],
+  "authAccess": [
+    "CREATE_AND_UPDATE",
+    "READ",
+    "DELETE"
+  ],
+  "triggerFunction": "NONE",
+  "groupAccess": {}
 }
-

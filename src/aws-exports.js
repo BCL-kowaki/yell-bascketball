@@ -3,14 +3,14 @@
 
 const awsmobile = {
     "aws_project_region": "ap-northeast-1",
-    "aws_appsync_graphqlEndpoint": "https://helcik5ebvbyta6fjd4fhysy3u.appsync-api.ap-northeast-1.amazonaws.com/graphql",
+    "aws_appsync_graphqlEndpoint": "https://r5yse4ukbnho3jrfii65bvl6b4.appsync-api.ap-northeast-1.amazonaws.com/graphql",
     "aws_appsync_region": "ap-northeast-1",
     "aws_appsync_authenticationType": "API_KEY",
-    "aws_appsync_apiKey": "da2-sfv7eobm4zg4hl77w5w6zohyf4",
-    "aws_cognito_identity_pool_id": "ap-northeast-1:c880cc9d-a210-4d52-b268-54ccfc927753",
+    "aws_appsync_apiKey": "da2-whcyph64qvg5nnnclgshsrddke",
+    "aws_cognito_identity_pool_id": "ap-northeast-1:4ce52465-1407-4954-9796-dae83750a021",
     "aws_cognito_region": "ap-northeast-1",
-    "aws_user_pools_id": "ap-northeast-1_quulXj1YD",
-    "aws_user_pools_web_client_id": "24uv2b9inchdms3d48lk9fkuh4",
+    "aws_user_pools_id": "ap-northeast-1_inS6SatCi",
+    "aws_user_pools_web_client_id": "4v6uenkf49414e2k6dk6lgultd",
     "oauth": {},
     "aws_cognito_username_attributes": [
         "EMAIL"
@@ -35,8 +35,10 @@ const awsmobile = {
         ]
     },
     "aws_cognito_verification_mechanisms": [
-        "PHONE_NUMBER"
-    ]
+        "EMAIL"
+    ],
+    "aws_user_files_s3_bucket": "yell-storage-dev1f56f-dev",
+    "aws_user_files_s3_bucket_region": "ap-northeast-1"
 };
 
 

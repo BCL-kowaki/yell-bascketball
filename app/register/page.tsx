@@ -15,6 +15,88 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Eye, EyeOff } from "lucide-react"
 
+// Cognitoエラーメッセージを日本語に翻訳
+function translateCognitoError(errorMessage: string): string {
+  // パスワードポリシー関連のエラー（複数のパターンに対応）
+  if (errorMessage.includes("Password did not conform") || 
+      errorMessage.includes("Password does not conform") ||
+      errorMessage.includes("password policy") ||
+      errorMessage.includes("Password must have")) {
+    if (errorMessage.includes("uppercase")) {
+      return "パスワードには大文字（A-Z）を含めてください"
+    }
+    if (errorMessage.includes("lowercase")) {
+      return "パスワードには小文字（a-z）を含めてください"
+    }
+    if (errorMessage.includes("numeric") || errorMessage.includes("number")) {
+      return "パスワードには数字（0-9）を含めてください"
+    }
+    if (errorMessage.includes("symbol") || errorMessage.includes("special")) {
+      return "パスワードには記号（!@#$%^&*など）を含めてください"
+    }
+    if (errorMessage.includes("long enough") || errorMessage.includes("length")) {
+      return "パスワードは8文字以上にしてください"
+    }
+    return "パスワードの形式が正しくありません（大文字・小文字・数字・記号を含む8文字以上）"
+  }
+  
+  // パスワード長のエラー
+  if (errorMessage.includes("Password not long enough") || 
+      errorMessage.includes("password must have length") ||
+      errorMessage.includes("Password must be at least")) {
+    return "パスワードは8文字以上にしてください"
+  }
+  
+  // メールアドレス関連のエラー
+  if (errorMessage.includes("email already exists") || 
+      errorMessage.includes("already registered") ||
+      errorMessage.includes("An account with the given email already exists")) {
+    return "このメールアドレスは既に登録されています"
+  }
+  if (errorMessage.includes("Username cannot be empty") || 
+      errorMessage.includes("email cannot be empty") ||
+      errorMessage.includes("Username is required")) {
+    return "メールアドレスを入力してください"
+  }
+  if (errorMessage.includes("Invalid email") || 
+      errorMessage.includes("invalid email format") ||
+      errorMessage.includes("Invalid email address format")) {
+    return "メールアドレスの形式が正しくありません"
+  }
+  
+  // ユーザー名関連のエラー
+  if (errorMessage.includes("User already exists") || 
+      errorMessage.includes("UsernameExistsException")) {
+    return "このメールアドレスは既に登録されています"
+  }
+  
+  // 確認コード関連のエラー
+  if (errorMessage.includes("Invalid verification code") || 
+      errorMessage.includes("CodeMismatchException")) {
+    return "確認コードが正しくありません"
+  }
+  if (errorMessage.includes("ExpiredCodeException") || 
+      errorMessage.includes("code has expired")) {
+    return "確認コードの有効期限が切れています"
+  }
+  
+  // 試行回数制限
+  if (errorMessage.includes("Attempt limit exceeded") || 
+      errorMessage.includes("LimitExceededException") ||
+      errorMessage.includes("too many requests") ||
+      errorMessage.includes("Too many attempts")) {
+    return "試行回数が多すぎます。しばらく待ってからお試しください"
+  }
+  
+  // ネットワークエラー
+  if (errorMessage.includes("Network") || errorMessage.includes("network")) {
+    return "ネットワークエラーが発生しました。接続を確認してください"
+  }
+  
+  // その他のエラー
+  return errorMessage || "登録に失敗しました。入力内容を確認してください"
+}
+
 export default function RegisterPage() {
   ensureAmplifyConfigured()
   const [formData, setFormData] = useState({
@@ -87,18 +169,18 @@ export default function RegisterPage() {
         // メール確認が必要な場合は確認画面へ
         if (nextStep.signUpStep === 'CONFIRM_SIGN_UP') {
           console.log('Redirecting to confirmation page')
-          const params = new URLSearchParams({
-            email: formData.email,
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-          })
-          router.push(`/confirm-signup?${params.toString()}`)
+      const params = new URLSearchParams({
+        email: formData.email,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+      })
+      router.push(`/confirm-signup?${params.toString()}`)
         } else {
           // メール確認が不要な場合は、ログイン画面へ
-          setSuccess('登録が完了しました！ログインページに移動します。')
+          setSuccess('登録完了しました')
           setTimeout(() => {
             router.push('/login')
-          }, 2000)
+          }, 1500)
         }
       } catch (dbError) {
         console.error("Database save error:", dbError)
@@ -108,7 +190,9 @@ export default function RegisterPage() {
 
     } catch (error: any) {
       console.error("Registration error:", error)
-      setError(error.message || '登録に失敗しました')
+      // Cognitoのエラーメッセージを日本語に翻訳
+      const translatedError = translateCognitoError(error.message || '')
+      setError(translatedError)
     } finally {
       setIsLoading(false)
     }
@@ -162,15 +246,15 @@ export default function RegisterPage() {
               />
 
               <div className="relative">
-                <Input
-                  name="password"
+              <Input
+                name="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="パスワード"
-                  value={formData.password}
-                  onChange={handleChange}
+                placeholder="パスワード"
+                value={formData.password}
+                onChange={handleChange}
                   className="h-12 pr-12"
-                  required
-                />
+                required
+              />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
@@ -182,15 +266,15 @@ export default function RegisterPage() {
               </div>
 
               <div className="relative">
-                <Input
-                  name="confirmPassword"
+              <Input
+                name="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
-                  placeholder="パスワードを再入力"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
+                placeholder="パスワードを再入力"
+                value={formData.confirmPassword}
+                onChange={handleChange}
                   className="h-12 pr-12"
-                  required
-                />
+                required
+              />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -201,15 +285,21 @@ export default function RegisterPage() {
                 </button>
               </div>
 
+              {/* パスワードポリシーの注意書き */}
+              <div className="p-3 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-md">
+                <p className="font-medium mb-1">パスワードの要件:</p>
+                <ul className="list-disc list-inside space-y-0.5">
+                  <li>8文字以上</li>
+                  <li>大文字（A-Z）を含む</li>
+                  <li>小文字（a-z）を含む</li>
+                  <li>数字（0-9）を含む</li>
+                  <li>記号（!@#$%^&*など）を含む</li>
+                </ul>
+              </div>
+
               {error && (
                 <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
                   {error}
-                </div>
-              )}
-              
-              {success && (
-                <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
-                  {success}
                 </div>
               )}
 
@@ -221,6 +311,12 @@ export default function RegisterPage() {
               >
                 {isLoading ? "作成中..." : "アカウントを作成"}
               </Button>
+              
+              {success && (
+                <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md text-center">
+                  {success}
+                </div>
+              )}
             </form>
 
             <div className="text-center mt-6">

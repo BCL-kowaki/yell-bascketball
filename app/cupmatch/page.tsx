@@ -159,7 +159,7 @@ export default function CupMatchPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+          <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-blue-100 rounded-full">
@@ -173,7 +173,7 @@ export default function CupMatchPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+          <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-green-100 rounded-full">
@@ -187,7 +187,7 @@ export default function CupMatchPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+          <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-purple-100 rounded-full">
@@ -201,7 +201,7 @@ export default function CupMatchPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+          <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-yellow-100 rounded-full">
@@ -234,7 +234,7 @@ export default function CupMatchPage() {
           <TabsContent value="tournaments" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {mockCupMatches.map((match) => (
-                <Card key={match.id} className="border-0 shadow-lg bg-white/90 backdrop-blur-sm hover:shadow-xl transition-all duration-300 overflow-hidden">
+                <Card key={match.id} className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm hover:shadow-xl transition-all duration-300 overflow-hidden">
                   <div className="relative">
                     <img src={match.image} alt={match.title} className="w-full h-48 object-cover" />
                     <div className="absolute top-4 right-4">
@@ -258,7 +258,7 @@ export default function CupMatchPage() {
                       <span className="text-gray-500">賞金</span>
                       <span className="font-semibold text-green-600">{match.prize}</span>
                     </div>
-                    <Button className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-200">
+                    <Button className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold rounded-full shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] hover:shadow-xl transition-all duration-200">
                       {match.status === "active" ? "参加する" : match.status === "upcoming" ? "予約する" : "詳細を見る"}
                     </Button>
                   </CardContent>
@@ -269,7 +269,7 @@ export default function CupMatchPage() {
 
           {/* Leaderboard Tab */}
           <TabsContent value="leaderboard" className="space-y-6">
-            <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+            <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                   <Star className="w-6 h-6 text-yellow-500" />
@@ -306,7 +306,7 @@ export default function CupMatchPage() {
 
           {/* Recent Matches Tab */}
           <TabsContent value="matches" className="space-y-6">
-            <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+            <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                   <Zap className="w-6 h-6 text-orange-500" />

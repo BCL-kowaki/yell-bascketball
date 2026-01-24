@@ -120,7 +120,7 @@ export default function SearchPage() {
   }
 
   const SearchResultCard = ({ result }: { result: SearchResult }) => (
-    <Card className="mb-3 hover:shadow-md transition-shadow">
+    <Card className="mb-3 hover:shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] transition-shadow">
       <CardContent className="p-4">
         <div className="flex items-start space-x-3">
           <div className="relative">
@@ -188,7 +188,7 @@ export default function SearchPage() {
   )
 
   const TrendingCard = ({ topic }: { topic: { id: string; hashtag: string; posts: string } }) => (
-    <Card className="mb-2 hover:shadow-md transition-shadow cursor-pointer">
+    <Card className="mb-2 hover:shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] transition-shadow cursor-pointer">
       <CardContent className="p-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">

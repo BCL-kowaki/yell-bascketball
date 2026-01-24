@@ -59,17 +59,9 @@
   },
   "storage": {
     "yellstorage": {
-      "service": "S3",
+      "dependsOn": [],
       "providerPlugin": "awscloudformation",
-      "dependsOn": [
-        {
-          "category": "auth",
-          "resourceName": "yellbackend",
-          "attributes": [
-            "UserPoolId"
-          ]
-        }
-      ]
+      "service": "S3"
     }
   }
 }

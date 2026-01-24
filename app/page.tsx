@@ -4,25 +4,44 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Textarea, Input } from "@/components/ui/textarea"
-import { Heart, MessageCircle, Share2, ImageIcon, MapPin, MoreHorizontal, Send, FileText, Search, X, Loader2 } from "lucide-react"
+import { Heart, MessageCircle, Share2, ImageIcon, MoreHorizontal, Send, FileText, Search, X, Loader2, Video, Edit, Trash2, Trophy, Users } from "lucide-react"
 import { Layout } from "@/components/layout"
+import { Navigation } from "@/components/navigation"
+import Link from "next/link"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
-import { listPosts, createPost as createDbPost, toggleLike as toggleDbLike, addComment as addDbComment, updatePostCounts, getCurrentUserEmail } from "@/lib/api"
+import { listPosts, getTimelinePosts, createPost as createDbPost, toggleLike as toggleDbLike, addComment as addDbComment, updatePostCounts, getCurrentUserEmail, getUserByEmail, updatePost, deletePost } from "@/lib/api"
+import { uploadImageToS3, uploadPdfToS3, uploadVideoToS3, refreshS3Url } from "@/lib/storage"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input as DialogInput } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
-
-type Place = {
-  id: string
-  name: string
-  address: string
-}
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 type LinkPreviewData = {
   url: string
   title: string
   description: string
   image: string
+}
+
+type Place = {
+  id: string
+  name: string
+  address: string
 }
 
 type Reply = {
@@ -55,6 +74,7 @@ type Comment = {
 type Post = {
   id: number
   dbId?: string
+  authorEmail?: string // 投稿作成者のメールアドレス
   user: {
     id: number
     name: string
@@ -62,6 +82,8 @@ type Post = {
   }
   content: string
   image?: string
+  videoUrl?: string
+  videoName?: string
   pdfName?: string
   pdfUrl?: string
   location?: Place
@@ -73,320 +95,398 @@ type Post = {
   liked: boolean
 }
 
-// Mock users data
-const mockUsers = [
-  {
-    id: 1,
-    name: "田中 太郎",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: 2,
-    name: "佐藤 花子",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: 3,
-    name: "山田 次郎",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: 4,
-    name: "鈴木 美咲",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: 5,
-    name: "高橋 健太",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: 6,
-    name: "伊藤 愛子",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-]
-
-// Mock comments data structure
-const mockComments: { [key: number]: Comment[] } = {
-  1: [
-    {
-      id: 1,
-      user: mockUsers[2],
-      content: "素敵な写真ですね！どちらのカフェですか？",
-      timestamp: "25分前",
-      likes: 3,
-      liked: false,
-      replies: [
-        {
-          id: 101,
-          user: mockUsers[1],
-          content: "ありがとうございます！これは渋谷の「STREAMER COFFEE COMPANY」ですよ！",
-          timestamp: "15分前",
-          likes: 2,
-          liked: false,
-        },
-        {
-          id: 102,
-          user: mockUsers[2],
-          content: "そうなんですね！今度行ってみます！",
-          timestamp: "10分前",
-          likes: 1,
-          liked: true,
-        },
-      ],
-    },
-    {
-      id: 2,
-      user: mockUsers[0],
-      content: "渋谷の新しいカフェです。とても雰囲気が良かったです！",
-      timestamp: "20分前",
-      likes: 1,
-      liked: true,
-      replies: [],
-    },
-  ],
-  2: [
-    {
-      id: 3,
-      user: mockUsers[1],
-      content: "頑張ってください！応援しています。",
-      timestamp: "1時間前",
-      likes: 2,
-      liked: false,
-      replies: [],
-    },
-  ],
-  3: [
-    {
-      id: 4,
-      user: mockUsers[1],
-      content: "家族との時間は大切ですね。素敵な写真です！",
-      timestamp: "4時間前",
-      likes: 5,
-      liked: true,
-      replies: [],
-    },
-    {
-      id: 5,
-      user: mockUsers[2],
-      content: "お子さんたち、とても楽しそうですね！",
-      timestamp: "3時間前",
-      likes: 2,
-      liked: false,
-      replies: [],
-    },
-  ],
-  4: [
-    {
-      id: 6,
-      user: mockUsers[4],
-      content: "お疲れ様です！素敵な写真ですね。",
-      timestamp: "15分前",
-      likes: 1,
-      liked: false,
-      replies: [],
-    },
-  ],
-  5: [
-    {
-      id: 7,
-      user: mockUsers[3],
-      content: "素晴らしい演奏ですね！",
-      timestamp: "30分前",
-      likes: 3,
-      liked: true,
-      replies: [],
-    },
-  ],
-  6: [
-    {
-      id: 8,
-      user: mockUsers[5],
-      content: "おいしそう！レシピを教えてください。",
-      timestamp: "1時間前",
-      likes: 2,
-      liked: false,
-      replies: [],
-    },
-  ],
+// デフォルトユーザー（データベースからユーザー情報を取得できない場合のフォールバック）
+const defaultUser = {
+  id: 0,
+  name: "匿名ユーザー",
+  avatar: "/placeholder.svg?height=40&width=40",
 }
 
-// Mock timeline posts
-const mockTimelinePosts: Post[] = [
-  {
-    id: 1,
-    user: mockUsers[1],
-    content: "今日は素晴らしい天気でした！渋谷で友達とカフェ巡りを楽しみました。新しいお店を発見できて嬉しいです。",
-    image: "/placeholder.svg?height=400&width=600",
-    likes: 42,
-    comments: 8,
-    shares: 3,
-    timestamp: "30分前",
-    liked: false,
-  },
-  {
-    id: 2,
-    user: mockUsers[2],
-    content: "新しいプロジェクトが始まりました！チーム一同で頑張ります。技術的な挑戦が多そうですが、とても楽しみです。",
-    likes: 28,
-    comments: 5,
-    shares: 2,
-    timestamp: "2時間前",
-    liked: true,
-  },
-  {
-    id: 3,
-    user: mockUsers[0],
-    content: "週末は家族と一緒に公園でピクニックをしました。子供たちがとても喜んでいて、良い思い出になりました。",
-    image: "/placeholder.svg?height=400&width=600",
-    likes: 56,
-    comments: 12,
-    shares: 4,
-    timestamp: "5時間前",
-    liked: false,
-  },
-  {
-    id: 4,
-    user: mockUsers[3],
-    content: "今日は一日中プログラミングの勉強をしていました。新しいフレームワークを学ぶのは大変ですが、とても楽しいです！",
-    likes: 35,
-    comments: 4,
-    shares: 1,
-    timestamp: "1時間前",
-    liked: false,
-  },
-  {
-    id: 5,
-    user: mockUsers[4],
-    content: "久しぶりにギターを弾きました。昔の曲を思い出しながら演奏するのは懐かしくて楽しいですね。",
-    image: "/placeholder.svg?height=400&width=600",
-    likes: 67,
-    comments: 7,
-    shares: 5,
-    timestamp: "3時間前",
-    liked: true,
-  },
-  {
-    id: 6,
-    user: mockUsers[5],
-    content: "今日は料理に挑戦しました！新しいレシピを試してみて、家族に好評でした。料理は本当に楽しいですね。",
-    image: "/placeholder.svg?height=400&width=600",
-    likes: 89,
-    comments: 18,
-    shares: 8,
-    timestamp: "4時間前",
-    liked: false,
-  },
-  {
-    id: 7,
-    user: mockUsers[1],
-    content:
-      "読書の秋ですね。最近読んだ本がとても面白くて、一気に読み終えてしまいました。おすすめの本があれば教えてください！",
-    likes: 19,
-    comments: 15,
-    shares: 1,
-    timestamp: "1日前",
-    liked: true,
-  },
-  {
-    id: 8,
-    user: mockUsers[2],
-    content: "今日はジムでトレーニングをしました。新しいメニューに挑戦して、とても充実した時間でした。",
-    likes: 45,
-    comments: 6,
-    shares: 2,
-    timestamp: "6時間前",
-    liked: false,
-  },
-  {
-    id: 9,
-    user: mockUsers[3],
-    content: "夜の散歩が好きです。街の灯りを見ながら歩くのは、とてもリラックスできます。",
-    likes: 23,
-    comments: 3,
-    shares: 1,
-    timestamp: "8時間前",
-    liked: true,
-  },
-  {
-    id: 10,
-    user: mockUsers[4],
-    content: "今日は友達と映画を見に行きました。とても感動的な作品で、久しぶりに涙が出ました。",
-    likes: 78,
-    comments: 22,
-    shares: 12,
-    timestamp: "1日前",
-    liked: false,
-  },
-]
+// コメントデータ（将来的にはデータベースから取得する予定）
+const mockComments: { [key: number]: Comment[] } = {}
 
-// Mock location data
-const mockPlaces: Place[] = [
-  { id: "1", name: "東京タワー", address: "東京都港区芝公園４丁目２−８" },
-  { id: "2", name: "東京スカイツリー", address: "東京都墨田区押上１丁目１−２" },
-  { id: "3", name: "渋谷スクランブル交差点", address: "東京都渋谷区道玄坂２丁目２" },
-  { id: "4", name: "新宿御苑", address: "東京都新宿区内藤町１１" },
-  { id: "5", name: "浅草寺", address: "東京都台東区浅草２丁目３−１" },
-  { id: "6", name: "東京駅", address: "東京都千代田区丸の内１丁目" },
-  { id: "7", name: "皇居", address: "東京都千代田区千代田１−１" },
-]
 
-// Mock Link Preview Data
-const mockLinkPreviews: { [key: string]: LinkPreviewData } = {
-  "https://www.yell-com.com": {
-    url: "https://www.yell-com.com",
-    title: "Yell-Com",
-    description: "スポーツで繋がる新しいコミュニケーションの場",
-    image: "/placeholder.svg?height=200&width=400&text=Yell-Com",
-  },
-  "https://bleague.jp": {
-    url: "https://bleague.jp",
-    title: "B.LEAGUE（Bリーグ）公式サイト",
-    description: "日本のプロバスケットボールリーグ「B.LEAGUE」の公式サイトです。",
-    image: "/placeholder.svg?height=200&width=400&text=B.LEAGUE",
-  },
+// 画像表示コンポーネント（S3のURLを動的に更新）
+function ImageWithRefresh({ imageUrl }: { imageUrl: string }) {
+  const [refreshedUrl, setRefreshedUrl] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [retryCount, setRetryCount] = useState(0)
+
+  useEffect(() => {
+    console.log('🎬 ImageWithRefresh: useEffect triggered', {
+      imageUrl: imageUrl.substring(0, 100),
+      retryCount,
+    })
+
+    const loadImage = async () => {
+      console.log('📸 ImageWithRefresh: loadImage() called')
+
+      if (!imageUrl) {
+        console.warn('⚠️ ImageWithRefresh: imageUrl is empty')
+        return
+      }
+
+      // Base64データURLの場合はそのまま使用
+      if (imageUrl.startsWith('data:')) {
+        console.log('📦 ImageWithRefresh: Using Base64 data URL')
+        setRefreshedUrl(imageUrl)
+        setIsLoading(false)
+        return
+      }
+
+      // S3のURLを更新（ダウンロードモードを使用）
+      try {
+        console.log('🔄 ImageWithRefresh: Refreshing image URL with download mode...')
+        const newUrl = await refreshS3Url(imageUrl, true) // ダウンロードモードを強制
+        console.log('✅ ImageWithRefresh: Image URL refreshed successfully!')
+        console.log('🔗 ImageWithRefresh: New URL type:', newUrl?.startsWith('blob:') ? 'Blob URL' : 'Other')
+        console.log('🔗 ImageWithRefresh: New URL preview:', newUrl?.substring(0, 100))
+        setRefreshedUrl(newUrl || imageUrl)
+        setIsLoading(false)
+      } catch (error) {
+        console.error('❌ ImageWithRefresh: Failed to refresh image URL:', error)
+        console.error('❌ ImageWithRefresh: Error details:', {
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        })
+        setRefreshedUrl(imageUrl) // エラー時は元のURLを使用
+        setIsLoading(false)
+      }
+    }
+
+    loadImage()
+  }, [imageUrl, retryCount])
+
+  const handleImageError = async (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const imgElement = e.target as HTMLImageElement
+    console.error('Image load error details:', {
+      originalUrl: imageUrl.substring(0, 150),
+      currentSrc: imgElement.src.substring(0, 150),
+      retryCount,
+      naturalWidth: imgElement.naturalWidth,
+      naturalHeight: imgElement.naturalHeight,
+    })
+
+    // エラー時に再度URLを更新して再試行（最大3回まで）
+    if (retryCount < 3) {
+      console.log(`Image load failed, retrying... (attempt ${retryCount + 1}/3)`)
+      setIsLoading(true)
+      setRetryCount(prev => prev + 1)
+    } else {
+      console.error('Failed to load image after 3 attempts:', imageUrl.substring(0, 150))
+      console.error('⚠️ Possible causes:')
+      console.error('1. S3 CORS configuration may be missing or incorrect')
+      console.error('2. S3 bucket policy may not allow access from this origin')
+      console.error('3. IAM role for authenticated users may lack S3 read permissions')
+      console.error('4. Object may not exist in S3')
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center bg-gray-50 min-h-[200px]">
+        <div className="text-center text-gray-500">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
+          <p>画像を読み込み中...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!refreshedUrl) {
+    return (
+      <div className="flex items-center justify-center bg-gray-50 min-h-[200px] p-4 text-center text-gray-500">
+        <p>画像を読み込めませんでした</p>
+      </div>
+    )
+  }
+
+  return (
+    <img
+      key={refreshedUrl} // URLが変更されたときに再読み込み
+      src={refreshedUrl}
+      alt="Post content"
+      className="w-full h-auto cursor-pointer hover:scale-[1.02] transition-transform duration-300"
+      onError={handleImageError}
+      onLoad={() => {
+        console.log('Image loaded successfully:', refreshedUrl.substring(0, 100))
+      }}
+    />
+  )
 }
 
+// PDF表示コンポーネント（S3のURLを動的に更新）
+function PdfViewer({ pdfUrl, pdfName }: { pdfUrl: string; pdfName?: string }) {
+  const [refreshedUrl, setRefreshedUrl] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const loadPdf = async () => {
+      if (!pdfUrl) return
+      
+      // Base64データURLの場合はそのまま使用
+      if (pdfUrl.startsWith('data:')) {
+        setRefreshedUrl(pdfUrl)
+        setIsLoading(false)
+        return
+      }
+      
+      // S3のURLを更新（ダウンロードモードを使用）
+      try {
+        console.log('🔄 PdfViewer: Refreshing PDF URL with download mode...')
+        const newUrl = await refreshS3Url(pdfUrl, true) // ダウンロードモードを強制
+        console.log('✅ PdfViewer: PDF URL refreshed successfully!')
+        console.log('🔗 PdfViewer: New URL type:', newUrl?.startsWith('blob:') ? 'Blob URL' : 'Other')
+        setRefreshedUrl(newUrl || pdfUrl)
+      } catch (error) {
+        console.error('❌ PdfViewer: Failed to refresh PDF URL:', error)
+        setRefreshedUrl(pdfUrl) // エラー時は元のURLを使用
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    loadPdf()
+  }, [pdfUrl])
+
+  if (isLoading) {
+    return (
+      <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center" style={{ height: '500px' }}>
+        <div className="text-center text-gray-500">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
+          <p>PDFを読み込み中...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!refreshedUrl) {
+    return (
+      <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden bg-gray-50 p-4 text-center text-gray-500">
+        <p>PDFを読み込めませんでした</p>
+      </div>
+    )
+  }
+
+  // PDFを直接表示（Google Docs ViewerのCSP問題を回避）
+  // objectタグを使用してPDFを直接表示（embedタグより互換性が高い）
+  return (
+    <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden">
+      <object
+        key={refreshedUrl} // URLが変更されたときに再読み込み
+        data={refreshedUrl}
+        type="application/pdf"
+        width="100%"
+        height="500px"
+        className="w-full"
+        style={{ minHeight: '500px' }}
+      >
+        {/* フォールバック: PDFが表示できない場合 */}
+        <div className="p-8 text-center bg-gray-50">
+          <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+          <p className="text-gray-600 mb-4">PDFを表示できませんでした</p>
+          <a
+            href={refreshedUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:underline inline-flex items-center gap-2 font-medium"
+          >
+            <FileText className="w-4 h-4" />
+            {pdfName || "PDFファイル"}を新しいタブで開く
+          </a>
+        </div>
+      </object>
+    </div>
+  )
+}
 
 export default function TimelinePage() {
   ensureAmplifyConfigured()
-  const [posts, setPosts] = useState<Post[]>(mockTimelinePosts)
+  const [posts, setPosts] = useState<Post[]>([]) // データベースから取得した投稿のみを使用
   const [newPost, setNewPost] = useState("")
   const [selectedPdf, setSelectedPdf] = useState<File | null>(null)
   const [pdfPreview, setPdfPreview] = useState<string | null>(null)
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null)
-  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false)
-  const [locationSearch, setLocationSearch] = useState("")
-  const [locationResults, setLocationResults] = useState<Place[]>([])
+  const [selectedVideo, setSelectedVideo] = useState<File | null>(null)
+  const [videoPreview, setVideoPreview] = useState<string | null>(null)
   const [linkPreview, setLinkPreview] = useState<LinkPreviewData | null>(null)
   const [isFetchingPreview, setIsFetchingPreview] = useState(false)
+  const [currentUser, setCurrentUser] = useState<{ name: string; avatar?: string; email?: string } | null>(null)
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | undefined>(undefined)
 
-  const [locationError, setLocationError] = useState<string | null>(null)
   const pdfInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
+  const videoInputRef = useRef<HTMLInputElement>(null)
   const [comments, setComments] = useState(mockComments)
   const [showComments, setShowComments] = useState<{ [key: number]: boolean }>({})
   const [newComment, setNewComment] = useState<{ [key: number]: string }>({})
   const [replyingTo, setReplyingTo] = useState<{ postId: number; commentId: number } | null>(null)
   const [replyContent, setReplyContent] = useState("")
   const { toast } = useToast()
+  const [editingPostId, setEditingPostId] = useState<number | null>(null)
+  const [editContent, setEditContent] = useState("")
+  const [deletePostId, setDeletePostId] = useState<number | null>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isPostFormOpen, setIsPostFormOpen] = useState(false)
+
+  // ログインユーザー情報を取得
+  useEffect(() => {
+    const loadCurrentUser = async () => {
+      try {
+        // Amplifyのauth sessionから直接ユーザー情報を取得
+        const email = await getCurrentUserEmail()
+        if (email) {
+          setCurrentUserEmail(email)
+          console.log('Current user email set:', email)
+
+          const userData = await getUserByEmail(email)
+          if (userData) {
+            // アバターURLをS3からリフレッシュ
+            let avatarUrl = userData.avatar || undefined
+            if (avatarUrl && !avatarUrl.startsWith('data:') && !avatarUrl.startsWith('blob:') && !avatarUrl.startsWith('/placeholder')) {
+              try {
+                avatarUrl = await refreshS3Url(avatarUrl, true) || avatarUrl
+              } catch (error) {
+                console.error('Failed to refresh current user avatar URL:', error)
+              }
+            }
+            setCurrentUser({
+              name: `${userData.lastName} ${userData.firstName}`,
+              avatar: avatarUrl,
+              email: email,
+            })
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load current user:', error)
+      }
+    }
+
+    loadCurrentUser()
+  }, [])
 
   // 初期ロードでDBから投稿を取得
   useEffect(() => {
     ;(async () => {
       try {
-        const dbPosts = await listPosts(50)
-        const mapped: Post[] = dbPosts.map((p, idx) => ({
+        console.log('TimelinePage: Loading posts from database...')
+        
+        // ログインユーザーがいる場合はフォローベースのタイムラインを取得
+        // いない場合は全投稿を取得
+        let dbPosts
+        if (currentUserEmail) {
+          console.log('TimelinePage: Loading personalized timeline for:', currentUserEmail)
+          dbPosts = await getTimelinePosts(currentUserEmail, 50)
+        } else {
+          console.log('TimelinePage: Loading all posts (user not logged in)')
+          dbPosts = await listPosts(50)
+        }
+        console.log('TimelinePage: Received posts from database:', dbPosts.length)
+        console.log('TimelinePage: Posts with authorEmail:', dbPosts.filter(p => p.authorEmail).length)
+        
+        if (dbPosts.length === 0) {
+          console.warn('TimelinePage: No posts found in database')
+          setPosts([])
+          return
+        }
+        
+        // 投稿を新しい順にソート（createdAtの降順）
+        const sortedPosts = [...dbPosts].sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0
+          return dateB - dateA // 新しい順
+        })
+        console.log('TimelinePage: Sorted posts by createdAt (newest first):', sortedPosts.map(p => ({
+          id: p.id,
+          createdAt: p.createdAt,
+          content: p.content?.substring(0, 20)
+        })))
+        
+        const mapped: Post[] = await Promise.all(
+          sortedPosts.map(async (p, idx) => {
+            console.log(`TimelinePage: Processing post ${idx + 1}/${sortedPosts.length}:`, {
+              id: p.id,
+              content: p.content?.substring(0, 30),
+              authorEmail: p.authorEmail || 'NO AUTHOR EMAIL'
+            })
+            
+            // 投稿者のユーザー情報を取得
+            let user = defaultUser // デフォルトユーザー
+            if (p.authorEmail) {
+              try {
+                console.log(`TimelinePage: Fetching user for email: ${p.authorEmail}`)
+                const author = await getUserByEmail(p.authorEmail)
+                if (author) {
+                  // アバターURLをS3からリフレッシュ
+                  let avatarUrl = author.avatar || "/placeholder.svg?height=40&width=40"
+                  if (avatarUrl && !avatarUrl.startsWith('data:') && !avatarUrl.startsWith('blob:') && !avatarUrl.startsWith('/placeholder')) {
+                    try {
+                      avatarUrl = await refreshS3Url(avatarUrl, true) || avatarUrl
+                    } catch (error) {
+                      console.error('Failed to refresh avatar URL:', error)
+                    }
+                  }
+                  user = {
+                    id: idx + 1,
+                    name: `${author.lastName} ${author.firstName}`,
+                    avatar: avatarUrl,
+                  }
+                  console.log(`TimelinePage: Found user: ${user.name}`)
+                } else {
+                  console.warn(`TimelinePage: User not found for email: ${p.authorEmail}`)
+                }
+              } catch (e) {
+                console.error("TimelinePage: Failed to load user for post:", e)
+                console.error("TimelinePage: Post details:", { id: p.id, authorEmail: p.authorEmail })
+              }
+            } else {
+              console.warn(`TimelinePage: Post ${p.id} has no authorEmail, using default user`)
+            }
+
+            // PDF情報をログ出力（デバッグ用）
+            if (p.pdfUrl || p.pdfName) {
+              console.log(`Post ${p.id} PDF info:`, {
+                pdfUrl: p.pdfUrl ? (p.pdfUrl.length > 100 ? p.pdfUrl.substring(0, 100) + '...' : p.pdfUrl) : null,
+                pdfName: p.pdfName,
+                pdfUrlType: p.pdfUrl ? (p.pdfUrl.startsWith('data:') ? 'Base64' : 'S3 URL') : 'null'
+              })
+            }
+
+            // S3のURLを更新（期限切れの場合に新しいURLを生成）
+            let imageUrl = p.imageUrl ?? undefined
+            let pdfUrl = p.pdfUrl ?? undefined
+            
+            // S3のURLが期限切れの場合に新しいURLを生成
+            if (imageUrl && !imageUrl.startsWith('data:') && !imageUrl.startsWith('blob:')) {
+              try {
+                imageUrl = await refreshS3Url(imageUrl, true) || undefined  // ダウンロードモードを使用
+              } catch (error) {
+                console.error('Failed to refresh image URL:', error)
+                // エラーが発生した場合は、元のURLを使用
+              }
+            }
+            
+            if (pdfUrl && !pdfUrl.startsWith('data:') && !pdfUrl.startsWith('blob:')) {
+              try {
+                pdfUrl = await refreshS3Url(pdfUrl, true) || undefined  // ダウンロードモードを使用
+              } catch (error) {
+                console.error('Failed to refresh PDF URL:', error)
+                // エラーが発生した場合は、元のURLを使用
+              }
+            }
+
+            return {
           id: idx + 1, // ローカル用の連番ID
           dbId: p.id,
-          user: mockUsers[0], // 簡易表示（将来: authorで表示）
+          authorEmail: p.authorEmail || undefined, // 投稿作成者のメールアドレスを保存（nullをundefinedに変換）
+              user: user,
           content: p.content,
-          image: p.imageUrl ?? undefined,
+          image: imageUrl,
+              videoUrl: p.videoUrl ?? undefined,
+              videoName: p.videoName ?? undefined,
           pdfName: p.pdfName ?? undefined,
-          pdfUrl: p.pdfUrl ?? undefined,
+          pdfUrl: pdfUrl,
           location: p.locationName ? { id: "-", name: p.locationName, address: p.locationAddress || "" } : undefined,
           linkPreview: p.linkUrl
             ? {
@@ -399,20 +499,53 @@ export default function TimelinePage() {
           likes: p.likesCount ?? 0,
           comments: p.commentsCount ?? 0,
           shares: 0,
-          timestamp: p.createdAt || "",
+              timestamp: p.createdAt ? (() => {
+                const date = new Date(p.createdAt)
+                const year = date.getFullYear()
+                const month = String(date.getMonth() + 1).padStart(2, '0')
+                const day = String(date.getDate()).padStart(2, '0')
+                const hours = String(date.getHours()).padStart(2, '0')
+                const minutes = String(date.getMinutes()).padStart(2, '0')
+                return `${year}-${month}-${day} ${hours}:${minutes}`
+              })() : "",
           liked: false,
-        }))
-        if (mapped.length) setPosts(mapped)
-      } catch (e) {
-        console.error("Failed to load posts", e)
+            }
+          })
+        )
+        // データベースから取得した投稿を設定（空の場合も空配列を設定）
+        setPosts(mapped)
+        console.log('TimelinePage: Loaded posts from database:', mapped.length)
+        console.log('TimelinePage: Posts state updated:', mapped.map(p => ({ id: p.dbId, content: p.content?.substring(0, 20) })))
+      } catch (e: any) {
+        console.error("TimelinePage: Failed to load posts", e)
+        console.error("TimelinePage: Error details:", {
+          message: e?.message,
+          errors: e?.errors,
+          stack: e?.stack
+        })
+        // エラーが発生した場合は空配列を設定
+        setPosts([])
+        toast({
+          title: "エラー",
+          description: "投稿の読み込みに失敗しました。ページをリロードしてください。",
+          variant: "destructive",
+        })
       }
     })()
-  }, [])
+  }, [currentUserEmail])
 
   const handleLike = async (postId: number) => {
     const target = posts.find(p => p.id === postId)
     if (!target) return
-    const email = await getCurrentUserEmail()
+
+    // Amplifyのauth sessionから直接メールアドレスを取得
+    let email: string | undefined
+    try {
+      email = await getCurrentUserEmail()
+    } catch (error) {
+      console.error('Failed to get current user email:', error)
+    }
+
     if (!email || !target.dbId) {
       // ローカルのみ反映
       setPosts(posts.map(p => p.id === postId ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 } : p))
@@ -467,9 +600,16 @@ export default function TimelinePage() {
   const handleSubmitComment = async (postId: number) => {
     const commentText = newComment[postId]?.trim()
     if (commentText) {
+      // 現在のユーザー情報を取得（ログインしている場合）
+      const userForComment = currentUser ? {
+        id: Date.now(),
+        name: currentUser.name,
+        avatar: currentUser.avatar || "/placeholder.svg",
+      } : defaultUser
+
       const newCommentObj: Comment = {
         id: Date.now(),
-        user: mockUsers[0],
+        user: userForComment,
         content: commentText,
         timestamp: "今",
         likes: 0,
@@ -502,9 +642,18 @@ export default function TimelinePage() {
       try {
         const post = posts.find(p => p.id === postId)
         if (post?.dbId) {
-          const email = await getCurrentUserEmail()
+          // Amplifyのauth sessionから直接メールアドレスを取得
+          let email: string | undefined
+          try {
+            email = await getCurrentUserEmail()
+          } catch (error) {
+            console.error('Failed to get current user email:', error)
+          }
+
+          if (email) {
           await addDbComment(post.dbId, commentText, email)
           await updatePostCounts(post.dbId, { commentsCount: post.comments + 1 })
+          }
         }
       } catch (e) {
         console.error("add comment failed", e)
@@ -535,11 +684,22 @@ export default function TimelinePage() {
     }
   }
 
+  const handleVideoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0]
+      setSelectedVideo(file)
+      if (videoPreview) {
+        URL.revokeObjectURL(videoPreview)
+      }
+      setVideoPreview(URL.createObjectURL(file))
+    }
+  }
+
   const handleSubmitReply = (postId: number, commentId: number) => {
     if (replyContent.trim()) {
       const newReplyObj: Reply = {
         id: Date.now(),
-        user: mockUsers[0],
+        user: defaultUser,
         content: replyContent,
         timestamp: "今",
         likes: 0,
@@ -564,21 +724,17 @@ export default function TimelinePage() {
     if (isFetchingPreview) return
     setIsFetchingPreview(true)
 
-    // Simulate API call delay
+    // リンクプレビューの取得（将来的には実際のAPIを使用）
     await new Promise((resolve) => setTimeout(resolve, 800))
 
-    const matchedDomain = Object.keys(mockLinkPreviews).find((domain) => url.includes(domain))
-    if (matchedDomain) {
-      setLinkPreview(mockLinkPreviews[matchedDomain])
-    } else {
-      // Generic preview for any other link
-      setLinkPreview({
-        url,
-        title: "プレビューを取得できませんでした",
-        description: "指定されたURLのプレビューは表示できません。",
-        image: "/placeholder.svg?height=200&width=400&text=No+Preview",
-      })
-    }
+    // 汎用プレビュー
+    setLinkPreview({
+      url,
+      title: "リンクプレビュー",
+      description: url,
+      image: "/placeholder.svg?height=200&width=400&text=Link+Preview",
+    })
+
     setIsFetchingPreview(false)
   }
 
@@ -611,18 +767,6 @@ export default function TimelinePage() {
     }
   }, [newPost])
 
-  useEffect(() => {
-    if (locationSearch.trim() === "") {
-      setLocationResults([])
-      return
-    }
-
-    const results = mockPlaces.filter((place) =>
-      place.name.toLowerCase().includes(locationSearch.toLowerCase()) ||
-      place.address.toLowerCase().includes(locationSearch.toLowerCase())
-    )
-    setLocationResults(results)
-  }, [locationSearch])
 
   const handlePdfButtonClick = () => {
     pdfInputRef.current?.click()
@@ -632,126 +776,357 @@ export default function TimelinePage() {
     imageInputRef.current?.click()
   }
 
-  const handleLocationButtonClick = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocationError(null)
-        },
-        (error) => {
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              setLocationError("位置情報の取得が拒否されました。")
-              break
-            case error.POSITION_UNAVAILABLE:
-              setLocationError("位置情報が利用できません。")
-              break
-            case error.TIMEOUT:
-              setLocationError("位置情報の取得がタイムアウトしました。")
-              break
-            default:
-              setLocationError("位置情報の取得中にエラーが発生しました。")
-              break
-          }
-        },
-      )
-    } else {
-      setLocationError("お使いのブラウザは位置情報取得に対応していません。")
-    }
+  const handleVideoButtonClick = () => {
+    videoInputRef.current?.click()
   }
 
+
   const handleSubmitPost = async () => {
-    if (newPost.trim() || selectedPdf || selectedImage || selectedPlace) {
+    if (newPost.trim() || selectedPdf || selectedImage || selectedVideo) {
       // まずDBへ保存
       try {
-        const email = await getCurrentUserEmail()
-        const created = await createDbPost({
+        // Amplifyのauth sessionから直接メールアドレスを取得
+        let email: string | undefined
+        try {
+          email = await getCurrentUserEmail()
+        } catch (error) {
+          console.error('Failed to get current user email:', error)
+        }
+
+        if (!email) {
+          toast({
+            title: "エラー",
+            description: "ログインが必要です。ログインページに移動してください。",
+            variant: "destructive",
+          })
+          return
+        }
+
+        // 画像、動画、PDFをS3にアップロード（またはBase64フォールバック）
+        let imageUrl: string | null = null
+        let videoUrl: string | null = null
+        let pdfUrl: string | null = null
+
+        if (selectedImage) {
+          try {
+            imageUrl = await uploadImageToS3(selectedImage, email)
+            console.log('Image uploaded:', imageUrl)
+          } catch (error) {
+            console.error('Failed to upload image:', error)
+            // エラーが発生した場合は、プレビュー（Base64）を使用
+            imageUrl = imagePreview || null
+          }
+        } else if (imagePreview) {
+          imageUrl = imagePreview
+        }
+
+        if (selectedVideo) {
+          try {
+            videoUrl = await uploadVideoToS3(selectedVideo, email)
+            console.log('Video uploaded:', videoUrl)
+          } catch (error) {
+            console.error('Failed to upload video:', error)
+            // エラーが発生した場合は、プレビュー（Blob URL）を使用
+            videoUrl = videoPreview || null
+          }
+        } else if (videoPreview) {
+          videoUrl = videoPreview
+        }
+
+        if (selectedPdf) {
+          console.log('PDF file selected:', {
+            name: selectedPdf.name,
+            size: `${(selectedPdf.size / 1024 / 1024).toFixed(2)}MB`,
+            type: selectedPdf.type
+          })
+          try {
+            pdfUrl = await uploadPdfToS3(selectedPdf, email)
+            console.log('PDF uploaded successfully:', {
+              url: pdfUrl ? (pdfUrl.length > 100 ? pdfUrl.substring(0, 100) + '...' : pdfUrl) : 'null',
+              urlType: pdfUrl ? (pdfUrl.startsWith('data:') ? 'Base64' : 'S3 URL') : 'null'
+            })
+          } catch (error: any) {
+            console.error('Failed to upload PDF:', error)
+            console.error('PDF upload error details:', {
+              message: error?.message,
+              name: error?.name,
+              stack: error?.stack
+            })
+            
+            // S3設定エラーの場合は、投稿を中止する
+            const isS3ConfigError = error?.message?.includes('S3ストレージが設定されていません') ||
+                                   error?.message?.includes('bucket') ||
+                                   error?.name === 'NoBucket'
+            
+            if (isS3ConfigError) {
+              toast({
+                title: "S3ストレージが設定されていません",
+                description: "PDFをアップロードするには、AWS AmplifyでS3ストレージを設定する必要があります。設定後、再度お試しください。",
+                variant: "destructive",
+              })
+              // S3設定エラーの場合は投稿を中止
+              return
+            }
+            
+            // その他のエラーの場合
+            const fileSizeMB = selectedPdf ? (selectedPdf.size / 1024 / 1024).toFixed(2) : '不明'
+            toast({
+              title: "PDFのアップロードに失敗しました",
+              description: `PDFファイル（${fileSizeMB}MB）のアップロードに失敗しました。300KB以下のPDFは自動的に保存されますが、それ以上のサイズはS3ストレージの設定が必要です。`,
+              variant: "destructive",
+            })
+            // PDFのアップロードに失敗した場合は、PDFなしで投稿を続行
+            pdfUrl = null
+            console.warn('Continuing post creation without PDF due to upload failure.')
+          }
+        } else {
+          console.log('No PDF file selected')
+        }
+
+        console.log('Creating post with data:', {
           content: newPost,
-          imageUrl: imagePreview || null,
-          pdfUrl: pdfPreview || null,
+          imageUrl: imageUrl ? (imageUrl.length > 100 ? imageUrl.substring(0, 100) + '...' : imageUrl) : null,
+          videoUrl: videoUrl ? (videoUrl.length > 100 ? videoUrl.substring(0, 100) + '...' : videoUrl) : null,
+          videoName: selectedVideo?.name,
+          pdfUrl: pdfUrl ? (pdfUrl.length > 100 ? pdfUrl.substring(0, 100) + '...' : pdfUrl) : null,
+          pdfName: selectedPdf?.name,
+          pdfUrlType: pdfUrl ? (pdfUrl.startsWith('data:') ? 'Base64' : 'S3 URL') : 'null',
+          authorEmail: email,
+        })
+
+        if (!email) {
+          toast({
+            title: "エラー",
+            description: "ログインが必要です。ログインページに移動してください。",
+            variant: "destructive",
+          })
+          return
+        }
+        
+        console.log('Calling createDbPost with:', {
+          content: newPost,
+          imageUrl: imageUrl ? (imageUrl.length > 100 ? imageUrl.substring(0, 100) + '...' : imageUrl) : null,
+          videoUrl: videoUrl ? (videoUrl.length > 100 ? videoUrl.substring(0, 100) + '...' : videoUrl) : null,
+          pdfUrl: pdfUrl ? (pdfUrl.length > 100 ? pdfUrl.substring(0, 100) + '...' : pdfUrl) : null,
+          authorEmail: email,
+          hasAuthorEmail: !!email
+        })
+        
+        // PDFが選択されているがURLがnullの場合、警告を表示
+        if (selectedPdf && !pdfUrl) {
+          console.warn('PDF file was selected but upload failed:', {
+            fileName: selectedPdf.name,
+            fileSize: `${(selectedPdf.size / 1024 / 1024).toFixed(2)}MB`,
+            pdfUrl: null
+          })
+        }
+
+        // blob: URLが誤って保存されないようにチェック
+        if (pdfUrl && pdfUrl.startsWith('blob:')) {
+          console.error('⚠️ blob: URL detected in pdfUrl! This is a temporary URL and cannot be saved. Rejecting save.')
+          toast({
+            title: "エラー",
+            description: "PDFのURLが無効です。再度アップロードしてください。",
+            variant: "destructive",
+          })
+          return // 投稿を中止
+        }
+
+        const postInput = {
+          content: newPost || '', // 空文字列でも許可
+          imageUrl: imageUrl,
+          videoUrl: videoUrl,
+          videoName: selectedVideo?.name || null,
+          pdfUrl: pdfUrl, // blob: URLは上記のチェックで除外される
           pdfName: selectedPdf?.name || null,
-          locationName: selectedPlace?.name || null,
-          locationAddress: selectedPlace?.address || null,
           linkUrl: linkPreview?.url || null,
           linkTitle: linkPreview?.title || null,
           linkDescription: linkPreview?.description || null,
           linkImage: linkPreview?.image || null,
           likesCount: 0,
           commentsCount: 0,
-          authorEmail: email,
+          authorEmail: email, // 必須: 投稿者のメールアドレス
+        }
+        
+        console.log('Post input (full):', JSON.stringify(postInput, null, 2))
+        
+        const created = await createDbPost(postInput)
+        
+        console.log('Post created successfully:', {
+          id: created.id,
+          authorEmail: created.authorEmail,
+          hasAuthorEmail: !!created.authorEmail,
+          content: created.content?.substring(0, 50),
+          fullData: created
         })
 
-        const newPostObj: Post = {
-          id: Date.now(),
-          dbId: created.id,
-          user: mockUsers[0],
-          content: newPost,
-          likes: 0,
-          comments: 0,
-          shares: 0,
-          timestamp: "今",
-          liked: false,
+        toast({
+          title: "成功",
+          description: "投稿が作成されました",
+        })
+        
+        // 投稿後、DBから最新の投稿を再取得して表示を更新（ローカルステートは使用しない）
+        try {
+          console.log('Refreshing posts from database after creation...')
+          const latestPosts = await listPosts(50)
+          console.log('Refreshed posts count:', latestPosts.length)
+          
+          if (latestPosts.length > 0) {
+            // 投稿を新しい順にソート（createdAtの降順）
+            const sortedLatestPosts = [...latestPosts].sort((a, b) => {
+              const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0
+              const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0
+              return dateB - dateA // 新しい順
+            })
+            console.log('TimelinePage: Sorted refreshed posts by createdAt (newest first)')
+            
+            // DBから取得した投稿をマッピング
+            const mapped: Post[] = await Promise.all(
+              sortedLatestPosts.map(async (p, idx) => {
+                let user = defaultUser // デフォルトユーザー
+                if (p.authorEmail) {
+                  try {
+                    const author = await getUserByEmail(p.authorEmail)
+                    if (author) {
+                      // アバターURLをS3からリフレッシュ
+                      let avatarUrl = author.avatar || "/placeholder.svg?height=40&width=40"
+                      if (avatarUrl && !avatarUrl.startsWith('data:') && !avatarUrl.startsWith('blob:') && !avatarUrl.startsWith('/placeholder')) {
+                        try {
+                          avatarUrl = await refreshS3Url(avatarUrl, true) || avatarUrl
+                        } catch (error) {
+                          console.error('Failed to refresh avatar URL:', error)
+                        }
+                      }
+                      user = {
+                        id: idx + 1,
+                        name: `${author.lastName} ${author.firstName}`,
+                        avatar: avatarUrl,
+                      }
+                    }
+                  } catch (e) {
+                    console.error("Failed to load user for refreshed post:", e)
+                  }
+                }
+
+                return {
+                  id: idx + 1,
+                  dbId: p.id,
+                  authorEmail: p.authorEmail || undefined, // 投稿作成者のメールアドレスを保存（nullをundefinedに変換）
+                  user: user,
+                  content: p.content,
+                  image: p.imageUrl ?? undefined,
+                  videoUrl: p.videoUrl ?? undefined,
+                  videoName: p.videoName ?? undefined,
+                  pdfName: p.pdfName ?? undefined,
+                  pdfUrl: p.pdfUrl ?? undefined,
+                  location: p.locationName ? { id: "-", name: p.locationName, address: p.locationAddress || "" } : undefined,
+                  linkPreview: p.linkUrl
+                    ? {
+                        url: p.linkUrl,
+                        title: p.linkTitle || "",
+                        description: p.linkDescription || "",
+                        image: p.linkImage || "/placeholder.svg?height=200&width=400&text=Link",
+                      }
+                    : undefined,
+                  likes: p.likesCount ?? 0,
+                  comments: p.commentsCount ?? 0,
+                  shares: 0,
+                  timestamp: p.createdAt ? (() => {
+                    const date = new Date(p.createdAt)
+                    const year = date.getFullYear()
+                    const month = String(date.getMonth() + 1).padStart(2, '0')
+                    const day = String(date.getDate()).padStart(2, '0')
+                    const hours = String(date.getHours()).padStart(2, '0')
+                    const minutes = String(date.getMinutes()).padStart(2, '0')
+                    return `${year}-${month}-${day} ${hours}:${minutes}`
+                  })() : "",
+                  liked: false,
+                }
+              })
+            )
+            
+            // DBから取得した投稿のみを表示（ローカルステートは使用しない）
+            setPosts(mapped)
+            console.log('Posts refreshed from database:', mapped.length)
+            
+            // 最新の投稿が作成した投稿と一致するか確認
+            const latestPost = latestPosts[0]
+            if (latestPost.id === created.id || latestPost.authorEmail === email) {
+              console.log('Post confirmed in database:', latestPost)
+            }
+          } else {
+            console.warn('No posts found after creation, clearing local state')
+            setPosts([])
+          }
+        } catch (refreshError) {
+          console.error('Failed to refresh posts:', refreshError)
+          // エラーが発生した場合も、ローカルステートは更新しない（DBから取得できたもののみ表示）
         }
-        if (selectedPdf && pdfPreview) {
-          newPostObj.pdfName = selectedPdf.name
-          newPostObj.pdfUrl = pdfPreview
-        }
-        if (imagePreview) {
-          newPostObj.image = imagePreview
-        }
-        if (selectedPlace) {
-          newPostObj.location = selectedPlace
-        }
-        if (linkPreview) {
-          newPostObj.linkPreview = linkPreview
-        }
-        setPosts([newPostObj, ...posts])
-      } catch (e) {
+      } catch (e: any) {
         console.error("create post failed", e)
+        toast({
+          title: "エラー",
+          description: e?.message || "投稿の作成に失敗しました",
+          variant: "destructive",
+        })
       }
       setNewPost("")
       setSelectedPdf(null)
       setPdfPreview(null)
       setSelectedImage(null)
       setImagePreview(null)
-      setSelectedPlace(null)
+      setSelectedVideo(null)
+      if (videoPreview) {
+        URL.revokeObjectURL(videoPreview)
+      }
+      setVideoPreview(null)
       setLinkPreview(null)
-      setLocationError(null)
+      setIsPostFormOpen(false)
     }
   }
 
   return (
     <Layout>
-      <div className="max-w-6xl pt-2 pb-20 px-2 md:px-6 space-y-4 md:space-y-8">
-        {/* Create Post */}
-        <Card className="w-full border-0 shadow-lg bg-white/90 backdrop-blur-sm">
-          <CardHeader className="pb-4">
-            <div className="flex items-start gap-4">
-              <Avatar className="w-12 h-12 ring-2 ring-orange-100">
-                <AvatarImage src={mockUsers[0].avatar || "/placeholder.svg"} alt={mockUsers[0].name} />
-                <AvatarFallback className="bg-gradient-to-br from-orange-500 to-red-500 text-white font-semibold">
-                  {mockUsers[0].name
-                    .split(" ")
-                    .map((n: string) => n[0])
-                    .join("")}
+      <div className="min-h-screen bg-[#F0F2F5] overflow-x-hidden w-full max-w-full">
+        <div className="w-full max-w-[680px] mx-auto px-0 overflow-hidden box-border">
+          {/* Main Content */}
+          <div className="space-y-2 pb-4 w-full overflow-hidden box-border">
+            {/* Create Post */}
+            <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-2">
+          <CardHeader className="px-3 py-3">
+            <div className="flex items-center gap-2">
+              <Avatar className="w-10 h-10 shrink-0">
+                <AvatarImage src={currentUser?.avatar || "/placeholder.svg"} alt={currentUser?.name || 'ユーザー'} />
+                <AvatarFallback className="bg-blue-600 text-white font-semibold">
+                  {currentUser?.name?.charAt(0) || "U"}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1">
-                <Textarea 
-                  placeholder={`${mockUsers[0].name || 'ユーザー'}さん、今何をしていますか？`}
-                  value={newPost}
-                  onChange={(e) => setNewPost(e.target.value)}
-                  className="min-h-[100px] resize-none border-none shadow-none focus-visible:ring-0 text-base bg-transparent placeholder:text-gray-400"
-                />
-              </div>
+              {!isPostFormOpen ? (
+                <button
+                  onClick={() => setIsPostFormOpen(true)}
+                  className="flex-1 h-10 px-4 bg-gray-100 rounded-full text-left text-gray-500 text-sm hover:bg-gray-200"
+                >
+                  今何してる？
+                </button>
+              ) : (
+                <div className="flex-1">
+                  <Textarea
+                    id="post-textarea"
+                    placeholder="今何してる？"
+                    value={newPost}
+                    onChange={(e) => setNewPost(e.target.value)}
+                    className="w-full min-h-[80px] resize-none border border-gray-200 rounded-lg bg-white text-sm focus-visible:ring-1 focus-visible:ring-blue-500 p-3"
+                    autoFocus
+                  />
+                </div>
+              )}
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-full" onClick={handleImageButtonClick}>
-                  <ImageIcon className="w-5 h-5 md:mr-2" />
-                  <span className="hidden md:inline">写真</span>
+          <CardContent className="px-3 pb-3 pt-0">
+            <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+              <div className="flex items-center gap-4">
+                <Button variant="ghost" size="sm" className="text-gray-600 hover:bg-gray-100 p-2 h-auto" onClick={handleImageButtonClick}>
+                  <ImageIcon className="w-5 h-5 text-green-500" />
                 </Button>
                 <input
                   type="file"
@@ -760,9 +1135,8 @@ export default function TimelinePage() {
                   accept="image/*"
                   style={{ display: "none" }}
                 />
-                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-full" onClick={handlePdfButtonClick}>
-                  <FileText className="w-5 h-5 md:mr-2" />
-                  <span className="hidden md:inline">PDF</span>
+                <Button variant="ghost" size="sm" className="text-gray-600 hover:bg-gray-100 p-2 h-auto" onClick={handlePdfButtonClick}>
+                  <FileText className="w-5 h-5 text-red-500" />
                 </Button>
                 <input
                   type="file"
@@ -771,56 +1145,27 @@ export default function TimelinePage() {
                   accept=".pdf"
                   style={{ display: "none" }}
                 />
-
-                <Dialog open={isLocationDialogOpen} onOpenChange={setIsLocationDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-full">
-                      <MapPin className="w-5 h-5 md:mr-2" />
-                      <span className="hidden md:inline">場所</span>
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>場所を検索</DialogTitle>
-                    </DialogHeader>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                      <DialogInput 
-                        placeholder="場所を検索..." 
-                        value={locationSearch}
-                        onChange={(e) => setLocationSearch(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                    <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {locationResults.map((place) => (
-                        <div 
-                          key={place.id} 
-                          className="p-2 hover:bg-gray-100 rounded-md cursor-pointer"
-                          onClick={() => {
-                            setSelectedPlace(place)
-                            setIsLocationDialogOpen(false)
-                            setLocationSearch("")
-                          }}
-                        >
-                          <div className="font-semibold">{place.name}</div>
-                          <div className="text-sm text-gray-500">{place.address}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </DialogContent>
-                </Dialog>
-
+                <Button variant="ghost" size="sm" className="text-gray-600 hover:bg-gray-100 p-2 h-auto" onClick={handleVideoButtonClick}>
+                  <Video className="w-5 h-5 text-purple-500" />
+                </Button>
+                <input
+                  type="file"
+                  ref={videoInputRef}
+                  onChange={handleVideoSelect}
+                  accept="video/*"
+                  style={{ display: "none" }}
+                />
               </div>
-              <Button 
-                onClick={handleSubmitPost} 
-                disabled={!newPost.trim() && !selectedPdf && !selectedImage && !selectedPlace} 
-                className="px-8 py-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
+              <Button
+                onClick={handleSubmitPost}
+                disabled={!newPost.trim() && !selectedPdf && !selectedImage && !selectedVideo}
+                className="px-4 h-9 bg-[#DC0000] hover:bg-[#B80000] text-white font-medium text-sm rounded-lg disabled:bg-gray-300"
               >
                 投稿
               </Button>
             </div>
-            <div className="pt-4 space-y-2">
+            {/* プレビューエリア */}
+            <div className="space-y-2 mt-2">
               {isFetchingPreview && (
                 <div className="flex items-center gap-2 text-gray-500 text-sm p-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -865,22 +1210,6 @@ export default function TimelinePage() {
                   </Button>
                 </div>
               )}
-              {selectedPlace && (
-                <div className="relative text-sm text-green-600 p-2 border border-green-200 bg-green-50 rounded-lg flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4" />
-                    <span>{selectedPlace.name}</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 rounded-full hover:bg-green-100"
-                    onClick={() => setSelectedPlace(null)}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              )}
               {selectedPdf && (
                 <div className="relative text-sm text-gray-500 p-2 border rounded-lg flex items-center justify-between">
                   <span>選択中のPDF: {selectedPdf.name}</span>
@@ -903,38 +1232,122 @@ export default function TimelinePage() {
                   </Button>
                 </div>
               )}
-              {locationError && <div className="text-sm text-red-500">{locationError}</div>}
+              {selectedVideo && videoPreview && (
+                <div className="relative">
+                  <video src={videoPreview} controls className="rounded-lg max-h-40 w-auto" />
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="absolute top-2 right-2 rounded-full h-6 w-6 p-0"
+                    onClick={() => {
+                      setSelectedVideo(null)
+                      if (videoPreview) {
+                        URL.revokeObjectURL(videoPreview)
+                        setVideoPreview(null)
+                      }
+                      if (videoInputRef.current) {
+                        videoInputRef.current.value = ""
+                      }
+                    }}
+                  >
+                    X
+                  </Button>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
-                {/* Timeline Posts */}
-        {posts.map((post) => (
-          <Card key={post.id} className="w-full border-0 shadow-lg bg-white/90 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
-            <CardHeader className="pb-4">
+        {/* Timeline Posts */}
+        {posts.length === 0 ? (
+          <Card className="w-full max-w-[680px] mx-auto lg:mx-0 border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-2">
+            <CardContent className="py-8 sm:py-12 text-center">
+              <p className="text-gray-500 text-base sm:text-lg">まだ投稿がありません</p>
+              <p className="text-gray-400 text-xs sm:text-sm mt-2">最初の投稿を作成してみましょう！</p>
+            </CardContent>
+          </Card>
+        ) : (
+          posts.map((post) => (
+          <Card key={post.id} className="w-full max-w-[680px] mx-auto lg:mx-0 border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-2">
+            <CardHeader className="px-3 sm:px-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <Avatar className="w-12 h-12 ring-2 ring-gray-100">
-                    <AvatarImage src={post.user.avatar || "/placeholder.svg"} alt={post.user.name} />
-                    <AvatarFallback className="bg-gradient-to-br from-orange-500 to-red-500 text-white font-semibold">
-                      {post.user.name
-                        .split(" ")
-                        .map((n: string) => n[0])
-                        .join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="font-semibold text-gray-900 hover:text-orange-600 cursor-pointer transition-colors">{post.user.name}</div>
-                    <div className="text-sm text-gray-500">{post.timestamp}</div>
+                <div className="flex items-center gap-2 sm:gap-4">
+                  {post.authorEmail ? (
+                    <Link href={`/users/${encodeURIComponent(post.authorEmail)}`}>
+                      <Avatar className="w-10 h-10 sm:w-[50px] sm:h-[50px] cursor-pointer flex-shrink-0">
+                        <AvatarImage src={post.user.avatar || "/placeholder.svg"} alt={post.user.name} />
+                        <AvatarFallback className="bg-purple-600 text-white font-semibold text-base sm:text-[22px]">
+                          {post.user.name
+                            .split(" ")
+                            .map((n: string) => n[0])
+                            .join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Link>
+                  ) : (
+                    <Avatar className="w-10 h-10 sm:w-[50px] sm:h-[50px] flex-shrink-0">
+                      <AvatarImage src={post.user.avatar || "/placeholder.svg"} alt={post.user.name} />
+                      <AvatarFallback className="bg-purple-600 text-white font-semibold text-base sm:text-[22px]">
+                        {post.user.name
+                          .split(" ")
+                          .map((n: string) => n[0])
+                          .join("")}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                  <div className="min-w-0">
+                    {post.authorEmail ? (
+                      <Link href={`/users/${encodeURIComponent(post.authorEmail)}`}>
+                        <div className="font-bold text-sm sm:text-[15px] text-black hover:underline cursor-pointer mb-1 truncate">{post.user.name}</div>
+                      </Link>
+                    ) : (
+                      <div className="font-bold text-sm sm:text-[15px] text-black mb-1 truncate">{post.user.name}</div>
+                    )}
+                    <div className="text-[10px] sm:text-[12px] text-[#9d9d9d] font-bold">{post.timestamp}</div>
                   </div>
                 </div>
-                <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full">
-                  <MoreHorizontal className="w-4 h-4" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {/* 投稿の作成者のみ編集・削除を表示 */}
+                    {post.authorEmail && currentUserEmail && post.authorEmail === currentUserEmail ? (
+                      <>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setEditingPostId(post.id)
+                            setEditContent(post.content || "")
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <Edit className="w-4 h-4 mr-2" />
+                          編集
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setDeletePostId(post.id)
+                            setIsDeleteDialogOpen(true)
+                          }}
+                          className="cursor-pointer text-red-600 focus:text-red-600"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          削除
+                        </DropdownMenuItem>
+                      </>
+                    ) : (
+                      <DropdownMenuItem disabled className="text-gray-400 text-xs">
+                        編集・削除は投稿作成者のみ可能です
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </CardHeader>
-            <CardContent className="px-6 pb-4">
-              <p className="mb-6 text-gray-800 leading-relaxed">{post.content}</p>
+            <CardContent className="px-3 sm:px-4">
+              <p className="mb-3 sm:mb-4 text-black text-sm sm:text-[15px] leading-6 sm:leading-7 break-words">{post.content}</p>
               
               {post.linkPreview && (
                 <div className="mb-4 border rounded-lg overflow-hidden">
@@ -948,148 +1361,162 @@ export default function TimelinePage() {
                 </div>
               )}
 
-              {post.location && (
-                <div className="mb-4 text-sm text-gray-500 flex items-center gap-2 p-3 rounded-lg bg-gray-50 border">
-                  <MapPin className="w-5 h-5 text-orange-500" />
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-gray-800">{post.location.name}</span>
-                    <span className="text-xs">{post.location.address}</span>
+
+              {post.pdfUrl ? (
+                <div className="mb-6">
+                  <div className="p-4 rounded-lg border border-gray-200 bg-gray-50 flex items-center gap-4">
+                    <FileText className="w-8 h-8 text-red-500" />
+                    <div className="flex-1">
+                      <a
+                        href={post.pdfUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline font-medium block mb-2"
+                      >
+                        {post.pdfName || "PDFファイル"}
+                      </a>
+                      <p className="text-sm text-gray-500">
+                        PDFを表示するには、上記のリンクをクリックしてください
+                      </p>
+                    </div>
+                  </div>
+                  {post.pdfUrl.startsWith('data:') ? (
+                    // Base64データURLの場合はobjectタグを使用（より安全）
+                    <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden">
+                      <object
+                        data={post.pdfUrl}
+                        type="application/pdf"
+                        width="100%"
+                        height="500px"
+                        className="w-full"
+                      >
+                        <div className="p-4 text-center text-gray-500">
+                          <p>PDFを表示できませんでした。</p>
+                          <a
+                            href={post.pdfUrl}
+                            download={post.pdfName || "document.pdf"}
+                            className="text-blue-600 hover:underline mt-2 inline-block"
+                          >
+                            ダウンロードする
+                          </a>
+                        </div>
+                      </object>
+                    </div>
+                  ) : (
+                    // S3 URLの場合は、動的にURLを更新してGoogle Docs Viewerを使用
+                    <PdfViewer pdfUrl={post.pdfUrl} pdfName={post.pdfName} />
+                  )}
+                </div>
+              ) : post.pdfName ? (
+                // PDF名はあるがURLがない場合（アップロード失敗など）
+                <div className="mb-6 p-4 rounded-lg border border-yellow-200 bg-yellow-50">
+                  <div className="flex items-center gap-2 text-yellow-800">
+                    <FileText className="w-5 h-5" />
+                    <span className="font-medium">{post.pdfName}</span>
+                    <span className="text-sm text-yellow-600">（PDFのアップロードに失敗しました）</span>
                   </div>
                 </div>
-              )}
+              ) : null}
 
-              {post.pdfUrl && (
-                <div className="mb-6">
-                  <div className="p-4 rounded-t-lg border border-b-0 border-gray-200 bg-gray-50 flex items-center gap-4">
-                    <FileText className="w-8 h-8 text-red-500" />
-                    <a
-                      href={post.pdfUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline font-medium"
-                    >
-                      {post.pdfName}
-                    </a>
-                  </div>
-                  <iframe
-                    src={post.pdfUrl}
-                    width="100%"
-                    height="500px"
-                    className="rounded-b-lg border border-gray-200"
-                  ></iframe>
+              {post.videoUrl && (
+                <div className="mb-6 rounded-lg overflow-hidden border border-gray-100">
+                  <video
+                    src={post.videoUrl}
+                    controls
+                    className="w-full h-auto"
+                  >
+                    お使いのブラウザは動画の再生に対応していません。
+                  </video>
                 </div>
               )}
 
               {post.image && (
                 <div className="mb-6 rounded-lg overflow-hidden border border-gray-100">
-                  <img
-                    src={post.image || "/placeholder.svg"}
-                    alt="Post content"
-                    className="w-full h-auto cursor-pointer hover:scale-[1.02] transition-transform duration-300"
-                  />
+                  <ImageWithRefresh imageUrl={post.image} />
                 </div>
               )}
 
-              {/* Engagement Stats */}
-              <div className="flex items-center justify-between py-3 mb-4 text-sm text-gray-500 border-b border-gray-100">
-                <div className="flex items-center gap-4">
-                  {post.likes > 0 && (
-                    <span className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-gradient-to-r from-red-500 to-pink-500 rounded-full flex items-center justify-center shadow-sm">
-                        <Heart className="w-3 h-3 text-white fill-current" />
-                      </div>
-                      <span className="font-medium">{post.likes}</span>
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-6">
-                  {post.comments > 0 && (
-                    <button onClick={() => toggleComments(post.id)} className="hover:text-orange-600 cursor-pointer font-medium transition-colors">
-                      {post.comments}件のコメント
-                    </button>
-                  )}
-                </div>
-              </div>
-
               {/* Action Buttons */}
-              <div className="flex items-center justify-around pt-2 mb-6">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={`flex-1 rounded-full py-3 ${post.liked ? "text-red-500 bg-red-50 hover:bg-red-100" : "text-gray-600 hover:text-red-500 hover:bg-red-50"}`}
-                  onClick={() => handleLike(post.id)}
-                >
-                  <Heart className={`w-5 h-5 mr-2 ${post.liked ? "fill-current" : ""}`} />
-                  <span className="font-medium">{post.liked ? "いいね済み" : "いいね"}</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex-1 rounded-full py-3 text-gray-600 hover:text-orange-600 hover:bg-orange-50"
-                  onClick={() => toggleComments(post.id)}
-                >
-                  <MessageCircle className="w-5 h-5 mr-2" />
-                  <span className="font-medium">コメント</span>
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="flex-1 rounded-full py-3 text-gray-600 hover:text-green-600 hover:bg-green-50"
-                  onClick={() => handleShare(post.id)}
-                >
-                  <Share2 className="w-5 h-5 mr-2" />
-                  <span className="font-medium">シェア</span>
-                </Button>
+              <div className="flex items-center gap-8 pt-2 border-t border-[#e1e1e1]">
+                <div className="flex items-center gap-2 flex-1 justify-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="p-0 h-auto hover:bg-transparent"
+                    onClick={() => handleLike(post.id)}
+                  >
+                    <Heart className={`w-[26px] h-[26px] ${post.liked ? "fill-current text-red-500" : "text-black"}`} />
+                  </Button>
+                  <span className="text-[15px] text-black font-medium">
+                    いいね {post.likes > 0 && <span className="font-normal">({post.likes})</span>}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 flex-1 justify-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="p-0 h-auto hover:bg-transparent"
+                    onClick={() => toggleComments(post.id)}
+                  >
+                    <MessageCircle className="w-[30px] h-[30px] text-black" />
+                  </Button>
+                  <span className="text-[15px] text-black font-medium">
+                    コメント <span className="font-normal">({post.comments || 0})</span>
+                  </span>
+                </div>
               </div>
 
               {showComments[post.id] && (
                 <div className="border-t border-gray-100 pt-6">
-                  {/* Comment Input */}
-                  <div className="flex items-center gap-4 mb-6">
-                    <Avatar className="w-10 h-10 ring-2 ring-orange-100">
-                      <AvatarImage src={mockUsers[0].avatar || "/placeholder.svg"} alt={mockUsers[0].name} />
-                      <AvatarFallback className="text-sm bg-gradient-to-br from-orange-500 to-red-500 text-white font-semibold">
-                        {mockUsers[0].name
+                  <div className="flex items-start gap-4 mb-6">
+                    <Avatar className="w-[43px] h-[43px]">
+                      <AvatarImage src={currentUser?.avatar || "/placeholder.svg"} alt={currentUser?.name || 'ユーザー'} />
+                      <AvatarFallback className="text-[20px] bg-blue-600 text-white font-normal">
+                        {currentUser?.name
+                          ? currentUser.name
                           .split(" ")
                           .map((n: string) => n[0])
-                          .join("")}
+                          .join("")
+                          : "U"}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex-1 flex items-center gap-3">
-                      <Input
-                        placeholder="コメントを書く..."
-                        value={newComment[post.id] || ""}
-                        onChange={(e) =>
-                          setNewComment((prev) => ({
+                    <div className="flex-1">
+                      <div className="bg-[#ececec] rounded-[10px] px-4 py-3">
+                        <Textarea
+                          placeholder="コメントを入力..."
+                          value={newComment[post.id] || ""}
+                          onChange={(e) => setNewComment((prev) => ({
                             ...prev,
-                            [post.id]: e.target.value,
-                          }))
-                        }
-                        className="flex-1 rounded-full border-gray-200 focus:border-orange-500 focus:ring-orange-500"
-                        onKeyPress={(e) => {
-                          if (e.key === "Enter") {
-                            handleSubmitComment(post.id)
-                          }
-                        }}
-                      />
-                      <Button
-                        size="sm"
-                        onClick={() => handleSubmitComment(post.id)}
-                        disabled={!newComment[post.id]?.trim()}
-                        className="rounded-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg"
-                      >
-                        <Send className="w-4 h-4" />
-                      </Button>
+                            [post.id]: e.target.value
+                          }))}
+                          className="resize-none border-none border-0 shadow-none !focus-visible:ring-0 !focus-visible:ring-offset-0 !focus:ring-0 !focus:ring-offset-0 !focus:outline-none !outline-none !ring-0 !ring-offset-0 text-[15px] bg-transparent rounded-[10px] placeholder:text-gray-400 p-0 min-h-[60px]"
+                          style={{ border: 'none', outline: 'none', boxShadow: 'none' }}
+                        />
+                      </div>
+                      <div className="flex justify-end mt-2">
+                        <Button
+                          onClick={() => handleSubmitComment(post.id)}
+                          disabled={!newComment[post.id]?.trim()}
+                          className="px-4 py-2 bg-[#dc0000] hover:bg-[#B80000] text-white font-bold text-[15px] rounded-[10px] disabled:bg-gray-300"
+                        >
+                          投稿
+                        </Button>
+                      </div>
                     </div>
                   </div>
+                  {/* Comment Header */}
+                  <h4 className="font-bold text-[15px] text-black mb-4 border-t border-gray-100 pt-6">▼コメント一覧</h4>
 
                   {/* Comments List */}
-                  <div className="space-y-4">
+                  <div className="space-y-4 mb-6">
+
+                  {/* Comment Input */}
+                 
                     {comments[post.id]?.map((comment) => (
                       <div key={comment.id} className="flex items-start gap-4">
-                        <Avatar className="w-10 h-10 ring-2 ring-gray-100">
+                        <Avatar className="w-[43px] h-[43px]">
                           <AvatarImage src={comment.user.avatar || "/placeholder.svg"} alt={comment.user.name} />
-                          <AvatarFallback className="text-sm bg-gradient-to-br from-orange-500 to-red-500 text-white font-semibold">
+                          <AvatarFallback className="text-[20px] bg-blue-600 text-white font-normal">
                             {comment.user.name
                               .split(" ")
                               .map((n: string) => n[0])
@@ -1097,110 +1524,311 @@ export default function TimelinePage() {
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
-                          <div className="bg-gray-50 rounded-2xl px-4 py-3 shadow-sm">
-                            <div className="font-semibold text-sm mb-2 text-gray-900">{comment.user.name}</div>
-                            <p className="text-sm text-gray-700 leading-relaxed">{comment.content}</p>
+                          <div className="bg-[#ececec] rounded-[10px] px-5 py-3">
+                            <div className="font-bold text-[15px] mb-2 text-black">{comment.user.name}</div>
+                            <p className="text-[15px] text-black leading-[24px] font-light">{comment.content}</p>
                           </div>
-                          <div className="flex items-center gap-6 mt-2 text-xs text-gray-500">
-                            <button
-                              onClick={() => handleCommentLike(post.id, comment.id)}
-                              className={`flex items-center gap-1 hover:text-red-500 transition-colors ${
-                                comment.liked ? "text-red-500" : ""
-                              }`}
-                            >
-                              <Heart className={`w-3 h-3 ${comment.liked ? "fill-current" : ""}`} />
-                              {comment.likes > 0 && <span className="font-medium">{comment.likes}</span>}
-                            </button>
-                            <button
-                              onClick={() => {
-                                if (replyingTo?.commentId === comment.id) {
-                                  setReplyingTo(null)
-                                } else {
-                                  setReplyingTo({ postId: post.id, commentId: comment.id })
-                                }
-                              }}
-                              className="hover:text-orange-600 cursor-pointer font-medium"
-                            >
-                              返信
-                            </button>
-                            <span className="font-medium">{comment.timestamp}</span>
-                          </div>
-
-                          {/* Replies */}
-                          <div className="mt-4 pl-8 space-y-4 border-l-2 border-gray-100">
-                            {comment.replies.map((reply) => (
-                              <div key={reply.id} className="flex items-start gap-3">
-                                <Avatar className="w-8 h-8">
-                                  <AvatarImage src={reply.user.avatar || "/placeholder.svg"} alt={reply.user.name} />
-                                  <AvatarFallback className="text-xs">
-                                    {reply.user.name.split(" ").map((n: string) => n[0]).join("")}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1">
-                                  <div className="bg-white rounded-xl px-3 py-2 shadow-sm border">
-                                    <div className="font-semibold text-xs mb-1 text-gray-800">{reply.user.name}</div>
-                                    <p className="text-xs text-gray-600">{reply.content}</p>
-                                  </div>
-                                  <div className="flex items-center gap-4 mt-1 text-xs text-gray-400">
-                                    <button
-                                      onClick={() => handleCommentLike(post.id, comment.id, reply.id)}
-                                      className={`flex items-center gap-1 hover:text-red-500 transition-colors ${
-                                        reply.liked ? "text-red-500" : ""
-                                      }`}
-                                    >
-                                      <Heart className={`w-3 h-3 ${reply.liked ? "fill-current" : ""}`} />
-                                      {reply.likes > 0 && <span className="font-medium text-xs">{reply.likes}</span>}
-                                    </button>
-                                    <span className="font-medium">{reply.timestamp}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-
-                          {/* Reply Input */}
-                          {replyingTo?.postId === post.id && replyingTo?.commentId === comment.id && (
-                            <div className="flex items-center gap-2 mt-4 pl-8">
-                              <Avatar className="w-8 h-8">
-                                <AvatarImage src={mockUsers[0].avatar || "/placeholder.svg"} alt={mockUsers[0].name} />
-                                <AvatarFallback className="text-xs">
-                                  {mockUsers[0].name.split(" ").map((n: string) => n[0]).join("")}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 flex items-center gap-2">
-                                <Input
-                                  placeholder={`${comment.user.name}に返信...`}
-                                  value={replyContent}
-                                  onChange={(e) => setReplyContent(e.target.value)}
-                                  className="flex-1 rounded-full text-sm"
-                                  onKeyPress={(e) => {
-                                    if (e.key === "Enter") {
-                                      handleSubmitReply(post.id, comment.id)
-                                    }
-                                  }}
-                                />
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleSubmitReply(post.id, comment.id)}
-                                  disabled={!replyContent.trim()}
-                                  className="rounded-full bg-gradient-to-r from-orange-500 to-red-500 text-white"
-                                >
-                                  <Send className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            </div>
-                          )}
+                          <div className="text-[12px] text-[#9d9d9d] font-bold mt-2">{comment.timestamp}</div>
 
                         </div>
                       </div>
                     ))}
                   </div>
+
                 </div>
               )}
             </CardContent>
           </Card>
-        ))}
+          ))
+        )}
+          </div>
+        </div>
       </div>
+
+      {/* 削除確認ダイアログ */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>投稿を削除しますか？</AlertDialogTitle>
+            <AlertDialogDescription>
+              この操作は取り消せません。投稿が完全に削除されます。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (deletePostId === null) return
+                
+                const post = posts.find(p => p.id === deletePostId)
+                if (!post?.dbId) {
+                  toast({
+                    title: "エラー",
+                    description: "投稿が見つかりません",
+                    variant: "destructive",
+                  })
+                  return
+                }
+
+                try {
+                  await deletePost(post.dbId)
+                  toast({
+                    title: "成功",
+                    description: "投稿を削除しました",
+                  })
+                  
+                  // 投稿リストを更新
+                  const latestPosts = await listPosts(50)
+                  const sortedLatestPosts = [...latestPosts].sort((a, b) => {
+                    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0
+                    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0
+                    return dateB - dateA
+                  })
+                  
+                  const mapped: Post[] = await Promise.all(
+                    sortedLatestPosts.map(async (p, idx) => {
+                      let user = defaultUser
+                      if (p.authorEmail) {
+                        try {
+                          const author = await getUserByEmail(p.authorEmail)
+                          if (author) {
+                            user = {
+                              id: idx + 1,
+                              name: `${author.lastName} ${author.firstName}`,
+                              avatar: author.avatar || "/placeholder.svg?height=40&width=40",
+                            }
+                          }
+                        } catch (e) {
+                          console.error("Failed to load user for refreshed post:", e)
+                        }
+                      }
+
+                      // S3のURLを更新（期限切れの場合に新しいURLを生成）
+                      let imageUrl = p.imageUrl ?? undefined
+                      let pdfUrl = p.pdfUrl ?? undefined
+                      
+                      // S3のURLが期限切れの場合に新しいURLを生成
+                      if (imageUrl && !imageUrl.startsWith('data:') && !imageUrl.startsWith('blob:')) {
+                        try {
+                          imageUrl = await refreshS3Url(imageUrl, true) || undefined  // ダウンロードモードを使用
+                        } catch (error) {
+                          console.error('Failed to refresh image URL:', error)
+                          // エラーが発生した場合は、元のURLを使用
+                        }
+                      }
+
+                      if (pdfUrl && !pdfUrl.startsWith('data:') && !pdfUrl.startsWith('blob:')) {
+                        try {
+                          pdfUrl = await refreshS3Url(pdfUrl, true) || undefined  // ダウンロードモードを使用
+                        } catch (error) {
+                          console.error('Failed to refresh PDF URL:', error)
+                          // エラーが発生した場合は、元のURLを使用
+                        }
+                      }
+
+                      return {
+                        id: idx + 1,
+                        dbId: p.id,
+                        authorEmail: p.authorEmail || undefined, // 投稿作成者のメールアドレスを保存（nullをundefinedに変換）
+                        user: user,
+                        content: p.content,
+                        image: imageUrl,
+                        videoUrl: p.videoUrl ?? undefined,
+                        videoName: p.videoName ?? undefined,
+                        pdfName: p.pdfName ?? undefined,
+                        pdfUrl: pdfUrl,
+                        location: p.locationName ? { id: "-", name: p.locationName, address: p.locationAddress || "" } : undefined,
+                        linkPreview: p.linkUrl
+                          ? {
+                              url: p.linkUrl,
+                              title: p.linkTitle || "",
+                              description: p.linkDescription || "",
+                              image: p.linkImage || "/placeholder.svg?height=200&width=400&text=Link",
+                            }
+                          : undefined,
+                        likes: p.likesCount ?? 0,
+                        comments: p.commentsCount ?? 0,
+                        shares: 0,
+                        timestamp: p.createdAt ? new Date(p.createdAt).toLocaleString('ja-JP', { 
+                          year: 'numeric', 
+                          month: 'short', 
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : "",
+                        liked: false,
+                      }
+                    })
+                  )
+                  
+                  setPosts(mapped)
+                  setDeletePostId(null)
+                  setIsDeleteDialogOpen(false)
+                } catch (error: any) {
+                  console.error("Failed to delete post:", error)
+                  toast({
+                    title: "エラー",
+                    description: error?.message || "投稿の削除に失敗しました",
+                    variant: "destructive",
+                  })
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              削除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 編集ダイアログ */}
+      <Dialog open={editingPostId !== null} onOpenChange={(open) => !open && setEditingPostId(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>投稿を編集</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              placeholder="投稿内容を入力..."
+              className="min-h-[200px]"
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEditingPostId(null)
+                  setEditContent("")
+                }}
+              >
+                キャンセル
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (editingPostId === null) return
+                  
+                  const post = posts.find(p => p.id === editingPostId)
+                  if (!post?.dbId) {
+                    toast({
+                      title: "エラー",
+                      description: "投稿が見つかりません",
+                      variant: "destructive",
+                    })
+                    return
+                  }
+
+                  try {
+                    await updatePost(post.dbId, { content: editContent })
+                    toast({
+                      title: "成功",
+                      description: "投稿を更新しました",
+                    })
+                    
+                    // 投稿リストを更新
+                    const latestPosts = await listPosts(50)
+                    const sortedLatestPosts = [...latestPosts].sort((a, b) => {
+                      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0
+                      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0
+                      return dateB - dateA
+                    })
+                    
+                    const mapped: Post[] = await Promise.all(
+                      sortedLatestPosts.map(async (p, idx) => {
+                        let user = defaultUser
+                        if (p.authorEmail) {
+                          try {
+                            const author = await getUserByEmail(p.authorEmail)
+                            if (author) {
+                              user = {
+                                id: idx + 1,
+                                name: `${author.lastName} ${author.firstName}`,
+                                avatar: author.avatar || "/placeholder.svg?height=40&width=40",
+                              }
+                            }
+                          } catch (e) {
+                            console.error("Failed to load user for refreshed post:", e)
+                          }
+                        }
+
+                        // S3のURLを更新（期限切れの場合に新しいURLを生成）
+                        let imageUrl = p.imageUrl ?? undefined
+                        let pdfUrl = p.pdfUrl ?? undefined
+                        
+                        // S3のURLが期限切れの場合に新しいURLを生成
+                        if (imageUrl && !imageUrl.startsWith('data:') && !imageUrl.startsWith('blob:')) {
+                          try {
+                            imageUrl = await refreshS3Url(imageUrl) || undefined
+                          } catch (error) {
+                            console.error('Failed to refresh image URL:', error)
+                            // エラーが発生した場合は、元のURLを使用
+                          }
+                        }
+                        
+                        if (pdfUrl && !pdfUrl.startsWith('data:') && !pdfUrl.startsWith('blob:')) {
+                          try {
+                            pdfUrl = await refreshS3Url(pdfUrl) || undefined
+                          } catch (error) {
+                            console.error('Failed to refresh PDF URL:', error)
+                            // エラーが発生した場合は、元のURLを使用
+                          }
+                        }
+
+                        return {
+                          id: idx + 1,
+                          dbId: p.id,
+                          user: user,
+                          content: p.content,
+                          image: imageUrl,
+                          videoUrl: p.videoUrl ?? undefined,
+                          videoName: p.videoName ?? undefined,
+                          pdfName: p.pdfName ?? undefined,
+                          pdfUrl: pdfUrl,
+                          location: p.locationName ? { id: "-", name: p.locationName, address: p.locationAddress || "" } : undefined,
+                          linkPreview: p.linkUrl
+                            ? {
+                                url: p.linkUrl,
+                                title: p.linkTitle || "",
+                                description: p.linkDescription || "",
+                                image: p.linkImage || "/placeholder.svg?height=200&width=400&text=Link",
+                              }
+                            : undefined,
+                          likes: p.likesCount ?? 0,
+                          comments: p.commentsCount ?? 0,
+                          shares: 0,
+                          timestamp: p.createdAt ? new Date(p.createdAt).toLocaleString('ja-JP', { 
+                            year: 'numeric', 
+                            month: 'short', 
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          }) : "",
+                          liked: false,
+                        }
+                      })
+                    )
+                    
+                    setPosts(mapped)
+                    setEditingPostId(null)
+                    setEditContent("")
+                  } catch (error: any) {
+                    console.error("Failed to update post:", error)
+                    toast({
+                      title: "エラー",
+                      description: error?.message || "投稿の更新に失敗しました",
+                      variant: "destructive",
+                    })
+                  }
+                }}
+                disabled={!editContent.trim()}
+                className="bg-gradient-to-r from-orange-500 to-red-500 text-white"
+              >
+                更新
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Layout>
   )
 }

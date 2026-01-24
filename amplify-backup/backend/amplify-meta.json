@@ -1,0 +1,96 @@
+{
+  "providers": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-yellbascketball-main-745a2-authRole",
+      "UnauthRoleArn": "arn:aws:iam::661984796222:role/amplify-yellbascketball-main-745a2-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::661984796222:role/amplify-yellbascketball-main-745a2-authRole",
+      "Region": "ap-northeast-1",
+      "DeploymentBucketName": "amplify-yellbascketball-main-745a2-deployment",
+      "UnauthRoleName": "amplify-yellbascketball-main-745a2-unauthRole",
+      "StackName": "amplify-yellbascketball-main-745a2",
+      "StackId": "arn:aws:cloudformation:ap-northeast-1:661984796222:stack/amplify-yellbascketball-main-745a2/251df8f0-b450-11f0-aa78-0e789585dbb7",
+      "AmplifyAppId": "d10hjabkkpod1n"
+    }
+  },
+  "api": {
+    "yellbackend": {
+      "dependsOn": [],
+      "output": {
+        "authConfig": {
+          "additionalAuthenticationProviders": [
+            {
+              "authenticationType": "AWS_IAM"
+            }
+          ],
+          "defaultAuthentication": {
+            "apiKeyConfig": {
+              "apiKeyExpirationDays": 30,
+              "description": "api key description"
+            },
+            "authenticationType": "API_KEY"
+          }
+        },
+        "GraphQLAPIIdOutput": "mcs2dydfpvf5lonf4yvahm4fk4",
+        "GraphQLAPIEndpointOutput": "https://helcik5ebvbyta6fjd4fhysy3u.appsync-api.ap-northeast-1.amazonaws.com/graphql",
+        "GraphQLAPIKeyOutput": "da2-sfv7eobm4zg4hl77w5w6zohyf4"
+      },
+      "providerPlugin": "awscloudformation",
+      "service": "AppSync",
+      "lastPushTimeStamp": "2025-11-24T01:03:45.031Z",
+      "providerMetadata": {
+        "s3TemplateURL": "https://s3.amazonaws.com/amplify-yellbascketball-main-745a2-deployment/amplify-cfn-templates/api/cloudformation-template.json",
+        "logicalId": "apiyellbackend"
+      }
+    }
+  },
+  "auth": {
+    "yellbackend": {
+      "customAuth": false,
+      "dependsOn": [],
+      "frontendAuthConfig": {
+        "mfaConfiguration": "OFF",
+        "mfaTypes": [
+          "SMS"
+        ],
+        "passwordProtectionSettings": {
+          "passwordPolicyMinLength": 8,
+          "passwordPolicyCharacters": [
+            "REQUIRES_LOWERCASE",
+            "REQUIRES_NUMBERS",
+            "REQUIRES_SYMBOLS",
+            "REQUIRES_UPPERCASE"
+          ]
+        },
+        "signupAttributes": [
+          "EMAIL",
+          "GIVEN_NAME",
+          "FAMILY_NAME"
+        ],
+        "socialProviders": [],
+        "usernameAttributes": [
+          "EMAIL"
+        ],
+        "verificationMechanisms": [
+          "EMAIL"
+        ]
+      },
+      "providerPlugin": "awscloudformation",
+      "service": "Cognito",
+      "output": {
+        "CreatedSNSRole": "arn:aws:iam::661984796222:role/sns525e4d8f745a2-main",
+        "UserPoolId": "ap-northeast-1_quulXj1YD",
+        "AppClientIDWeb": "24uv2b9inchdms3d48lk9fkuh4",
+        "AppClientID": "4t4ms7ahta0rqaqvue0vn60hgp",
+        "IdentityPoolId": "ap-northeast-1:c880cc9d-a210-4d52-b268-54ccfc927753",
+        "UserPoolArn": "arn:aws:cognito-idp:ap-northeast-1:661984796222:userpool/ap-northeast-1_quulXj1YD",
+        "IdentityPoolName": "testAuthIdentityPool__main",
+        "UserPoolName": "yellbackend"
+      },
+      "lastPushTimeStamp": "2025-11-24T01:03:45.035Z",
+      "providerMetadata": {
+        "s3TemplateURL": "https://s3.amazonaws.com/amplify-yellbascketball-main-745a2-deployment/amplify-cfn-templates/auth/yellbackend-cloudformation-template.json",
+        "logicalId": "authyellbackend"
+      }
+    }
+  }
+}

@@ -1,261 +1,548 @@
 "use client"
 import { useState, useEffect } from "react"
-import Link from "next/link"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useRouter } from "next/navigation"
+import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
+import { getUserByEmail, createTournament, searchUsersByEmail, createTournamentInvitation, getCurrentUserEmail, type DbUser } from "@/lib/api"
+import { uploadImageToS3 } from "@/lib/storage"
+import { CATEGORIES, REGION_BLOCKS, PREFECTURES_BY_REGION, DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS } from "@/lib/regionData"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { Layout } from "@/components/layout"
-import { ChevronLeft, Info, Upload, X } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-
-const regions = {
-  北海道: ["北海道"],
-  東北: ["青森県", "岩手県", "宮城県", "秋田県", "山形県", "福島県"],
-  関東: ["茨城県", "栃木県", "群馬県", "埼玉県", "千葉県", "東京都", "神奈川県"],
-  中部: ["新潟県", "富山県", "石川県", "福井県", "山梨県", "長野県", "岐阜県", "静岡県", "愛知県"],
-  近畿: ["三重県", "滋賀県", "京都府", "大阪府", "兵庫県", "奈良県", "和歌山県"],
-  中国: ["鳥取県", "島根県", "岡山県", "広島県", "山口県"],
-  四国: ["徳島県", "香川県", "愛媛県", "高知県"],
-  九州沖縄: ["福岡県", "佐賀県", "長崎県", "熊本県", "大分県", "宮崎県", "鹿児島県", "沖縄県"],
-}
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Layout } from "@/components/layout"
+import { useToast } from "@/hooks/use-toast"
+import { Camera, X, Search, UserPlus } from "lucide-react"
 
 export default function CreateTournamentPage() {
+  ensureAmplifyConfigured()
+  const router = useRouter()
   const { toast } = useToast()
-  const currentUser = { name: "管理者" } // Mock current user
+
+  const [currentUser, setCurrentUser] = useState<DbUser | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
 
   const [formData, setFormData] = useState({
-    title: "",
-    organizer: currentUser.name,
-    region: "",
-    prefecture: "",
-    startDate: "",
-    endDate: "",
+    name: "",
     category: "",
+    regionBlock: "",
+    prefecture: "",
+    district: "",
     description: "",
-    image: null as File | null,
-    editors: [] as string[],
   })
-  const [prefectures, setPrefectures] = useState<string[]>([])
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [currentEditor, setCurrentEditor] = useState("")
+
+  const [availablePrefectures, setAvailablePrefectures] = useState<string[]>([])
+  const [availableDistricts, setAvailableDistricts] = useState<string[]>([])
+
+  // 壁紙画像関連
+  const [coverPreview, setCoverPreview] = useState<string | null>(null)
+  const [coverFile, setCoverFile] = useState<File | null>(null)
+
+  // 共有管理者関連
+  const [searchTerm, setSearchTerm] = useState("")
+  const [searchResults, setSearchResults] = useState<DbUser[]>([])
+  const [selectedCoAdmins, setSelectedCoAdmins] = useState<DbUser[]>([])
+  const [isSearching, setIsSearching] = useState(false)
 
   useEffect(() => {
-    if (formData.region && regions[formData.region as keyof typeof regions]) {
-      setPrefectures(regions[formData.region as keyof typeof regions])
+    loadCurrentUser()
+  }, [])
+
+  // 地域ブロックが変更されたら、都道府県リストを更新
+  useEffect(() => {
+    if (formData.regionBlock) {
+      setAvailablePrefectures(PREFECTURES_BY_REGION[formData.regionBlock] || [])
+      setFormData(prev => ({ ...prev, prefecture: "", district: "" }))
+      setAvailableDistricts([])
     } else {
-      setPrefectures([])
+      setAvailablePrefectures([])
     }
-    setFormData(prev => ({ ...prev, prefecture: "" }))
-  }, [formData.region])
+  }, [formData.regionBlock])
 
-
-  const handleAddEditor = () => {
-    if (currentEditor && formData.editors.length < 5 && !formData.editors.includes(currentEditor)) {
-      setFormData(prev => ({ ...prev, editors: [...prev.editors, currentEditor] }))
-      setCurrentEditor("")
+  // 都道府県が変更されたら、地区リストを更新
+  useEffect(() => {
+    if (formData.prefecture) {
+      setAvailableDistricts(DISTRICTS_BY_PREFECTURE[formData.prefecture] || DEFAULT_DISTRICTS)
+      setFormData(prev => ({ ...prev, district: "" }))
+    } else {
+      setAvailableDistricts([])
     }
-  }
+  }, [formData.prefecture])
 
-  const handleRemoveEditor = (editorToRemove: string) => {
-    setFormData(prev => ({ ...prev, editors: prev.editors.filter(e => e !== editorToRemove) }))
-  }
+  const loadCurrentUser = async () => {
+    try {
+      // Amplifyのauth sessionから直接ユーザー情報を取得
+      const email = await getCurrentUserEmail()
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { id, value } = e.target
-    setFormData((prev) => ({ ...prev, [id]: value }))
-  }
+      if (!email) {
+        toast({
+          title: "エラー",
+          description: "ログインが必要です",
+          variant: "destructive",
+        })
+        router.push('/login')
+        return
+      }
 
-  const handleSelectChange = (id: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [id]: value }))
-  }
+      const userData = await getUserByEmail(email)
+      if (!userData) {
+        toast({
+          title: "エラー",
+          description: "ユーザー情報が見つかりません",
+          variant: "destructive",
+        })
+        router.push('/login')
+        return
+      }
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0]
-      setFormData((prev) => ({ ...prev, image: file }))
-      setImagePreview(URL.createObjectURL(file))
-    }
-  }
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (!formData.title || !formData.startDate || !formData.image) {
+      setCurrentUser(userData)
+    } catch (error) {
+      console.error('Failed to load user:', error)
       toast({
-        title: "必須項目を入力してください",
-        description: "大会名、開始日、画像を選択してください。",
+        title: "エラー",
+        description: "ユーザー情報の読み込みに失敗しました",
+        variant: "destructive",
+      })
+      router.push('/login')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+
+  const handleSearch = async () => {
+    if (!searchTerm.trim()) {
+      setSearchResults([])
+      return
+    }
+
+    setIsSearching(true)
+    try {
+      const results = await searchUsersByEmail(searchTerm)
+      // 自分自身と既に選択されているユーザーを除外
+      const filtered = results.filter(
+        user => user.email !== currentUser?.email &&
+          !selectedCoAdmins.some(admin => admin.email === user.email)
+      )
+      setSearchResults(filtered)
+    } catch (error) {
+      console.error('Search error:', error)
+      toast({
+        title: "エラー",
+        description: "ユーザー検索に失敗しました",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSearching(false)
+    }
+  }
+
+  const addCoAdmin = (user: DbUser) => {
+    setSelectedCoAdmins([...selectedCoAdmins, user])
+    setSearchTerm("")
+    setSearchResults([])
+  }
+
+  const removeCoAdmin = (email: string) => {
+    setSelectedCoAdmins(selectedCoAdmins.filter(admin => admin.email !== email))
+  }
+
+  const handleCoverChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setCoverFile(file)
+
+    // プレビューを生成
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setCoverPreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!currentUser) {
+      toast({
+        title: "エラー",
+        description: "ユーザー情報が見つかりません",
         variant: "destructive",
       })
       return
     }
 
-    // ここにフォームデータを送信する処理を追加
-    console.log("Tournament Creation Data:", formData)
-    toast({
-      title: "作成申請を送信しました",
-      description: "運営者の承認をお待ちください。承認されると大会ページが公開されます。",
-    })
-    // Here you would typically send data to your backend API
+    if (!formData.name.trim()) {
+      toast({
+        title: "エラー",
+        description: "大会名を入力してください",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      // 壁紙画像をアップロード
+      let coverImageUrl: string | null = null
+      if (coverFile) {
+        try {
+          console.log('Uploading cover image to S3...')
+          coverImageUrl = await uploadImageToS3(coverFile, currentUser.id)
+          console.log('Cover image uploaded successfully:', coverImageUrl)
+        } catch (error) {
+          console.error('Failed to upload cover image:', error)
+          toast({
+            title: "警告",
+            description: "壁紙画像のアップロードに失敗しましたが、大会の登録は続行します",
+            variant: "default",
+          })
+        }
+      }
+
+      // 大会を作成
+      const tournamentData = {
+        name: formData.name,
+        iconUrl: null,
+        coverImage: coverImageUrl,
+        category: formData.category || null,
+        regionBlock: formData.regionBlock || null,
+        prefecture: formData.prefecture || null,
+        district: formData.district || null,
+        description: formData.description || null,
+        ownerEmail: currentUser.email,
+        coAdminEmails: selectedCoAdmins.map(admin => admin.email),
+      }
+
+      console.log('Creating tournament:', tournamentData)
+      const tournament = await createTournament(tournamentData)
+      console.log('Tournament created:', tournament)
+
+      // 共有管理者に招待を送信
+      if (selectedCoAdmins.length > 0) {
+        try {
+          for (const admin of selectedCoAdmins) {
+            await createTournamentInvitation({
+              tournamentId: tournament.id,
+              tournamentName: tournament.name,
+              inviterEmail: currentUser.email,
+              inviteeEmail: admin.email,
+              status: 'pending',
+            })
+          }
+          console.log('Invitations sent to co-admins')
+        } catch (error) {
+          console.error('Failed to send invitations:', error)
+          // 招待送信エラーは致命的ではないため、続行
+        }
+      }
+
+      toast({
+        title: "成功",
+        description: "大会を登録しました",
+      })
+
+      router.push('/tournaments')
+    } catch (error: any) {
+      console.error('Failed to create tournament:', error)
+      toast({
+        title: "エラー",
+        description: error?.message || "大会の登録に失敗しました",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
-  return (
-    <Layout>
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="mb-6">
-          <Link href="/tournaments/kanto/tokyo">
-            <Button variant="outline">
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              大会一覧に戻る
-            </Button>
-          </Link>
+  if (isLoading) {
+    return (
+      <Layout isLoggedIn={true} currentUser={{ name: "読み込み中..." }}>
+        <div className="max-w-4xl mx-auto pb-20 p-8 text-center">
+          <p className="text-muted-foreground">読み込み中...</p>
         </div>
+      </Layout>
+    )
+  }
 
-        <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold">新しい大会を作成</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Alert className="mb-6 bg-blue-50 border-blue-200">
-              <Info className="h-4 w-4 text-blue-700" />
-              <AlertTitle className="text-blue-800">管理者による承認が必要です</AlertTitle>
-              <AlertDescription className="text-blue-700">
-                フォームから送信された内容は、Yell運営者による確認・承認を経てから公開されます。
-              </AlertDescription>
-            </Alert>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="title">大会名</Label>
-                <Input id="title" value={formData.title} onChange={handleInputChange} required className="bg-white" />
-              </div>
+  if (!currentUser) {
+    return null
+  }
 
-              <div className="space-y-2">
-                <Label>主催者</Label>
-                <Input value={formData.organizer} disabled className="bg-gray-100" />
-              </div>
+  const displayName = `${currentUser.lastName} ${currentUser.firstName}`
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label>地区</Label>
-                  <Select onValueChange={(value) => handleSelectChange("region", value)} value={formData.region}>
-                    <SelectTrigger className="bg-white">
-                      <SelectValue placeholder="地区を選択" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.keys(regions).map((region) => (
-                        <SelectItem key={region} value={region}>{region}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+  return (
+    <Layout isLoggedIn={true} currentUser={{ name: displayName, avatar: currentUser.avatar || undefined }}>
+      <div className="max-w-4xl mx-auto pb-20 p-4 md:p-8">
+        <h1 className="text-3xl font-bold mb-6">新規大会登録</h1>
+
+        <form onSubmit={handleSubmit}>
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>基本情報</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* 壁紙画像 */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">大会壁紙画像（任意）</label>
+                <div className="space-y-3">
+                  {coverPreview ? (
+                    <div className="relative">
+                      <img
+                        src={coverPreview}
+                        alt="Cover preview"
+                        className="w-full h-48 object-cover rounded-lg border"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-2 right-2"
+                        onClick={() => {
+                          setCoverPreview(null)
+                          setCoverFile(null)
+                        }}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <Camera className="w-8 h-8 text-gray-400 mb-2" />
+                        <p className="text-sm text-gray-500">壁紙画像をアップロード</p>
+                        <p className="text-xs text-gray-400 mt-1">クリックまたはドラッグ&ドロップ</p>
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleCoverChange}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
                 </div>
-                <div className="space-y-2">
-                  <Label>都道府県</Label>
-                   <Select onValueChange={(value) => handleSelectChange("prefecture", value)} value={formData.prefecture} disabled={!formData.region}>
-                    <SelectTrigger className="bg-white">
+              </div>
+
+              {/* 大会名 */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">大会名 <span className="text-red-500">*</span></label>
+                <Input
+                  placeholder="大会名を入力"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                />
+              </div>
+
+              {/* カテゴリ */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">カテゴリ</label>
+                <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="カテゴリを選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES.map((cat) => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* 地域ブロック */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">地域ブロック</label>
+                <Select value={formData.regionBlock} onValueChange={(value) => setFormData({ ...formData, regionBlock: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="地域ブロックを選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {REGION_BLOCKS.map((region) => (
+                      <SelectItem key={region} value={region}>{region}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* 都道府県 */}
+              {availablePrefectures.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium mb-2 block">都道府県</label>
+                  <Select value={formData.prefecture} onValueChange={(value) => setFormData({ ...formData, prefecture: value })}>
+                    <SelectTrigger>
                       <SelectValue placeholder="都道府県を選択" />
                     </SelectTrigger>
                     <SelectContent>
-                      {prefectures.map((pref) => (
+                      {availablePrefectures.map((pref) => (
                         <SelectItem key={pref} value={pref}>{pref}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
+              )}
 
-              <div className="space-y-2">
-                <Label>カテゴリ</Label>
-                <RadioGroup
-                  value={formData.category}
-                  onValueChange={(value) => handleSelectChange("category", value)}
-                  className="flex items-center gap-6"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="U12" id="u12" />
-                    <Label htmlFor="u12">U12</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="U15" id="u15" />
-                    <Label htmlFor="u15">U15</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="U18" id="u18" />
-                    <Label htmlFor="u18">U18</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              <div className="space-y-2">
-                <Label>大会メイン画像</Label>
-                <div
-                  className="w-full h-48 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-500 cursor-pointer hover:bg-gray-50"
-                  onClick={() => document.getElementById('image')?.click()}
-                >
-                  {imagePreview ? (
-                    <img src={imagePreview} alt="大会画像プレビュー" className="w-full h-full object-cover rounded-lg" />
-                  ) : (
-                    <div className="text-center">
-                      <Upload className="mx-auto h-8 w-8" />
-                      <p>クリックして画像を選択</p>
-                    </div>
-                  )}
+              {/* 地区 */}
+              {availableDistricts.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium mb-2 block">地区</label>
+                  <Select value={formData.district} onValueChange={(value) => setFormData({ ...formData, district: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="地区を選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableDistricts.map((dist) => (
+                        <SelectItem key={dist} value={dist}>{dist}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Input id="image" type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
-              </div>
+              )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="startDate">開始日</Label>
-                  <Input id="startDate" type="date" value={formData.startDate} onChange={handleInputChange} required className="bg-white" />
+              {/* 大会紹介 */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">大会紹介</label>
+                <Textarea
+                  placeholder="大会の詳細や参加方法など"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  rows={5}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 管理者情報 */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>管理者情報</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* ページ管理者 */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">ページ管理者</label>
+                <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
+                  <Avatar>
+                    <AvatarImage src={currentUser.avatar || "/placeholder-user.jpg"} alt={displayName} />
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      {currentUser.firstName[0]}{currentUser.lastName[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">{displayName}</p>
+                    <p className="text-sm text-muted-foreground">{currentUser.email}</p>
+                  </div>
+                  <Badge className="ml-auto">管理者</Badge>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="endDate">終了日</Label>
-                  <Input id="endDate" type="date" value={formData.endDate} onChange={handleInputChange} required className="bg-white" />
+              </div>
+
+              {/* 共有管理者 */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">共有管理者（任意）</label>
+                <p className="text-sm text-muted-foreground mb-3">
+                  ユーザーのメールアドレスで検索して、共有管理者として招待できます
+                </p>
+
+                {/* 検索ボックス */}
+                <div className="flex gap-2 mb-3">
+                  <Input
+                    placeholder="メールアドレスで検索"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        handleSearch()
+                      }
+                    }}
+                  />
+                  <Button type="button" onClick={handleSearch} disabled={isSearching}>
+                    <Search className="w-4 h-4" />
+                  </Button>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="description">大会詳細</Label>
-                <Textarea id="description" value={formData.description} onChange={handleInputChange} rows={5} className="bg-white" />
-              </div>
-
-              <div className="space-y-4">
-                <Label>編集権限を付与するユーザー (最大5名)</Label>
-                {formData.editors.length < 5 && (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="email"
-                      placeholder="ユーザーのメールアドレス"
-                      value={currentEditor}
-                      onChange={(e) => setCurrentEditor(e.target.value)}
-                      className="bg-white"
-                    />
-                    <Button type="button" onClick={handleAddEditor}>追加</Button>
+                {/* 検索結果 */}
+                {searchResults.length > 0 && (
+                  <div className="border rounded-lg mb-3 max-h-48 overflow-y-auto">
+                    {searchResults.map((user) => (
+                      <div
+                        key={user.id}
+                        className="flex items-center gap-3 p-3 hover:bg-muted/50 cursor-pointer"
+                        onClick={() => addCoAdmin(user)}
+                      >
+                        <Avatar className="w-10 h-10">
+                          <AvatarImage src={user.avatar || "/placeholder-user.jpg"} alt={`${user.lastName} ${user.firstName}`} />
+                          <AvatarFallback>
+                            {user.firstName[0]}{user.lastName[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <p className="font-medium">{user.lastName} {user.firstName}</p>
+                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                        </div>
+                        <UserPlus className="w-4 h-4 text-primary" />
+                      </div>
+                    ))}
                   </div>
                 )}
-                 <div className="space-y-2">
-                  {formData.editors.map((editor) => (
-                    <div key={editor} className="flex items-center justify-between p-2 bg-gray-50 rounded-md text-sm">
-                      <span>{editor}</span>
-                      <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveEditor(editor)}>
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
 
-              <div className="flex justify-end">
-                <Button type="submit" className="bg-gradient-to-r from-red-600 to-orange-500 text-white">
-                  承認をリクエスト
-                </Button>
+                {/* 選択された共有管理者 */}
+                {selectedCoAdmins.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">選択された共有管理者:</p>
+                    {selectedCoAdmins.map((admin) => (
+                      <div key={admin.id} className="flex items-center gap-3 p-3 border rounded-lg">
+                        <Avatar className="w-10 h-10">
+                          <AvatarImage src={admin.avatar || "/placeholder-user.jpg"} alt={`${admin.lastName} ${admin.firstName}`} />
+                          <AvatarFallback>
+                            {admin.firstName[0]}{admin.lastName[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <p className="font-medium">{admin.lastName} {admin.firstName}</p>
+                          <p className="text-sm text-muted-foreground">{admin.email}</p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeCoAdmin(admin.email)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            </form>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          {/* 登録ボタン */}
+          <div className="flex gap-3">
+            <Button
+              type="submit"
+              disabled={isSaving}
+              className="flex-1"
+            >
+              {isSaving ? "登録中..." : "大会を登録"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.push('/tournaments')}
+              disabled={isSaving}
+            >
+              キャンセル
+            </Button>
+          </div>
+        </form>
       </div>
     </Layout>
   )

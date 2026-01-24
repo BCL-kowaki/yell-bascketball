@@ -1,8 +1,7 @@
 "use client"
 import { ReactNode, useState, useEffect } from "react"
 import { HeaderNavigation } from "@/components/header-navigation"
-import { SidebarMenu } from "@/components/sidebar-menu"
-import { getUserByEmail } from "@/lib/api"
+import { getUserByEmail, getCurrentUserEmail } from "@/lib/api"
 
 interface LayoutProps {
   children: ReactNode
@@ -30,16 +29,8 @@ export function Layout({ children, isLoggedIn: propIsLoggedIn = false, currentUs
     // 自動的にユーザー情報を取得
     const loadUserInfo = async () => {
       try {
-        const sessionRes = await fetch('/api/session')
-        if (!sessionRes.ok) {
-          setIsLoggedIn(false)
-          setCurrentUser(undefined)
-          setIsLoading(false)
-          return
-        }
-
-        const sessionData = await sessionRes.json()
-        const email = sessionData.email
+        // Amplifyのauth sessionから直接ユーザー情報を取得
+        const email = await getCurrentUserEmail()
 
         if (!email) {
           setIsLoggedIn(false)
@@ -70,7 +61,7 @@ export function Layout({ children, isLoggedIn: propIsLoggedIn = false, currentUs
     }
 
     loadUserInfo()
-  }, [propIsLoggedIn, propCurrentUser])
+  }, [propIsLoggedIn, propCurrentUser?.name, propCurrentUser?.avatar])
 
   // ローディング中はデフォルト値を表示
   const displayUser = isLoading && !propCurrentUser 
@@ -78,16 +69,13 @@ export function Layout({ children, isLoggedIn: propIsLoggedIn = false, currentUs
     : currentUser
 
   return (
-    <div className="min-h-screen bg-gradient-to-br">
+    <div className="min-h-screen bg-[#F0F2F5] overflow-x-hidden w-full max-w-full">
       {/* Header */}
       <HeaderNavigation isLoggedIn={isLoggedIn} currentUser={displayUser} />
-      
-      <div className="flex pt-20">
-        {/* Sidebar */}
-        <SidebarMenu isLoggedIn={isLoggedIn} currentUser={displayUser} />
-        
-        {/* Main Content */}
-        <main className="flex-1 min-h-screen min-w-0">
+
+      {/* Main Content - ヘッダー2段分(44px + 44px = 88px)のスペース確保 */}
+      <div className={isLoggedIn ? "pt-[88px]" : "pt-11"}>
+        <main className="min-h-screen w-full max-w-full overflow-x-hidden">
           {children}
         </main>
       </div>

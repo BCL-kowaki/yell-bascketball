@@ -1,39 +1,15 @@
 {
-  "main": {
+  "dev": {
     "awscloudformation": {
-      "AuthRoleName": "amplify-yellbackend-main-945bd-authRole",
-      "UnauthRoleArn": "arn:aws:iam::979188187394:role/amplify-yellbackend-main-945bd-unauthRole",
-      "AuthRoleArn": "arn:aws:iam::979188187394:role/amplify-yellbackend-main-945bd-authRole",
+      "AuthRoleName": "amplify-yellbascketball-dev-1f56f-authRole",
+      "UnauthRoleArn": "arn:aws:iam::661984796222:role/amplify-yellbascketball-dev-1f56f-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::661984796222:role/amplify-yellbascketball-dev-1f56f-authRole",
       "Region": "ap-northeast-1",
-      "DeploymentBucketName": "amplify-yellbackend-main-945bd-deployment",
-      "UnauthRoleName": "amplify-yellbackend-main-945bd-unauthRole",
-      "StackName": "amplify-yellbackend-main-945bd",
-      "StackId": "arn:aws:cloudformation:ap-northeast-1:979188187394:stack/amplify-yellbackend-main-945bd/094402a0-b518-11f0-bce5-0a225c0a80c9",
-      "AmplifyAppId": "dbczw5aaydtop"
-    },
-    "categories": {
-      "auth": {
-        "yellbackend": {}
-      },
-      "api": {
-        "yellbackend": {}
-      },
-      "storage": {
-        "yellstorage": {}
-      }
-    }
-  },
-  "staging": {
-    "awscloudformation": {
-      "AuthRoleName": "amplify-yellbackend-staging-e87ca-authRole",
-      "UnauthRoleArn": "arn:aws:iam::661984796222:role/amplify-yellbackend-staging-e87ca-unauthRole",
-      "AuthRoleArn": "arn:aws:iam::661984796222:role/amplify-yellbackend-staging-e87ca-authRole",
-      "Region": "ap-northeast-1",
-      "DeploymentBucketName": "amplify-yellbackend-staging-e87ca-deployment",
-      "UnauthRoleName": "amplify-yellbackend-staging-e87ca-unauthRole",
-      "StackName": "amplify-yellbackend-staging-e87ca",
-      "StackId": "arn:aws:cloudformation:ap-northeast-1:661984796222:stack/amplify-yellbackend-staging-e87ca/cce0d300-add9-11f0-9efe-0e2d854aff85",
-      "AmplifyAppId": "dotkcfxppnehu"
+      "DeploymentBucketName": "amplify-yellbascketball-dev-1f56f-deployment",
+      "UnauthRoleName": "amplify-yellbascketball-dev-1f56f-unauthRole",
+      "StackName": "amplify-yellbascketball-dev-1f56f",
+      "StackId": "arn:aws:cloudformation:ap-northeast-1:661984796222:stack/amplify-yellbascketball-dev-1f56f/8e4dcd40-c8d8-11f0-9579-0e795fd07a5d",
+      "AmplifyAppId": "d10hjabkkpod1n"
     },
     "categories": {
       "auth": {

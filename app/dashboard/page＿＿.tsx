@@ -332,7 +332,7 @@ export default function TimelinePage() {
     <Layout>
       <div className="max-w-4xl mx-auto p-6 space-y-8">
         {/* Create Post */}
-        <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+        <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
           <CardHeader className="pb-4">
             <div className="flex items-start gap-4">
               <Avatar className="w-12 h-12 ring-2 ring-blue-100">
@@ -379,7 +379,7 @@ export default function TimelinePage() {
               <Button 
                 onClick={handleSubmitPost} 
                 disabled={!newPost.trim()} 
-                className="px-8 py-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
+                className="px-8 py-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold rounded-full shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] hover:shadow-xl transition-all duration-200"
               >
                 投稿
               </Button>
@@ -389,7 +389,7 @@ export default function TimelinePage() {
 
                 {/* Timeline Posts */}
         {posts.map((post) => (
-          <Card key={post.id} className="border-0 shadow-lg bg-white/90 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
+          <Card key={post.id} className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -511,7 +511,7 @@ export default function TimelinePage() {
                         size="sm"
                         onClick={() => handleSubmitComment(post.id)}
                         disabled={!newComment[post.id]?.trim()}
-                        className="rounded-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg"
+                        className="rounded-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)]"
                       >
                         <Send className="w-4 h-4" />
                       </Button>

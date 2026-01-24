@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd:*)",
+      "Bash(cd /Volumes/MS\\ PicoGo/myfolda/Yell/yell && amplify pull:*)",
+      "Bash(cd /Volumes/MS\\ PicoGo/myfolda/Yell/yell && npm run dev:*)",
+      "Bash(amplify status:*)",
+      "Bash(amplify pull)",
+      "Bash(amplify push:*)",
+      "Bash(pkill:*)",
+      "Bash(tee:*)",
+      "Bash(aws cloudformation list-stacks:*)",
+      "Bash(npx @aws-amplify/cli codegen:*)",
+      "Bash(timeout 300 amplify push:*)",
+      "Bash(npm run dev:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

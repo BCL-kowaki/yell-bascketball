@@ -1,135 +1,194 @@
 "use client"
 import { useState } from "react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { usePathname } from "next/navigation"
+import { signOut } from "aws-amplify/auth"
+import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Search, Trophy, Settings, User, Users, MessageCircle, LogOut } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Settings, LogOut, Search, Home, Trophy, Users, User, Menu, X } from "lucide-react"
 
 interface HeaderNavigationProps {
   isLoggedIn?: boolean
   currentUser?: {
     name: string
     avatar?: string
+    email?: string
   }
 }
 
 export function HeaderNavigation({ isLoggedIn = false, currentUser }: HeaderNavigationProps) {
+  ensureAmplifyConfigured()
+  
   const pathname = usePathname()
-  const router = useRouter()
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    // TODO: Implement search functionality
-    console.log("Searching for:", searchQuery)
+  const isActive = (path: string) => {
+    if (path === "/") return pathname === path
+    return pathname === path || pathname?.startsWith(path + "/")
   }
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/logout', { method: 'POST' })
-      router.push('/login')
+      try {
+        await signOut({ global: true })
+      } catch (cognitoError) {
+        console.error("Cognito signOut error:", cognitoError)
+      }
+      await fetch("/api/logout", { method: "POST" })
+      window.location.href = "/login"
     } catch (error) {
-      console.error('ログアウトに失敗しました:', error)
+      console.error("ログアウトエラー:", error)
+      window.location.href = "/login"
     }
   }
 
-  const isActive = (path: string) => {
-    return pathname === path
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (searchQuery.trim()) {
+      window.location.href = `/list/search?q=${encodeURIComponent(searchQuery)}`
+    }
+    setIsSearchOpen(false)
   }
 
+  const navItems = [
+    { href: "/", icon: Home, label: "ホーム" },
+    { href: "/favorites/tournaments", icon: Trophy, label: "お気に入り大会" },
+    { href: "/favorites/teams", icon: Users, label: "お気に入りチーム" },
+    { href: "/profile", icon: User, label: "プロフィール" },
+  ]
+
   return (
-    <nav className="bg-white/80 backdrop-blur-md border-b border-gray-200/50 p-4 fixed top-0 left-0 right-0 z-50 shadow-sm">
-      <div className="max-w-6xl mx-auto flex items-center justify-between">
-        {/* Left side - Logo and Search */}
-        <div className="flex items-center gap-6 flex-1">
-          {/* Logo */}
-          <Link href="/" className="font-serif text-2xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
-            YeLL
-          </Link>
+    <header 
+      className="fixed top-0 z-50 bg-white shadow-sm"
+      style={{ left: 0, right: 0, width: '100%', maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}
+    >
+      {/* 1段目: ロゴ | 検索 | メニュー */}
+      <div 
+        className="flex items-center justify-between h-11 px-2 border-b border-gray-100"
+        style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
+      >
+        {/* ロゴ */}
+        <Link href="/" className="text-[#DC0000] text-xl font-bold shrink-0">
+          YeLL
+        </Link>
 
-          {/* Search Box */}
-          <form onSubmit={handleSearch} className="flex-1 max-w-md">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="検索..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-gray-50 border-gray-200 rounded-full focus:bg-white focus:border-blue-500 focus:ring-orange-500"
-              />
-            </div>
-          </form>
-        </div>
+        {/* 右側: 検索 & メニュー */}
+        <div className="flex items-center gap-1 shrink-0">
+          {/* 検索ボタン */}
+          <button
+            onClick={() => setIsSearchOpen(!isSearchOpen)}
+            className="flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 shrink-0"
+          >
+            {isSearchOpen ? (
+              <X className="w-[18px] h-[18px] text-gray-700" />
+            ) : (
+              <Search className="w-[18px] h-[18px] text-gray-700" />
+            )}
+          </button>
 
-        {/* Right side - Navigation Links */}
-        <div className="flex items-center gap-2">
-
-          {/* User Actions */}
-          <div className="flex items-center gap-4">
-            {isLoggedIn ? (
-              <>
-                {/* Settings */}
-                <Link href="/settings">
-                  <Button
-                    variant="ghost"
-                    className={`px-3 py-2 rounded-lg transition-colors ${
-                      isActive("/settings")
-                        ? "text-orange-600 bg-blue-50 font-semibold"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                    }`}
-                  >
-                    <Settings className="w-4 h-4" />
-                  </Button>
-                </Link>
-
-                {/* User Profile */}
-                <Link href="/profile">
-                  <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
-                    <Avatar className="w-8 h-8 border-2 border-orange-500">
-                      <AvatarImage 
-                        src={currentUser?.avatar || "/placeholder-user.jpg"} 
-                        alt={currentUser?.name || 'ユーザー'} 
-                      />
-                      <AvatarFallback className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold text-xs">
-                        {currentUser?.name?.charAt(0)?.toUpperCase() || 
-                         currentUser?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 
-                         'U'}
+          {/* メニュー（設定） */}
+          {isLoggedIn ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 shrink-0">
+                  <Menu className="w-[18px] h-[18px] text-gray-700" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem asChild>
+                  <Link href="/profile" className="flex items-center gap-3 py-2">
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage src={currentUser?.avatar} />
+                      <AvatarFallback className="bg-blue-500 text-white text-xs">
+                        {currentUser?.name?.charAt(0) || 'U'}
                       </AvatarFallback>
                     </Avatar>
-                  </div>
-                </Link>
-                {/* Logout Button */}
-                <Button
-                  variant="ghost"
-                  onClick={handleLogout}
-                  className="px-3 py-2 rounded-lg text-gray-600 hover:text-red-600 hover:bg-red-50"
-                >
-                  <LogOut className="w-4 h-4" />
-                </Button>
-              </>
-            ) : (
-              /* Guest user - only show login/register buttons */
-              <div className="flex items-center gap-2">
-                <Link href="/login">
-                  <Button variant="ghost" className="px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50">
-                    ログイン
-                  </Button>
-                </Link>
-                <Link href="/register">
-                  <Button className="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200">
-                    新規登録
-                  </Button>
-                </Link>
-              </div>
-            )}
-          </div>
+                    <span className="font-medium">{currentUser?.name || 'ユーザー'}</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/settings" className="flex items-center cursor-pointer">
+                    <Settings className="mr-3 h-4 w-4" />
+                    設定
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer">
+                  <LogOut className="mr-3 h-4 w-4" />
+                  ログアウト
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <div className="flex items-center gap-1">
+              <Link href="/login" className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded whitespace-nowrap">
+                ログイン
+              </Link>
+              <Link href="/register" className="px-2 py-1 text-sm bg-[#DC0000] text-white rounded hover:bg-[#B80000] whitespace-nowrap">
+                登録
+              </Link>
+            </div>
+          )}
         </div>
       </div>
-    </nav>
+
+      {/* 検索バー（展開時） */}
+      {isSearchOpen && (
+        <div 
+          className="px-2 py-2 bg-white border-b border-gray-100"
+          style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
+        >
+          <form onSubmit={handleSearch}>
+            <input
+              type="text"
+              placeholder="YeLLを検索"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full h-9 px-3 bg-gray-100 rounded-full text-sm outline-none focus:bg-white focus:ring-2 focus:ring-blue-500"
+              style={{ maxWidth: '100%', boxSizing: 'border-box' }}
+              autoFocus
+            />
+          </form>
+        </div>
+      )}
+
+      {/* 2段目: ナビゲーションアイコン（ログイン時のみ） */}
+      {isLoggedIn && (
+        <div 
+          className="grid grid-cols-4 h-11 border-b border-gray-100"
+          style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', padding: 0, margin: 0 }}
+        >
+          {navItems.map((item) => {
+            const IconComponent = item.icon
+            const active = isActive(item.href)
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center justify-center h-full relative ${
+                  active ? "text-[#DC0000]" : "text-gray-500 hover:bg-gray-50"
+                }`}
+              >
+                <IconComponent className="w-5 h-5" />
+                {active && (
+                  <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#DC0000]" />
+                )}
+              </Link>
+            )
+          })}
+        </div>
+      )}
+    </header>
   )
 }
 
-export default HeaderNavigation 
+export default HeaderNavigation

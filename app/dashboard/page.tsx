@@ -156,7 +156,7 @@ export default function HomePage() {
 
           <div className="space-y-4">
             <Link href="/login" className="block">
-              <Button className="w-full h-12 text-lg bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200">
+              <Button className="w-full h-12 text-lg bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold rounded-lg shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] hover:shadow-xl transition-all duration-200">
                 ログイン
               </Button>
             </Link>
@@ -208,7 +208,7 @@ export default function HomePage() {
           {/* Left Column - User Profile & Quick Stats */}
           <div className="lg:col-span-1 space-y-6">
             {/* User Profile Card */}
-            <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+            <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
               <CardContent className="p-6">
                 <div className="text-center mb-6">
                   <Avatar className="w-20 h-20 mx-auto mb-4 ring-4 ring-blue-100">
@@ -266,7 +266,7 @@ export default function HomePage() {
             </Card>
 
             {/* Quick Stats */}
-            <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+            <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-orange-600" />
@@ -298,7 +298,7 @@ export default function HomePage() {
 
           {/* Center Column - Recent Activities */}
           <div className="lg:col-span-1 space-y-6">
-            <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+            <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
                   <Activity className="w-5 h-5 text-orange-600" />
@@ -335,7 +335,7 @@ export default function HomePage() {
             </Card>
 
             {/* Quick Actions */}
-            <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+            <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="text-lg font-bold text-gray-900">クイックアクション</CardTitle>
               </CardHeader>
@@ -386,7 +386,7 @@ export default function HomePage() {
           {/* Right Column - Upcoming Events & Notifications */}
           <div className="lg:col-span-1 space-y-6">
             {/* Upcoming Events */}
-            <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+            <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-orange-600" />
@@ -422,7 +422,7 @@ export default function HomePage() {
             </Card>
 
             {/* Notifications */}
-            <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+            <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
                   <Bell className="w-5 h-5 text-orange-600" />

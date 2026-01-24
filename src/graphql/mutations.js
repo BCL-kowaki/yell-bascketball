@@ -12,13 +12,15 @@ export const createUser = /* GraphQL */ `
       lastName
       email
       bio
-      location
       avatar
       coverImage
       category
-      regionBlock
+      region
       prefecture
       district
+      teams
+      isEmailPublic
+      isRegistrationDatePublic
       createdAt
       updatedAt
       __typename
@@ -36,13 +38,15 @@ export const updateUser = /* GraphQL */ `
       lastName
       email
       bio
-      location
       avatar
       coverImage
       category
-      regionBlock
+      region
       prefecture
       district
+      teams
+      isEmailPublic
+      isRegistrationDatePublic
       createdAt
       updatedAt
       __typename
@@ -60,13 +64,15 @@ export const deleteUser = /* GraphQL */ `
       lastName
       email
       bio
-      location
       avatar
       coverImage
       category
-      regionBlock
+      region
       prefecture
       district
+      teams
+      isEmailPublic
+      isRegistrationDatePublic
       createdAt
       updatedAt
       __typename
@@ -93,6 +99,8 @@ export const createPost = /* GraphQL */ `
       likesCount
       commentsCount
       authorEmail
+      tournamentId
+      teamId
       createdAt
       updatedAt
       __typename
@@ -119,6 +127,8 @@ export const updatePost = /* GraphQL */ `
       likesCount
       commentsCount
       authorEmail
+      tournamentId
+      teamId
       createdAt
       updatedAt
       __typename
@@ -145,6 +155,8 @@ export const deletePost = /* GraphQL */ `
       likesCount
       commentsCount
       authorEmail
+      tournamentId
+      teamId
       createdAt
       updatedAt
       __typename
@@ -238,6 +250,489 @@ export const deleteLike = /* GraphQL */ `
       id
       postId
       userEmail
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const createRegion = /* GraphQL */ `
+  mutation CreateRegion(
+    $input: CreateRegionInput!
+    $condition: ModelRegionConditionInput
+  ) {
+    createRegion(input: $input, condition: $condition) {
+      id
+      name
+      slug
+      sortOrder
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const updateRegion = /* GraphQL */ `
+  mutation UpdateRegion(
+    $input: UpdateRegionInput!
+    $condition: ModelRegionConditionInput
+  ) {
+    updateRegion(input: $input, condition: $condition) {
+      id
+      name
+      slug
+      sortOrder
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const deleteRegion = /* GraphQL */ `
+  mutation DeleteRegion(
+    $input: DeleteRegionInput!
+    $condition: ModelRegionConditionInput
+  ) {
+    deleteRegion(input: $input, condition: $condition) {
+      id
+      name
+      slug
+      sortOrder
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const createPrefecture = /* GraphQL */ `
+  mutation CreatePrefecture(
+    $input: CreatePrefectureInput!
+    $condition: ModelPrefectureConditionInput
+  ) {
+    createPrefecture(input: $input, condition: $condition) {
+      id
+      regionId
+      name
+      slug
+      sortOrder
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const updatePrefecture = /* GraphQL */ `
+  mutation UpdatePrefecture(
+    $input: UpdatePrefectureInput!
+    $condition: ModelPrefectureConditionInput
+  ) {
+    updatePrefecture(input: $input, condition: $condition) {
+      id
+      regionId
+      name
+      slug
+      sortOrder
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const deletePrefecture = /* GraphQL */ `
+  mutation DeletePrefecture(
+    $input: DeletePrefectureInput!
+    $condition: ModelPrefectureConditionInput
+  ) {
+    deletePrefecture(input: $input, condition: $condition) {
+      id
+      regionId
+      name
+      slug
+      sortOrder
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const createDistrict = /* GraphQL */ `
+  mutation CreateDistrict(
+    $input: CreateDistrictInput!
+    $condition: ModelDistrictConditionInput
+  ) {
+    createDistrict(input: $input, condition: $condition) {
+      id
+      prefectureId
+      name
+      sortOrder
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const updateDistrict = /* GraphQL */ `
+  mutation UpdateDistrict(
+    $input: UpdateDistrictInput!
+    $condition: ModelDistrictConditionInput
+  ) {
+    updateDistrict(input: $input, condition: $condition) {
+      id
+      prefectureId
+      name
+      sortOrder
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const deleteDistrict = /* GraphQL */ `
+  mutation DeleteDistrict(
+    $input: DeleteDistrictInput!
+    $condition: ModelDistrictConditionInput
+  ) {
+    deleteDistrict(input: $input, condition: $condition) {
+      id
+      prefectureId
+      name
+      sortOrder
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const createTeam = /* GraphQL */ `
+  mutation CreateTeam(
+    $input: CreateTeamInput!
+    $condition: ModelTeamConditionInput
+  ) {
+    createTeam(input: $input, condition: $condition) {
+      id
+      name
+      category
+      region
+      prefecture
+      district
+      description
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const updateTeam = /* GraphQL */ `
+  mutation UpdateTeam(
+    $input: UpdateTeamInput!
+    $condition: ModelTeamConditionInput
+  ) {
+    updateTeam(input: $input, condition: $condition) {
+      id
+      name
+      category
+      region
+      prefecture
+      district
+      description
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const deleteTeam = /* GraphQL */ `
+  mutation DeleteTeam(
+    $input: DeleteTeamInput!
+    $condition: ModelTeamConditionInput
+  ) {
+    deleteTeam(input: $input, condition: $condition) {
+      id
+      name
+      category
+      region
+      prefecture
+      district
+      description
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const createTournament = /* GraphQL */ `
+  mutation CreateTournament(
+    $input: CreateTournamentInput!
+    $condition: ModelTournamentConditionInput
+  ) {
+    createTournament(input: $input, condition: $condition) {
+      id
+      name
+      iconUrl
+      coverImage
+      category
+      regionBlock
+      prefecture
+      district
+      description
+      ownerEmail
+      coAdminEmails
+      startDate
+      endDate
+      favoritesCount
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const updateTournament = /* GraphQL */ `
+  mutation UpdateTournament(
+    $input: UpdateTournamentInput!
+    $condition: ModelTournamentConditionInput
+  ) {
+    updateTournament(input: $input, condition: $condition) {
+      id
+      name
+      iconUrl
+      coverImage
+      category
+      regionBlock
+      prefecture
+      district
+      description
+      ownerEmail
+      coAdminEmails
+      startDate
+      endDate
+      favoritesCount
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const deleteTournament = /* GraphQL */ `
+  mutation DeleteTournament(
+    $input: DeleteTournamentInput!
+    $condition: ModelTournamentConditionInput
+  ) {
+    deleteTournament(input: $input, condition: $condition) {
+      id
+      name
+      iconUrl
+      coverImage
+      category
+      regionBlock
+      prefecture
+      district
+      description
+      ownerEmail
+      coAdminEmails
+      startDate
+      endDate
+      favoritesCount
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const createFollow = /* GraphQL */ `
+  mutation CreateFollow(
+    $input: CreateFollowInput!
+    $condition: ModelFollowConditionInput
+  ) {
+    createFollow(input: $input, condition: $condition) {
+      id
+      followerEmail
+      followingEmail
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const updateFollow = /* GraphQL */ `
+  mutation UpdateFollow(
+    $input: UpdateFollowInput!
+    $condition: ModelFollowConditionInput
+  ) {
+    updateFollow(input: $input, condition: $condition) {
+      id
+      followerEmail
+      followingEmail
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const deleteFollow = /* GraphQL */ `
+  mutation DeleteFollow(
+    $input: DeleteFollowInput!
+    $condition: ModelFollowConditionInput
+  ) {
+    deleteFollow(input: $input, condition: $condition) {
+      id
+      followerEmail
+      followingEmail
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const createFavorite = /* GraphQL */ `
+  mutation CreateFavorite(
+    $input: CreateFavoriteInput!
+    $condition: ModelFavoriteConditionInput
+  ) {
+    createFavorite(input: $input, condition: $condition) {
+      id
+      userEmail
+      tournamentId
+      teamId
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const updateFavorite = /* GraphQL */ `
+  mutation UpdateFavorite(
+    $input: UpdateFavoriteInput!
+    $condition: ModelFavoriteConditionInput
+  ) {
+    updateFavorite(input: $input, condition: $condition) {
+      id
+      userEmail
+      tournamentId
+      teamId
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const deleteFavorite = /* GraphQL */ `
+  mutation DeleteFavorite(
+    $input: DeleteFavoriteInput!
+    $condition: ModelFavoriteConditionInput
+  ) {
+    deleteFavorite(input: $input, condition: $condition) {
+      id
+      userEmail
+      tournamentId
+      teamId
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const createTournamentTeam = /* GraphQL */ `
+  mutation CreateTournamentTeam(
+    $input: CreateTournamentTeamInput!
+    $condition: ModelTournamentTeamConditionInput
+  ) {
+    createTournamentTeam(input: $input, condition: $condition) {
+      id
+      tournamentId
+      teamId
+      teamName
+      participationYear
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const updateTournamentTeam = /* GraphQL */ `
+  mutation UpdateTournamentTeam(
+    $input: UpdateTournamentTeamInput!
+    $condition: ModelTournamentTeamConditionInput
+  ) {
+    updateTournamentTeam(input: $input, condition: $condition) {
+      id
+      tournamentId
+      teamId
+      teamName
+      participationYear
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const deleteTournamentTeam = /* GraphQL */ `
+  mutation DeleteTournamentTeam(
+    $input: DeleteTournamentTeamInput!
+    $condition: ModelTournamentTeamConditionInput
+  ) {
+    deleteTournamentTeam(input: $input, condition: $condition) {
+      id
+      tournamentId
+      teamId
+      teamName
+      participationYear
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const createTournamentResult = /* GraphQL */ `
+  mutation CreateTournamentResult(
+    $input: CreateTournamentResultInput!
+    $condition: ModelTournamentResultConditionInput
+  ) {
+    createTournamentResult(input: $input, condition: $condition) {
+      id
+      tournamentId
+      year
+      title
+      content
+      ranking
+      createdBy
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const updateTournamentResult = /* GraphQL */ `
+  mutation UpdateTournamentResult(
+    $input: UpdateTournamentResultInput!
+    $condition: ModelTournamentResultConditionInput
+  ) {
+    updateTournamentResult(input: $input, condition: $condition) {
+      id
+      tournamentId
+      year
+      title
+      content
+      ranking
+      createdBy
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const deleteTournamentResult = /* GraphQL */ `
+  mutation DeleteTournamentResult(
+    $input: DeleteTournamentResultInput!
+    $condition: ModelTournamentResultConditionInput
+  ) {
+    deleteTournamentResult(input: $input, condition: $condition) {
+      id
+      tournamentId
+      year
+      title
+      content
+      ranking
+      createdBy
       createdAt
       updatedAt
       __typename

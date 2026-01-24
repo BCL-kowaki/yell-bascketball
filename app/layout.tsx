@@ -27,14 +27,21 @@ export const metadata: Metadata = {
   generator: "v0.app",
 }
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${playfairDisplay.variable} ${sourceSans.variable} antialiased`}>
-      <body suppressHydrationWarning={true}>
+    <html lang="ja" className={`${playfairDisplay.variable} ${sourceSans.variable} antialiased overflow-x-hidden w-full max-w-full`} suppressHydrationWarning>
+      <body className="overflow-x-hidden w-full max-w-full m-0 p-0" suppressHydrationWarning={true}>
         {children}
       </body>
     </html>

@@ -1,141 +1,189 @@
 "use client"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { 
-  MapPin, 
-  Calendar,
-  ChevronRight
+import { Button } from "@/components/ui/button"
+import {
+  ChevronRight,
+  Plus,
+  Trophy,
+  Filter
 } from "lucide-react"
 import { Layout } from "@/components/layout"
-
-// 地域データ
-const regions = [
-  {
-    id: "hokkaido",
-    name: "北海道エリア",
-    prefectures: ["北海道"],
-    image: "/placeholder.svg?height=200&width=400&text=北海道"
-  },
-  {
-    id: "tohoku",
-    name: "東北エリア", 
-    prefectures: ["青森県", "岩手県", "宮城県", "秋田県", "山形県", "福島県"],
-    image: "/placeholder.svg?height=200&width=400&text=東北"
-  },
-  {
-    id: "kanto",
-    name: "関東エリア",
-    prefectures: ["茨城県", "栃木県", "群馬県", "埼玉県", "千葉県", "東京都", "神奈川県"],
-    image: "/placeholder.svg?height=200&width=400&text=関東"
-  },
-  {
-    id: "hokushinetsu",
-    name: "北信越エリア",
-    prefectures: ["新潟県", "富山県", "石川県", "福井県", "山梨県", "長野県"],
-    image: "/placeholder.svg?height=200&width=400&text=北信越"
-  },
-  {
-    id: "tokai",
-    name: "東海エリア",
-    prefectures: ["岐阜県", "静岡県", "愛知県", "三重県"],
-    image: "/placeholder.svg?height=200&width=400&text=東海"
-  },
-  {
-    id: "kinki",
-    name: "近畿エリア",
-    prefectures: ["滋賀県", "京都府", "大阪府", "兵庫県", "奈良県", "和歌山県"],
-    image: "/placeholder.svg?height=200&width=400&text=近畿"
-  },
-  {
-    id: "chugoku",
-    name: "中国エリア",
-    prefectures: ["鳥取県", "島根県", "岡山県", "広島県", "山口県"],
-    image: "/placeholder.svg?height=200&width=400&text=中国"
-  },
-  {
-    id: "shikoku",
-    name: "四国エリア",
-    prefectures: ["徳島県", "香川県", "愛媛県", "高知県"],
-    image: "/placeholder.svg?height=200&width=400&text=四国"
-  },
-  {
-    id: "kyushu",
-    name: "九州エリア",
-    prefectures: ["福岡県", "佐賀県", "長崎県", "熊本県", "大分県", "宮崎県", "鹿児島県", "沖縄県"],
-    image: "/placeholder.svg?height=200&width=400&text=九州"
-  }
-]
+import { listTournaments, DbTournament, listRegions, DbRegion } from "@/lib/api"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { CATEGORIES } from "@/lib/regionData"
 
 export default function TournamentsPage() {
+  const router = useRouter()
+  const [tournaments, setTournaments] = useState<DbTournament[]>([])
+  const [regions, setRegions] = useState<DbRegion[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [selectedCategory, setSelectedCategory] = useState<string>("all")
+  const [regionCounts, setRegionCounts] = useState<Record<string, number>>({})
+
+  useEffect(() => {
+    loadTournaments()
+    loadRegions()
+  }, [])
+
+  useEffect(() => {
+    calculateRegionCounts()
+  }, [tournaments, selectedCategory, regions])
+
+  async function loadTournaments() {
+    try {
+      setIsLoading(true)
+      const allTournaments = await listTournaments(1000)
+      console.log("📊 Total tournaments loaded:", allTournaments.length)
+      if (allTournaments.length > 0) {
+        console.log("📝 First tournament sample:", allTournaments[0])
+        console.log("🗺️ All tournament regionBlocks:", allTournaments.map(t => t.regionBlock))
+      }
+      setTournaments(allTournaments)
+    } catch (error) {
+      console.error("Failed to load tournaments:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  async function loadRegions() {
+    try {
+      const allRegions = await listRegions()
+      console.log("📍 Regions loaded from DB:", allRegions.length)
+      setRegions(allRegions)
+    } catch (error) {
+      console.error("Failed to load regions:", error)
+    }
+  }
+
+  function calculateRegionCounts() {
+    const counts: Record<string, number> = {}
+    const filteredTournaments = selectedCategory === "all"
+      ? tournaments
+      : tournaments.filter(t => t.category === selectedCategory)
+
+    console.log("🔍 Calculating region counts for", filteredTournaments.length, "tournaments")
+
+    // 地域名からslugへのマッピング
+    const regionNameToSlug: Record<string, string> = {}
+    regions.forEach(region => {
+      regionNameToSlug[region.name] = region.slug
+    })
+
+    filteredTournaments.forEach(tournament => {
+      const regionBlock = tournament.regionBlock || ""
+      const slug = regionNameToSlug[regionBlock]
+      if (slug) {
+        counts[slug] = (counts[slug] || 0) + 1
+      }
+    })
+
+    console.log("✅ Final region counts:", counts)
+    setRegionCounts(counts)
+  }
+
+  const totalTournaments = selectedCategory === "all"
+    ? tournaments.length
+    : tournaments.filter(t => t.category === selectedCategory).length
+
   return (
     <Layout>
-
-      <div className="max-w-7xl mx-auto pt-2 pb-20 px-2 md:px-6">
+      <div className="max-w-7xl mx-auto pt-2 pb-20">
         {/* Header */}
-        {/* Statistics */}
-        {/* Regions Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {regions.map((region) => {
-            return (
-              <Link key={region.id} href={`/tournaments/${region.id}`}>
-                <Card className={`border-0 shadow-lg bg-white/90 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer group border-2 hover:scale-105`}>
-                  <div className="relative overflow-hidden">
-                    <div className={`absolute inset-0 bg-gradient-to-r opacity-10`}></div>
-                    <img 
-                      src={region.image} 
-                      alt={region.name}
-                      className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                  </div>
-                  
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className={`text-xl font-bold`}>
-                        {region.name}
-                      </CardTitle>
-                      <ChevronRight className={`w-5 h-5 group-hover:translate-x-1 transition-transform`} />
-                    </div>
-                  </CardHeader>
-                  
-                  <CardContent className="space-y-4">
-                    {/* Prefecture Count */}
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-gray-500" />
-                      <span className="text-sm text-gray-600">
-                        {region.prefectures.length}都道府県
-                      </span>
-                      <div className="flex flex-wrap gap-1">
-                        {region.prefectures.slice(0, 3).map((pref, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {pref.replace(/[都道府県]/g, '')}
-                          </Badge>
-                        ))}
-                        {region.prefectures.length > 3 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{region.prefectures.length - 3}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    {/* Statistics */}
-                    {/* Recent Activity */}
-                    <div className="pt-2 border-t border-gray-100">
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <Calendar className="w-3 h-3" />
-                        <span>最新更新: 2時間前</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            )
-          })}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 px-2 md:px-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
+            <h1 className="text-2xl sm:text-3xl font-bold">大会一覧</h1>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <Filter className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="カテゴリを選択" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">すべてのカテゴリ</SelectItem>
+                {CATEGORIES.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            onClick={async () => {
+              try {
+                await router.push('/tournaments/create')
+              } catch (error) {
+                console.error('Failed to navigate to create tournament page:', error)
+              }
+            }}
+            className="bg-primary hover:bg-primary/90 w-full sm:w-auto"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            新規大会登録
+          </Button>
         </div>
+
+        {/* Statistics */}
+        <div className="mb-6 sm:mb-8 px-2 md:px-6">
+          <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg p-4 sm:p-6">
+            <div className="flex items-center gap-2 sm:gap-3 mb-2">
+              <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
+              <h3 className="text-base sm:text-lg font-bold text-gray-900">
+                {selectedCategory === "all" ? "全国の大会" : `${selectedCategory}の大会`}
+              </h3>
+            </div>
+            <p className="text-2xl sm:text-3xl font-bold text-red-600">{totalTournaments}件</p>
+          </div>
+        </div>
+
+        {/* Regions Grid */}
+        {isLoading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
+            <p className="mt-4 text-gray-500">読み込み中...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {regions.map((region) => {
+              const count = regionCounts[region.slug] || 0
+              return (
+                <Link key={region.id} href={`/tournaments/${region.slug}`}>
+                  <Card className={`border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer group border-2 hover:scale-105`}>
+                    <CardHeader className="pt-3 pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className={`text-xl font-bold`}>
+                          {region.name}
+                        </CardTitle>
+                        <ChevronRight className={`w-5 h-5 group-hover:translate-x-1 transition-transform`} />
+                      </div>
+                    </CardHeader>
+
+                    <CardContent className="space-y-4">
+                      {/* Tournament Count */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">登録大会数</span>
+                        <span className="text-xl font-bold text-red-600">{count}件</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              )
+            })}
+          </div>
+        )}
 
         {/* Bottom Info */}
         {/* <div className="mt-16 text-center">
-          <div className="max-w-2xl mx-auto bg-white/80 backdrop-blur-sm rounded-lg p-6 border border-gray-100 shadow-sm">
+          <div className="max-w-2xl mx-auto bg-white/80 backdrop-blur-sm rounded-lg p-6 border border-gray-100 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)]">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">大会主催者の皆様へ</h3>
             <p className="text-gray-600 text-sm mb-4">
               新しい大会の登録や既存大会の管理は、各地域ページからアクセスできます。<br />
