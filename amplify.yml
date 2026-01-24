@@ -13,6 +13,7 @@ frontend:
     build:
       commands:
         - npm run build
+        - cp .next/required-server-files.json . || echo "required-server-files.json not found, continuing..."
   artifacts:
     baseDirectory: .
     files:
