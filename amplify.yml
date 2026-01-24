@@ -1,10 +1,11 @@
 version: 1
-backend:
-  phases:
-    build:
-      commands:
-        - '# Execute Amplify CLI with the helper script'
-        - amplifyPush --simple
+# Backend build temporarily disabled - main environment stack does not exist
+# backend:
+#   phases:
+#     build:
+#       commands:
+#         - '# Execute Amplify CLI with the helper script'
+#         - amplifyPush --simple
 frontend:
   phases:
     preBuild:
