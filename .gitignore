@@ -32,6 +32,7 @@ next-env.d.ts
 # Amplify backup directories
 amplify-backup/
 amplify_backup_old/
+amplify-backup-temp/
 
 # Claude settings
 .claude/
