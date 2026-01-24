@@ -1,10 +1,4 @@
 version: 1
-backend:
-  phases:
-    build:
-      commands:
-        - echo "Backend build skipped - main environment stack does not exist"
-        - exit 0
 frontend:
   phases:
     preBuild:
@@ -13,19 +7,11 @@ frontend:
     build:
       commands:
         - npm run build
-        - cp .next/required-server-files.json . || echo "required-server-files.json not found, continuing..."
   artifacts:
-    baseDirectory: .
+    baseDirectory: .next
     files:
-      - '.next/**/*'
-      - 'required-server-files.json'
-      - 'public/**/*'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'next.config.mjs'
-      - 'node_modules/**/*'
+      - '**/*'
   cache:
     paths:
       - node_modules/**/*
       - .next/cache/**/*
-
