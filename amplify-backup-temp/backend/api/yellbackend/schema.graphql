@@ -1,0 +1,153 @@
+type User @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  firstName: String!
+  lastName: String!
+  email: String!
+  bio: String
+  avatar: String
+  coverImage: String
+  category: String # U-12、U-15、U-18、バスケ関係者、一般、大会主催者、チーム運営者
+  region: String # 東北、関東などの地域ブロック
+  prefecture: String # 都道府県
+  district: String # 市町村エリア（任意）
+  teams: [String] # 出身チーム（複数可能、チーム名の配列）
+  isEmailPublic: Boolean # メールアドレスを公開するか（デフォルト: false）
+  isRegistrationDatePublic: Boolean # 登録日を公開するか（デフォルト: false）
+}
+
+# タイムライン投稿
+type Post @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  content: String!
+  imageUrl: String
+  pdfUrl: String
+  pdfName: String
+  locationName: String
+  locationAddress: String
+  linkUrl: String
+  linkTitle: String
+  linkDescription: String
+  linkImage: String
+  likesCount: Int
+  commentsCount: Int
+  authorEmail: String
+  tournamentId: ID @index(name: "byTournament", queryField: "postsByTournament")
+  teamId: ID
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+}
+
+# コメント
+type Comment @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  postId: ID!
+  authorEmail: String
+  content: String!
+  createdAt: AWSDateTime
+}
+
+# いいね（重複防止用）
+type Like @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  postId: ID! @index(name: "byPostAndUser", sortKeyFields: ["userEmail"], queryField: "likesByPostAndUser")
+  userEmail: String!
+}
+
+# 地域ブロック
+type Region @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  name: String! # 例: "北海道", "関東", "九州・沖縄"
+  slug: String!
+  sortOrder: Int! # 表示順序
+}
+
+# 都道府県
+type Prefecture @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  regionId: ID!
+  name: String! # 例: "東京都", "神奈川県"
+  slug: String!
+  sortOrder: Int! # 表示順序
+}
+
+# 地区（市区町村）
+type District @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  prefectureId: ID!
+  name: String! # 例: "千代田区", "横浜市"
+  sortOrder: Int! # 表示順序
+}
+
+# チームデータベース
+type Team @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  name: String! # チーム名
+  category: String # U-12、U-15、U-18など
+  region: String # 地域ブロック
+  prefecture: String # 都道府県
+  district: String # 市町村
+  description: String # チーム説明
+  createdAt: AWSDateTime
+}
+
+# 大会データベース
+type Tournament @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  name: String!
+  iconUrl: String
+  coverImage: String
+  category: String
+  regionBlock: String
+  prefecture: String
+  district: String
+  description: String
+  ownerEmail: String!
+  coAdminEmails: [String]
+  startDate: AWSDateTime
+  endDate: AWSDateTime
+  favoritesCount: Int
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+}
+
+# フォロー関係
+type Follow @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  followerEmail: String! @index(name: "byFollower", queryField: "followsByFollower")
+  followingEmail: String! @index(name: "byFollowing", queryField: "followsByFollowing")
+  createdAt: AWSDateTime
+}
+
+# お気に入り（チーム・大会）
+type Favorite @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  userEmail: String! @index(name: "byUser", queryField: "favoritesByUser")
+  tournamentId: ID
+  teamId: ID
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+}
+
+# 大会参加チーム（大会とチームの関連付け）
+type TournamentTeam @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  tournamentId: ID! @index(name: "byTournament", queryField: "teamsByTournament")
+  teamId: ID!
+  teamName: String # チーム名（検索用）
+  participationYear: String # 参加年（例: "2024"）
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+}
+
+# 過去大会結果
+type TournamentResult @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  tournamentId: ID! @index(name: "byTournament", queryField: "resultsByTournament")
+  year: String! # 開催年
+  title: String! # 結果タイトル（例: "2024年度 春季大会")
+  content: String! # 結果内容（HTMLまたはテキスト）
+  ranking: [String] # 順位（例: ["1位: チームA", "2位: チームB"])
+  createdBy: String! # 作成者メールアドレス
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+}

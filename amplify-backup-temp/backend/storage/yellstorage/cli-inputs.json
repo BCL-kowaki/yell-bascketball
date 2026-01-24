@@ -1,0 +1,14 @@
+{
+  "resourceName": "yellstorage",
+  "policyUUID": "5da043da",
+  "bucketName": "yell-storage-dev",
+  "storageAccess": "auth",
+  "guestAccess": [],
+  "authAccess": [
+    "CREATE_AND_UPDATE",
+    "READ",
+    "DELETE"
+  ],
+  "triggerFunction": "NONE",
+  "groupAccess": {}
+}
