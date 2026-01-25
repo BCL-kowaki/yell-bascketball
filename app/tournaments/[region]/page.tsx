@@ -70,10 +70,32 @@ export default function RegionTournamentsPage() {
       setIsLoading(true)
       const allTournaments = await listTournaments(1000)
 
+      console.log('🔍 Filtering tournaments by region:', {
+        regionName,
+        regionSlug,
+        totalTournaments: allTournaments.length,
+        sampleTournaments: allTournaments.slice(0, 5).map(t => ({
+          name: t.name,
+          regionBlock: t.regionBlock,
+          prefecture: t.prefecture
+        }))
+      })
+
       // 指定された地域の大会のみフィルター
       const regionTournaments = allTournaments.filter(
         t => t.regionBlock === regionName
       )
+      
+      console.log('✅ Filtered tournaments by region:', {
+        count: regionTournaments.length,
+        tournaments: regionTournaments.map(t => ({
+          id: t.id,
+          name: t.name,
+          regionBlock: t.regionBlock,
+          prefecture: t.prefecture
+        }))
+      })
+      
       setTournaments(regionTournaments)
 
       // 都道府県ごとの大会数をカウント
@@ -84,6 +106,8 @@ export default function RegionTournamentsPage() {
           counts[pref] = (counts[pref] || 0) + 1
         }
       })
+      
+      console.log('📊 Prefecture counts:', counts)
       setTournamentCounts(counts)
     } catch (error) {
       console.error("Failed to load tournaments:", error)
