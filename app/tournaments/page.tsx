@@ -91,10 +91,6 @@ export default function TournamentsPage() {
     setRegionCounts(counts)
   }
 
-  const totalTournaments = selectedCategory === "all"
-    ? tournaments.length
-    : tournaments.filter(t => t.category === selectedCategory).length
-
   return (
     <Layout>
       <div className="max-w-7xl mx-auto pt-2 pb-20">
@@ -130,19 +126,6 @@ export default function TournamentsPage() {
             <Plus className="w-4 h-4 mr-2" />
             新規大会登録
           </Button>
-        </div>
-
-        {/* Statistics */}
-        <div className="mb-6 sm:mb-8 px-2 md:px-6">
-          <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg p-4 sm:p-6">
-            <div className="flex items-center gap-2 sm:gap-3 mb-2">
-              <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
-              <h3 className="text-base sm:text-lg font-bold text-gray-900">
-                {selectedCategory === "all" ? "全国の大会" : `${selectedCategory}の大会`}
-              </h3>
-            </div>
-            <p className="text-2xl sm:text-3xl font-bold text-red-600">{totalTournaments}件</p>
-          </div>
         </div>
 
         {/* Regions Grid */}
