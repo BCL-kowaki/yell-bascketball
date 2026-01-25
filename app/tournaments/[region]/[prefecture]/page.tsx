@@ -106,7 +106,7 @@ export default function PrefectureTournamentsPage() {
         </div>
 
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-2">
           <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg p-6">
             <div className="flex items-center gap-2 mb-2">
               <MapPin className="w-6 h-6 text-red-600" />
@@ -133,7 +133,7 @@ export default function PrefectureTournamentsPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
             {tournaments.map((tournament) => (
               <Link
                 key={tournament.id}
