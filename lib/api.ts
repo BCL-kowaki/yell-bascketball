@@ -1098,12 +1098,11 @@ export async function createTournamentInvitation(input: Partial<DbTournamentInvi
 // ==================== Team Functions ====================
 
 export async function createTeam(input: Partial<DbTeam>): Promise<DbTeam> {
-  // GraphQLスキーマに存在するフィールドのみを使用
-  // スキーマに存在するフィールド: id, name, category, region, prefecture, district, description, createdAt
+  // GraphQLスキーマに存在するフィールドを使用
   const mutation = /* GraphQL */ `
     mutation CreateTeam($input: CreateTeamInput!) {
       createTeam(input: $input) {
-        id name category region prefecture district description createdAt
+        id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website ownerEmail editorEmails isApproved createdAt updatedAt
       }
     }
   `
@@ -1112,11 +1111,22 @@ export async function createTeam(input: Partial<DbTeam>): Promise<DbTeam> {
     // スキーマに存在するフィールドのみを送信
     const sanitizedInput: any = {}
     if (input.name) sanitizedInput.name = input.name
-    if (input.category) sanitizedInput.category = input.category
+    if ((input as any).shortName) sanitizedInput.shortName = (input as any).shortName
+    if ((input as any).logoUrl) sanitizedInput.logoUrl = (input as any).logoUrl
+    if ((input as any).coverImageUrl) sanitizedInput.coverImageUrl = (input as any).coverImageUrl
+    if ((input as any).founded) sanitizedInput.founded = (input as any).founded
     if (input.region) sanitizedInput.region = input.region
     if (input.prefecture) sanitizedInput.prefecture = input.prefecture
     if ((input as any).district) sanitizedInput.district = (input as any).district
+    if ((input as any).headcount) sanitizedInput.headcount = (input as any).headcount
+    if (input.category) sanitizedInput.category = input.category
     if (input.description) sanitizedInput.description = input.description
+    if ((input as any).website) sanitizedInput.website = (input as any).website
+    if ((input as any).ownerEmail) sanitizedInput.ownerEmail = (input as any).ownerEmail
+    if ((input as any).editorEmails) sanitizedInput.editorEmails = (input as any).editorEmails
+    if ((input as any).isApproved !== undefined) sanitizedInput.isApproved = (input as any).isApproved !== false
+
+    console.log('Creating team with input:', sanitizedInput)
 
     const result = await client.graphql({
       query: mutation,
@@ -1126,14 +1136,22 @@ export async function createTeam(input: Partial<DbTeam>): Promise<DbTeam> {
 
     if (result.errors) {
       console.error('GraphQL errors in createTeam:', result.errors)
-      throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
+      const errorMessage = result.errors[0]?.message || 'GraphQL error occurred'
+      console.error('Error message:', errorMessage)
+      throw new Error(errorMessage)
     }
 
     console.log('Team created successfully:', result.data.createTeam)
     return result.data.createTeam
   } catch (error: any) {
     console.error('createTeam error:', error)
-    console.error('Error stack:', error?.stack)
+    console.error('Error details:', JSON.stringify(error, null, 2))
+    if (error?.errors) {
+      console.error('GraphQL errors:', error.errors)
+    }
+    if (error?.stack) {
+      console.error('Error stack:', error.stack)
+    }
     throw error
   }
 }

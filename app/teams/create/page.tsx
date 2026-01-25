@@ -13,8 +13,10 @@ import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { createTeam, getCurrentUserEmail } from "@/lib/api"
+import { createTeam, getCurrentUserEmail, searchUsers } from "@/lib/api"
 import { uploadImageToS3 } from "@/lib/storage"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Search, UserPlus, X } from "lucide-react"
 
 const regions = {
   北海道: ["北海道"],
@@ -36,7 +38,6 @@ export default function CreateTeamPage() {
 
   const [formData, setFormData] = useState({
     name: "",
-    shortName: "",
     founded: "",
     region: "",
     prefecture: "",
@@ -46,12 +47,14 @@ export default function CreateTeamPage() {
     website: "",
     logo: null as File | null,
     coverImage: null as File | null,
-    editors: [] as string[],
+    editors: [] as Array<{ id: string; email: string; firstName: string; lastName: string; avatar?: string }>,
   })
   const [prefectures, setPrefectures] = useState<string[]>([])
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
-  const [currentEditor, setCurrentEditor] = useState("")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [searchResults, setSearchResults] = useState<Array<{ id: string; email: string; firstName: string; lastName: string; avatar?: string }>>([])
+  const [isSearching, setIsSearching] = useState(false)
 
   useEffect(() => {
     loadCurrentUser()
@@ -111,16 +114,50 @@ export default function CreateTeamPage() {
     }
   }
 
-  const handleAddEditor = () => {
-    if (currentEditor && formData.editors.length < 5 && !formData.editors.includes(currentEditor)) {
-      setFormData(prev => ({ ...prev, editors: [...prev.editors, currentEditor] }))
-      setCurrentEditor("")
+  const handleSearch = async () => {
+    if (!searchTerm.trim()) {
+      setSearchResults([])
+      return
+    }
+
+    setIsSearching(true)
+    try {
+      const results = await searchUsers(searchTerm)
+      // 既に選択されているユーザーを除外
+      const filtered = results.filter(
+        user => !formData.editors.some(editor => editor.id === user.id)
+      )
+      setSearchResults(filtered)
+    } catch (error) {
+      console.error('Search error:', error)
+      toast({
+        title: "エラー",
+        description: "ユーザー検索に失敗しました",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSearching(false)
     }
   }
 
-  const handleRemoveEditor = (editorToRemove: string) => {
-    setFormData(prev => ({ ...prev, editors: prev.editors.filter(e => e !== editorToRemove) }))
+  const handleAddEditor = (user: { id: string; email: string; firstName: string; lastName: string; avatar?: string }) => {
+    if (formData.editors.length < 5 && !formData.editors.some(e => e.id === user.id)) {
+      setFormData(prev => ({ ...prev, editors: [...prev.editors, user] }))
+      setSearchTerm("")
+      setSearchResults([])
+    }
   }
+
+  const handleRemoveEditor = (editorId: string) => {
+    setFormData(prev => ({ ...prev, editors: prev.editors.filter(e => e.id !== editorId) }))
+  }
+
+  // 年リストを生成（1900年から現在年まで）
+  const currentYear = new Date().getFullYear()
+  const years = Array.from({ length: currentYear - 1899 }, (_, i) => currentYear - i)
+
+  // 人数リストを生成（1-100人）
+  const headcounts = Array.from({ length: 100 }, (_, i) => i + 1)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -163,24 +200,21 @@ export default function CreateTeamPage() {
       }
 
       // チームをデータベースに作成
-      // GraphQLスキーマに存在するフィールドのみを使用: id, name, category, region, prefecture, district, description, createdAt
       const teamData = {
         name: formData.name,
+        logoUrl,
+        coverImageUrl,
         category: formData.category || undefined,
         region: formData.region || undefined,
         prefecture: formData.prefecture || undefined,
         district: undefined, // 必要に応じて追加
+        founded: formData.founded || undefined,
+        headcount: formData.headcount ? parseInt(formData.headcount) : undefined,
         description: formData.description || undefined,
-        // 以下のフィールドはスキーマに存在しないため、コメントアウト
-        // shortName: formData.shortName || undefined,
-        // logoUrl,
-        // coverImageUrl,
-        // founded: formData.founded || undefined,
-        // headcount: formData.headcount ? parseInt(formData.headcount) : undefined,
-        // website: formData.website || undefined,
-        // ownerEmail: currentUserEmail,
-        // editorEmails: formData.editors.length > 0 ? formData.editors : undefined,
-        // isApproved: true,
+        website: formData.website || undefined,
+        ownerEmail: currentUserEmail,
+        editorEmails: formData.editors.length > 0 ? formData.editors.map(e => e.email) : undefined,
+        isApproved: true,
       }
 
       console.log('Creating team with data:', teamData)
@@ -195,7 +229,6 @@ export default function CreateTeamPage() {
       // フォームをリセット
       setFormData({
         name: "",
-        shortName: "",
         founded: "",
         region: "",
         prefecture: "",
@@ -209,6 +242,8 @@ export default function CreateTeamPage() {
       })
       setLogoPreview(null)
       setCoverPreview(null)
+      setSearchTerm("")
+      setSearchResults([])
 
       // チーム一覧ページにリダイレクト
       router.push('/teams')
@@ -243,28 +278,16 @@ export default function CreateTeamPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="name">チーム名 <span className="text-red-500">*</span></Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    required
-                    className="bg-white"
-                    disabled={isSubmitting}
-                  />
-                </div>
-                 <div className="space-y-2">
-                  <Label htmlFor="shortName">チーム略称</Label>
-                  <Input
-                    id="shortName"
-                    value={formData.shortName}
-                    onChange={handleInputChange}
-                    className="bg-white"
-                    disabled={isSubmitting}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="name">チーム名 <span className="text-red-500">*</span></Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  required
+                  className="bg-white"
+                  disabled={isSubmitting}
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -340,24 +363,41 @@ export default function CreateTeamPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="founded">設立年</Label>
-                  <Input
-                    id="founded"
+                  <Select
                     value={formData.founded}
-                    onChange={handleInputChange}
-                    className="bg-white"
+                    onValueChange={(value) => handleSelectChange("founded", value)}
                     disabled={isSubmitting}
-                  />
+                  >
+                    <SelectTrigger className="bg-white">
+                      <SelectValue placeholder="設立年を選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {years.map((year) => (
+                        <SelectItem key={year} value={year.toString()}>
+                          {year}年
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                 <div className="space-y-2">
+                <div className="space-y-2">
                   <Label htmlFor="headcount">人数</Label>
-                  <Input
-                    id="headcount"
-                    type="number"
+                  <Select
                     value={formData.headcount}
-                    onChange={handleInputChange}
-                    className="bg-white"
+                    onValueChange={(value) => handleSelectChange("headcount", value)}
                     disabled={isSubmitting}
-                  />
+                  >
+                    <SelectTrigger className="bg-white">
+                      <SelectValue placeholder="人数を選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {headcounts.map((count) => (
+                        <SelectItem key={count} value={count.toString()}>
+                          {count}人
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -385,37 +425,86 @@ export default function CreateTeamPage() {
                 />
               </div>
 
-               <div className="space-y-4">
+              <div className="space-y-4">
                 <Label>編集権限を付与するユーザー (最大5名)</Label>
                 {formData.editors.length < 5 && (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="email"
-                      placeholder="ユーザーのメールアドレス"
-                      value={currentEditor}
-                      onChange={(e) => setCurrentEditor(e.target.value)}
-                      className="bg-white"
-                      disabled={isSubmitting}
-                    />
-                    <Button type="button" onClick={handleAddEditor} disabled={isSubmitting}>追加</Button>
-                  </div>
-                )}
-                <div className="space-y-2">
-                  {formData.editors.map((editor) => (
-                    <div key={editor} className="flex items-center justify-between p-2 bg-gray-50 rounded-md text-sm">
-                      <span>{editor}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveEditor(editor)}
-                        disabled={isSubmitting}
-                      >
-                        <X className="w-4 h-4" />
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="text"
+                        placeholder="ユーザー名で検索"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            handleSearch()
+                          }
+                        }}
+                        className="bg-white"
+                        disabled={isSubmitting || isSearching}
+                      />
+                      <Button type="button" onClick={handleSearch} disabled={isSubmitting || isSearching}>
+                        {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                       </Button>
                     </div>
-                  ))}
-                </div>
+                    {/* 検索結果 */}
+                    {searchResults.length > 0 && (
+                      <div className="border rounded-lg max-h-48 overflow-y-auto">
+                        {searchResults.map((user) => (
+                          <div
+                            key={user.id}
+                            className="flex items-center gap-3 p-3 hover:bg-muted/50 cursor-pointer"
+                            onClick={() => handleAddEditor(user)}
+                          >
+                            <Avatar className="w-10 h-10">
+                              <AvatarImage src={user.avatar || "/placeholder-user.jpg"} alt={`${user.lastName} ${user.firstName}`} />
+                              <AvatarFallback>
+                                {user.firstName[0]}{user.lastName[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <p className="font-medium">{user.lastName} {user.firstName}</p>
+                              <p className="text-sm text-muted-foreground">{user.email}</p>
+                            </div>
+                            <UserPlus className="w-4 h-4 text-primary" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {/* 選択されたユーザー */}
+                {formData.editors.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">選択されたユーザー:</p>
+                    {formData.editors.map((editor) => (
+                      <div key={editor.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-10 h-10">
+                            <AvatarImage src={editor.avatar || "/placeholder-user.jpg"} alt={`${editor.lastName} ${editor.firstName}`} />
+                            <AvatarFallback>
+                              {editor.firstName[0]}{editor.lastName[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{editor.lastName} {editor.firstName}</p>
+                            <p className="text-sm text-muted-foreground">{editor.email}</p>
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveEditor(editor.id)}
+                          disabled={isSubmitting}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end">
