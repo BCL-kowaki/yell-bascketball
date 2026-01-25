@@ -1,4 +1,10 @@
 version: 1
+backend:
+  phases:
+    build:
+      commands:
+        - echo "Backend build skipped - no backend environment needed"
+        - exit 0
 frontend:
   phases:
     preBuild:
