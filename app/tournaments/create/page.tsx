@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
-import { getUserByEmail, createTournament, searchUsersByEmail, createTournamentInvitation, getCurrentUserEmail, type DbUser } from "@/lib/api"
+import { getUserByEmail, createTournament, searchUsers, createTournamentInvitation, getCurrentUserEmail, type DbUser } from "@/lib/api"
 import { uploadImageToS3 } from "@/lib/storage"
 import { CATEGORIES, REGION_BLOCKS, PREFECTURES_BY_REGION, DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS } from "@/lib/regionData"
 import { Button } from "@/components/ui/button"
@@ -121,11 +121,11 @@ export default function CreateTournamentPage() {
 
     setIsSearching(true)
     try {
-      const results = await searchUsersByEmail(searchTerm)
+      const results = await searchUsers(searchTerm)
       // 自分自身と既に選択されているユーザーを除外
       const filtered = results.filter(
-        user => user.email !== currentUser?.email &&
-          !selectedCoAdmins.some(admin => admin.email === user.email)
+        user => user.id !== currentUser?.id &&
+          !selectedCoAdmins.some(admin => admin.id === user.id)
       )
       setSearchResults(filtered)
     } catch (error) {
@@ -146,8 +146,8 @@ export default function CreateTournamentPage() {
     setSearchResults([])
   }
 
-  const removeCoAdmin = (email: string) => {
-    setSelectedCoAdmins(selectedCoAdmins.filter(admin => admin.email !== email))
+  const removeCoAdmin = (userId: string) => {
+    setSelectedCoAdmins(selectedCoAdmins.filter(admin => admin.id !== userId))
   }
 
   const handleCoverChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -446,13 +446,13 @@ export default function CreateTournamentPage() {
               <div>
                 <label className="text-sm font-medium mb-2 block">共有管理者（任意）</label>
                 <p className="text-sm text-muted-foreground mb-3">
-                  ユーザーのメールアドレスで検索して、共有管理者として招待できます
+                  ユーザー名で検索して、共有管理者として招待できます
                 </p>
 
                 {/* 検索ボックス */}
                 <div className="flex gap-2 mb-3">
                   <Input
-                    placeholder="メールアドレスで検索"
+                    placeholder="ユーザー名で検索"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     onKeyDown={(e) => {
@@ -463,7 +463,11 @@ export default function CreateTournamentPage() {
                     }}
                   />
                   <Button type="button" onClick={handleSearch} disabled={isSearching}>
-                    <Search className="w-4 h-4" />
+                    {isSearching ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Search className="w-4 h-4" />
+                    )}
                   </Button>
                 </div>
 
@@ -512,7 +516,7 @@ export default function CreateTournamentPage() {
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => removeCoAdmin(admin.email)}
+                          onClick={() => removeCoAdmin(admin.id)}
                         >
                           <X className="w-4 h-4" />
                         </Button>
