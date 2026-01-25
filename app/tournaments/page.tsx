@@ -105,8 +105,8 @@ export default function TournamentsPage() {
     <Layout>
       <div className="max-w-7xl mx-auto px-2 py-4">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
             <h1 className="text-2xl sm:text-3xl font-bold">大会一覧</h1>
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
               <SelectTrigger className="w-full sm:w-[180px] bg-white">
@@ -139,7 +139,7 @@ export default function TournamentsPage() {
         </div>
 
         {/* Statistics */}
-        <div className="mb-8">
+        <div className="mb-2">
           <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg p-6">
             <div className="flex items-center gap-3 mb-2">
               <Trophy className="w-6 h-6 text-red-600" />
@@ -151,9 +151,9 @@ export default function TournamentsPage() {
 
         {/* Regions Section */}
         <div className="mb-12">
-          <div className="flex items-center gap-2 mb-6">
+          <div className="flex items-center gap-2 mb-2">
             <MapPin className="w-5 h-5 text-red-600" />
-            <h2 className="text-2xl font-bold text-gray-900">地域から探す</h2>
+            <h2 className="text-xl font-bold text-gray-900">地域から探す</h2>
           </div>
 
           {isLoading ? (
@@ -162,7 +162,7 @@ export default function TournamentsPage() {
               <p className="mt-4 text-gray-500">読み込み中...</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
               {REGIONS.map((region) => {
                 const count = regionCounts[region.slug] || 0
                 return (

@@ -93,7 +93,7 @@ export default function PrefectureTournamentsPage() {
     <Layout>
       <div className="max-w-7xl mx-auto px-2 py-6">
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 mb-6 text-sm">
+        <div className="flex items-center gap-2 mb-2 text-sm">
           <Link href="/tournaments" className="text-gray-500 hover:text-gray-700">
             大会トップ
           </Link>
@@ -108,7 +108,7 @@ export default function PrefectureTournamentsPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg p-6">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-2 mb-2">
               <MapPin className="w-6 h-6 text-red-600" />
               <h1 className="text-2xl font-bold text-gray-900">{prefectureName}の大会</h1>
             </div>
@@ -139,7 +139,23 @@ export default function PrefectureTournamentsPage() {
                 key={tournament.id}
                 href={`/tournaments/${tournament.id}`}
               >
-                <Card className="shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] hover:shadow-xl transition-all duration-300 cursor-pointer group h-full">
+                <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group h-full overflow-hidden">
+                  {/* Cover Image */}
+                  {tournament.coverImage && (
+                    <div className="relative w-full h-32 overflow-hidden">
+                      <img
+                        src={tournament.coverImage}
+                        alt={tournament.name}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        onError={(e) => {
+                          // 画像の読み込みに失敗した場合、非表示にする
+                          e.currentTarget.style.display = 'none'
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                    </div>
+                  )}
+
                   <CardHeader>
                     <div className="flex items-start justify-between gap-2">
                       <CardTitle className="text-lg font-bold group-hover:text-red-600 transition-colors">
