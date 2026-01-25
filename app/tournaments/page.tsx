@@ -99,15 +99,15 @@ export default function TournamentsPage() {
     <Layout>
       <div className="max-w-7xl mx-auto pt-2 pb-20">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 px-2 md:px-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-2 px-2 md:px-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-2 w-full sm:w-auto">
             <h1 className="text-2xl sm:text-3xl font-bold">大会一覧</h1>
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px] bg-white">
                 <Filter className="w-4 h-4 mr-2" />
                 <SelectValue placeholder="カテゴリを選択" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white">
                 <SelectItem value="all">すべてのカテゴリ</SelectItem>
                 {CATEGORIES.map((category) => (
                   <SelectItem key={category} value={category}>
@@ -139,18 +139,18 @@ export default function TournamentsPage() {
             <p className="mt-4 text-gray-500">読み込み中...</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 px-2 md:px-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 px-2 md:px-6">
             {REGIONS.map((region) => {
               const count = regionCounts[region.slug] || 0
               return (
                 <Link key={region.id} href={`/tournaments/${region.slug}`}>
-                  <Card className={`border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer group border-2 hover:scale-105`}>
+                  <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group">
                     <CardHeader className="pt-3 pb-3">
                       <div className="flex items-center justify-between">
-                        <CardTitle className={`text-xl font-bold`}>
+                        <CardTitle className="text-xl font-bold">
                           {region.name}
                         </CardTitle>
-                        <ChevronRight className={`w-5 h-5 group-hover:translate-x-1 transition-transform`} />
+                        <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                       </div>
                     </CardHeader>
 
