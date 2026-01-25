@@ -1,15 +1,4 @@
 version: 1
-backend:
-  phases:
-    build:
-      commands:
-        - '# Execute Amplify CLI with the helper script'
-        - |
-          if [ -z "$AWS_BACKEND_BUCKET" ]; then
-            echo "Backend environment not initialized, skipping backend build"
-          else
-            amplifyPush --simple
-          fi
 frontend:
   phases:
     preBuild:
