@@ -1,3 +1,6 @@
+# Yell Basketball App Schema
+
+# ==================== User ====================
 type User @model @auth(rules: [{allow: public}]) {
   id: ID!
   firstName: String!
@@ -8,16 +11,77 @@ type User @model @auth(rules: [{allow: public}]) {
   avatar: String
   coverImage: String
   category: String
+  region: String
   regionBlock: String
   prefecture: String
   district: String
+  teams: [String]
+  isEmailPublic: Boolean
+  isRegistrationDatePublic: Boolean
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
 }
 
-# タイムライン投稿
+# ==================== Tournament ====================
+type Tournament @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  name: String!
+  iconUrl: String
+  coverImage: String
+  category: String
+  regionBlock: String
+  prefecture: String
+  district: String
+  description: String
+  ownerEmail: String!
+  coAdminEmails: [String]
+  startDate: AWSDateTime
+  endDate: AWSDateTime
+  favoritesCount: Int
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+  
+  # リレーションシップ
+  teams: [TournamentTeam] @hasMany(indexName: "byTournament", fields: ["id"])
+  results: [TournamentResult] @hasMany(indexName: "byTournament", fields: ["id"])
+  invitations: [TournamentInvitation] @hasMany(indexName: "byTournament", fields: ["id"])
+  posts: [Post] @hasMany(indexName: "byTournament", fields: ["id"])
+  favorites: [Favorite] @hasMany(indexName: "byTournament", fields: ["id"])
+}
+
+# ==================== Team ====================
+type Team @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  name: String!
+  shortName: String
+  logoUrl: String
+  coverImageUrl: String
+  founded: String
+  region: String
+  prefecture: String
+  headcount: Int
+  category: String
+  description: String
+  website: String
+  ownerEmail: String!
+  editorEmails: [String]
+  isApproved: Boolean!
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+  
+  # リレーションシップ
+  tournamentTeams: [TournamentTeam] @hasMany(indexName: "byTeam", fields: ["id"])
+  posts: [Post] @hasMany(indexName: "byTeam", fields: ["id"])
+  favorites: [Favorite] @hasMany(indexName: "byTeam", fields: ["id"])
+}
+
+# ==================== Post ====================
 type Post @model @auth(rules: [{allow: public}]) {
   id: ID!
   content: String!
   imageUrl: String
+  videoUrl: String
+  videoName: String
   pdfUrl: String
   pdfName: String
   locationName: String
@@ -29,51 +93,145 @@ type Post @model @auth(rules: [{allow: public}]) {
   likesCount: Int!
   commentsCount: Int!
   authorEmail: String
+  tournamentId: ID @index(name: "byTournament")
+  teamId: ID @index(name: "byTeam")
   createdAt: AWSDateTime
   updatedAt: AWSDateTime
+  
+  # リレーションシップ
+  comments: [Comment] @hasMany(indexName: "byPost", fields: ["id"])
+  tournament: Tournament @belongsTo(fields: ["tournamentId"])
+  team: Team @belongsTo(fields: ["teamId"])
 }
 
-# コメント
+# ==================== Comment ====================
 type Comment @model @auth(rules: [{allow: public}]) {
   id: ID!
-  postId: ID!
+  postId: ID! @index(name: "byPost")
   authorEmail: String
   content: String!
   createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+  
+  # リレーションシップ
+  post: Post @belongsTo(fields: ["postId"])
 }
 
-# いいね（重複防止用）
+# ==================== Like ====================
 type Like @model @auth(rules: [{allow: public}]) {
   id: ID!
   postId: ID! @index(name: "byPostAndUser", sortKeyFields: ["userEmail"], queryField: "likesByPostAndUser")
   userEmail: String!
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
 }
 
-# 地域ブロック
+# ==================== Favorite ====================
+type Favorite @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  userEmail: String! @index(name: "byUser", queryField: "favoritesByUser")
+  tournamentId: ID @index(name: "byTournament")
+  teamId: ID @index(name: "byTeam")
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+  
+  # リレーションシップ
+  tournament: Tournament @belongsTo(fields: ["tournamentId"])
+  team: Team @belongsTo(fields: ["teamId"])
+}
+
+# ==================== Follow ====================
+type Follow @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  followerEmail: String! @index(name: "byFollower", queryField: "followsByFollower")
+  followingEmail: String! @index(name: "byFollowing", queryField: "followsByFollowing")
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+}
+
+# ==================== TournamentTeam ====================
+type TournamentTeam @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  tournamentId: ID! @index(name: "byTournament")
+  teamId: ID! @index(name: "byTeam")
+  teamName: String
+  participationYear: String
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+  
+  # リレーションシップ
+  tournament: Tournament @belongsTo(fields: ["tournamentId"])
+  team: Team @belongsTo(fields: ["teamId"])
+}
+
+# ==================== TournamentResult ====================
+type TournamentResult @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  tournamentId: ID! @index(name: "byTournament")
+  year: String!
+  title: String!
+  content: String!
+  ranking: [String]
+  createdBy: String!
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+  
+  # リレーションシップ
+  tournament: Tournament @belongsTo(fields: ["tournamentId"])
+}
+
+# ==================== TournamentInvitation ====================
+type TournamentInvitation @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  tournamentId: ID! @index(name: "byTournament")
+  tournamentName: String!
+  inviterEmail: String!
+  inviteeEmail: String!
+  status: String!
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+  
+  # リレーションシップ
+  tournament: Tournament @belongsTo(fields: ["tournamentId"])
+}
+
+# ==================== Region ====================
 type Region @model @auth(rules: [{allow: public}]) {
   id: ID!
-  name: String! # 例: "北海道", "関東", "九州・沖縄"
-  slug: String! @index(name: "bySlug", queryField: "regionBySlug") # 例: "hokkaido", "kanto", "kyushu"
-  sortOrder: Int! # 表示順序
+  name: String!
+  slug: String! @index(name: "bySlug", queryField: "regionBySlug")
+  sortOrder: Int!
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+  
+  # リレーションシップ
   prefectures: [Prefecture] @hasMany(indexName: "byRegion", fields: ["id"])
 }
 
-# 都道府県
+# ==================== Prefecture ====================
 type Prefecture @model @auth(rules: [{allow: public}]) {
   id: ID!
+  name: String!
+  slug: String! @index(name: "bySlug", queryField: "prefectureBySlug")
   regionId: ID! @index(name: "byRegion", sortKeyFields: ["sortOrder"])
+  sortOrder: Int!
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+  
+  # リレーションシップ
   region: Region @belongsTo(fields: ["regionId"])
-  name: String! # 例: "東京都", "神奈川県"
-  slug: String! @index(name: "bySlug", queryField: "prefectureBySlug") # 例: "tokyo", "kanagawa"
-  sortOrder: Int! # 表示順序
   districts: [District] @hasMany(indexName: "byPrefecture", fields: ["id"])
 }
 
-# 地区（市区町村）
+# ==================== District ====================
 type District @model @auth(rules: [{allow: public}]) {
   id: ID!
+  name: String!
   prefectureId: ID! @index(name: "byPrefecture", sortKeyFields: ["sortOrder"])
+  sortOrder: Int!
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+  
+  # リレーションシップ
   prefecture: Prefecture @belongsTo(fields: ["prefectureId"])
-  name: String! # 例: "千代田区", "横浜市"
-  sortOrder: Int! # 表示順序
 }

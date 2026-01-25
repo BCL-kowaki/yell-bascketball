@@ -42,9 +42,13 @@ export type DbUser = {
   avatar?: string | null
   coverImage?: string | null
   category?: string | null
+  region?: string | null
   regionBlock?: string | null
   prefecture?: string | null
   district?: string | null
+  teams?: string[] | null
+  isEmailPublic?: boolean | null
+  isRegistrationDatePublic?: boolean | null
   createdAt?: string | null
   updatedAt?: string | null
 }
@@ -201,7 +205,8 @@ export async function getUserByEmail(email: string): Promise<DbUser | null> {
       listUsers(filter: $filter) {
         items {
           id firstName lastName email bio avatar coverImage
-          category location regionBlock prefecture district
+          category location region regionBlock prefecture district
+          teams isEmailPublic isRegistrationDatePublic
           createdAt updatedAt
         }
       }
@@ -270,7 +275,8 @@ export async function updateUser(id: string, input: Partial<DbUser>): Promise<Db
     mutation UpdateUser($input: UpdateUserInput!) {
       updateUser(input: $input) {
         id firstName lastName email bio avatar coverImage
-        category location regionBlock prefecture district
+        category location region regionBlock prefecture district
+        teams isEmailPublic isRegistrationDatePublic
         createdAt updatedAt
       }
     }

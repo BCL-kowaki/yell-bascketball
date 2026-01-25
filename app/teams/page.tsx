@@ -345,8 +345,8 @@ export default function TeamsPage() {
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto pt-2 pb-20">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4 px-2 md:px-6">
+      <div className="max-w-7xl mx-auto pt-4 pb-20">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 sm:mb-2 gap-4 px-2 md:px-6">
           <div className="space-y-1">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">チームを探す</h1>
             <p className="text-sm sm:text-base text-gray-500">あなたの地域やお気に入りのチームを見つけよう</p>
@@ -361,7 +361,7 @@ export default function TeamsPage() {
 
         {/* Search and Filters */}
         <div className="mb-8 px-2 md:px-6">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-6">
+          <div className="flex flex-col md:flex-row gap-2 items-center justify-between">
             <div className="relative w-full md:flex-1 md:max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
@@ -373,16 +373,12 @@ export default function TeamsPage() {
               />
             </div>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-gray-500" />
-                <span className="text-sm text-gray-600">カテゴリー</span>
-              </div>
               {/* The "チーム作成" button is now handled by the Link component above */}
             </div>
           </div>
 
           {/* Category Tabs */}
-          <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide -mx-2 px-2">
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-2 px-2">
             {categories.map((category) => (
               <button
                 key={category.id}
