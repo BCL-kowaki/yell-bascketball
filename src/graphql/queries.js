@@ -5,13 +5,19 @@ export const getUser = /* GraphQL */ `
   query GetUser($id: ID!) {
     getUser(id: $id) {
       id
+      firstName
+      lastName
       email
-      displayName
-      profileImage
       bio
+      location
+      avatar
+      coverImage
+      category
+      regionBlock
+      prefecture
+      district
       createdAt
       updatedAt
-      owner
       __typename
     }
   }
@@ -25,45 +31,17 @@ export const listUsers = /* GraphQL */ `
     listUsers(filter: $filter, limit: $limit, nextToken: $nextToken) {
       items {
         id
+        firstName
+        lastName
         email
-        displayName
-        profileImage
         bio
-        createdAt
-        updatedAt
-        owner
-        __typename
-      }
-      nextToken
-      __typename
-    }
-  }
-`;
-export const getTeam = /* GraphQL */ `
-  query GetTeam($id: ID!) {
-    getTeam(id: $id) {
-      id
-      name
-      description
-      logoImage
-      createdAt
-      updatedAt
-      __typename
-    }
-  }
-`;
-export const listTeams = /* GraphQL */ `
-  query ListTeams(
-    $filter: ModelTeamFilterInput
-    $limit: Int
-    $nextToken: String
-  ) {
-    listTeams(filter: $filter, limit: $limit, nextToken: $nextToken) {
-      items {
-        id
-        name
-        description
-        logoImage
+        location
+        avatar
+        coverImage
+        category
+        regionBlock
+        prefecture
+        district
         createdAt
         updatedAt
         __typename
@@ -79,10 +57,19 @@ export const getPost = /* GraphQL */ `
       id
       content
       imageUrl
-      authorId
+      pdfUrl
+      pdfName
+      locationName
+      locationAddress
+      linkUrl
+      linkTitle
+      linkDescription
+      linkImage
+      likesCount
+      commentsCount
+      authorEmail
       createdAt
       updatedAt
-      owner
       __typename
     }
   }
@@ -98,10 +85,368 @@ export const listPosts = /* GraphQL */ `
         id
         content
         imageUrl
-        authorId
+        pdfUrl
+        pdfName
+        locationName
+        locationAddress
+        linkUrl
+        linkTitle
+        linkDescription
+        linkImage
+        likesCount
+        commentsCount
+        authorEmail
         createdAt
         updatedAt
-        owner
+        __typename
+      }
+      nextToken
+      __typename
+    }
+  }
+`;
+export const getComment = /* GraphQL */ `
+  query GetComment($id: ID!) {
+    getComment(id: $id) {
+      id
+      postId
+      authorEmail
+      content
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const listComments = /* GraphQL */ `
+  query ListComments(
+    $filter: ModelCommentFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    listComments(filter: $filter, limit: $limit, nextToken: $nextToken) {
+      items {
+        id
+        postId
+        authorEmail
+        content
+        createdAt
+        updatedAt
+        __typename
+      }
+      nextToken
+      __typename
+    }
+  }
+`;
+export const getLike = /* GraphQL */ `
+  query GetLike($id: ID!) {
+    getLike(id: $id) {
+      id
+      postId
+      userEmail
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const listLikes = /* GraphQL */ `
+  query ListLikes(
+    $filter: ModelLikeFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    listLikes(filter: $filter, limit: $limit, nextToken: $nextToken) {
+      items {
+        id
+        postId
+        userEmail
+        createdAt
+        updatedAt
+        __typename
+      }
+      nextToken
+      __typename
+    }
+  }
+`;
+export const getRegion = /* GraphQL */ `
+  query GetRegion($id: ID!) {
+    getRegion(id: $id) {
+      id
+      name
+      slug
+      sortOrder
+      prefectures {
+        nextToken
+        __typename
+      }
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const listRegions = /* GraphQL */ `
+  query ListRegions(
+    $filter: ModelRegionFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    listRegions(filter: $filter, limit: $limit, nextToken: $nextToken) {
+      items {
+        id
+        name
+        slug
+        sortOrder
+        createdAt
+        updatedAt
+        __typename
+      }
+      nextToken
+      __typename
+    }
+  }
+`;
+export const getPrefecture = /* GraphQL */ `
+  query GetPrefecture($id: ID!) {
+    getPrefecture(id: $id) {
+      id
+      regionId
+      region {
+        id
+        name
+        slug
+        sortOrder
+        createdAt
+        updatedAt
+        __typename
+      }
+      name
+      slug
+      sortOrder
+      districts {
+        nextToken
+        __typename
+      }
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const listPrefectures = /* GraphQL */ `
+  query ListPrefectures(
+    $filter: ModelPrefectureFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    listPrefectures(filter: $filter, limit: $limit, nextToken: $nextToken) {
+      items {
+        id
+        regionId
+        name
+        slug
+        sortOrder
+        createdAt
+        updatedAt
+        __typename
+      }
+      nextToken
+      __typename
+    }
+  }
+`;
+export const getDistrict = /* GraphQL */ `
+  query GetDistrict($id: ID!) {
+    getDistrict(id: $id) {
+      id
+      prefectureId
+      prefecture {
+        id
+        regionId
+        name
+        slug
+        sortOrder
+        createdAt
+        updatedAt
+        __typename
+      }
+      name
+      sortOrder
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const listDistricts = /* GraphQL */ `
+  query ListDistricts(
+    $filter: ModelDistrictFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    listDistricts(filter: $filter, limit: $limit, nextToken: $nextToken) {
+      items {
+        id
+        prefectureId
+        name
+        sortOrder
+        createdAt
+        updatedAt
+        __typename
+      }
+      nextToken
+      __typename
+    }
+  }
+`;
+export const likesByPostAndUser = /* GraphQL */ `
+  query LikesByPostAndUser(
+    $postId: ID!
+    $userEmail: ModelStringKeyConditionInput
+    $sortDirection: ModelSortDirection
+    $filter: ModelLikeFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    likesByPostAndUser(
+      postId: $postId
+      userEmail: $userEmail
+      sortDirection: $sortDirection
+      filter: $filter
+      limit: $limit
+      nextToken: $nextToken
+    ) {
+      items {
+        id
+        postId
+        userEmail
+        createdAt
+        updatedAt
+        __typename
+      }
+      nextToken
+      __typename
+    }
+  }
+`;
+export const regionBySlug = /* GraphQL */ `
+  query RegionBySlug(
+    $slug: String!
+    $sortDirection: ModelSortDirection
+    $filter: ModelRegionFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    regionBySlug(
+      slug: $slug
+      sortDirection: $sortDirection
+      filter: $filter
+      limit: $limit
+      nextToken: $nextToken
+    ) {
+      items {
+        id
+        name
+        slug
+        sortOrder
+        createdAt
+        updatedAt
+        __typename
+      }
+      nextToken
+      __typename
+    }
+  }
+`;
+export const prefecturesByRegionIdAndSortOrder = /* GraphQL */ `
+  query PrefecturesByRegionIdAndSortOrder(
+    $regionId: ID!
+    $sortOrder: ModelIntKeyConditionInput
+    $sortDirection: ModelSortDirection
+    $filter: ModelPrefectureFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    prefecturesByRegionIdAndSortOrder(
+      regionId: $regionId
+      sortOrder: $sortOrder
+      sortDirection: $sortDirection
+      filter: $filter
+      limit: $limit
+      nextToken: $nextToken
+    ) {
+      items {
+        id
+        regionId
+        name
+        slug
+        sortOrder
+        createdAt
+        updatedAt
+        __typename
+      }
+      nextToken
+      __typename
+    }
+  }
+`;
+export const prefectureBySlug = /* GraphQL */ `
+  query PrefectureBySlug(
+    $slug: String!
+    $sortDirection: ModelSortDirection
+    $filter: ModelPrefectureFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    prefectureBySlug(
+      slug: $slug
+      sortDirection: $sortDirection
+      filter: $filter
+      limit: $limit
+      nextToken: $nextToken
+    ) {
+      items {
+        id
+        regionId
+        name
+        slug
+        sortOrder
+        createdAt
+        updatedAt
+        __typename
+      }
+      nextToken
+      __typename
+    }
+  }
+`;
+export const districtsByPrefectureIdAndSortOrder = /* GraphQL */ `
+  query DistrictsByPrefectureIdAndSortOrder(
+    $prefectureId: ID!
+    $sortOrder: ModelIntKeyConditionInput
+    $sortDirection: ModelSortDirection
+    $filter: ModelDistrictFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    districtsByPrefectureIdAndSortOrder(
+      prefectureId: $prefectureId
+      sortOrder: $sortOrder
+      sortDirection: $sortDirection
+      filter: $filter
+      limit: $limit
+      nextToken: $nextToken
+    ) {
+      items {
+        id
+        prefectureId
+        name
+        sortOrder
+        createdAt
+        updatedAt
         __typename
       }
       nextToken

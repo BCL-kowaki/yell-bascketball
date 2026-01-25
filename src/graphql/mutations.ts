@@ -9,13 +9,19 @@ export const createUser = /* GraphQL */ `
   ) {
     createUser(input: $input, condition: $condition) {
       id
+      firstName
+      lastName
       email
-      displayName
-      profileImage
       bio
+      location
+      avatar
+      coverImage
+      category
+      regionBlock
+      prefecture
+      district
       createdAt
       updatedAt
-      owner
       __typename
     }
   }
@@ -27,13 +33,19 @@ export const updateUser = /* GraphQL */ `
   ) {
     updateUser(input: $input, condition: $condition) {
       id
+      firstName
+      lastName
       email
-      displayName
-      profileImage
       bio
+      location
+      avatar
+      coverImage
+      category
+      regionBlock
+      prefecture
+      district
       createdAt
       updatedAt
-      owner
       __typename
     }
   }
@@ -45,59 +57,17 @@ export const deleteUser = /* GraphQL */ `
   ) {
     deleteUser(input: $input, condition: $condition) {
       id
+      firstName
+      lastName
       email
-      displayName
-      profileImage
       bio
-      createdAt
-      updatedAt
-      owner
-      __typename
-    }
-  }
-`;
-export const createTeam = /* GraphQL */ `
-  mutation CreateTeam(
-    $input: CreateTeamInput!
-    $condition: ModelTeamConditionInput
-  ) {
-    createTeam(input: $input, condition: $condition) {
-      id
-      name
-      description
-      logoImage
-      createdAt
-      updatedAt
-      __typename
-    }
-  }
-`;
-export const updateTeam = /* GraphQL */ `
-  mutation UpdateTeam(
-    $input: UpdateTeamInput!
-    $condition: ModelTeamConditionInput
-  ) {
-    updateTeam(input: $input, condition: $condition) {
-      id
-      name
-      description
-      logoImage
-      createdAt
-      updatedAt
-      __typename
-    }
-  }
-`;
-export const deleteTeam = /* GraphQL */ `
-  mutation DeleteTeam(
-    $input: DeleteTeamInput!
-    $condition: ModelTeamConditionInput
-  ) {
-    deleteTeam(input: $input, condition: $condition) {
-      id
-      name
-      description
-      logoImage
+      location
+      avatar
+      coverImage
+      category
+      regionBlock
+      prefecture
+      district
       createdAt
       updatedAt
       __typename
@@ -113,10 +83,19 @@ export const createPost = /* GraphQL */ `
       id
       content
       imageUrl
-      authorId
+      pdfUrl
+      pdfName
+      locationName
+      locationAddress
+      linkUrl
+      linkTitle
+      linkDescription
+      linkImage
+      likesCount
+      commentsCount
+      authorEmail
       createdAt
       updatedAt
-      owner
       __typename
     }
   }
@@ -130,10 +109,19 @@ export const updatePost = /* GraphQL */ `
       id
       content
       imageUrl
-      authorId
+      pdfUrl
+      pdfName
+      locationName
+      locationAddress
+      linkUrl
+      linkTitle
+      linkDescription
+      linkImage
+      likesCount
+      commentsCount
+      authorEmail
       createdAt
       updatedAt
-      owner
       __typename
     }
   }
@@ -147,10 +135,340 @@ export const deletePost = /* GraphQL */ `
       id
       content
       imageUrl
-      authorId
+      pdfUrl
+      pdfName
+      locationName
+      locationAddress
+      linkUrl
+      linkTitle
+      linkDescription
+      linkImage
+      likesCount
+      commentsCount
+      authorEmail
       createdAt
       updatedAt
-      owner
+      __typename
+    }
+  }
+`;
+export const createComment = /* GraphQL */ `
+  mutation CreateComment(
+    $input: CreateCommentInput!
+    $condition: ModelCommentConditionInput
+  ) {
+    createComment(input: $input, condition: $condition) {
+      id
+      postId
+      authorEmail
+      content
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const updateComment = /* GraphQL */ `
+  mutation UpdateComment(
+    $input: UpdateCommentInput!
+    $condition: ModelCommentConditionInput
+  ) {
+    updateComment(input: $input, condition: $condition) {
+      id
+      postId
+      authorEmail
+      content
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const deleteComment = /* GraphQL */ `
+  mutation DeleteComment(
+    $input: DeleteCommentInput!
+    $condition: ModelCommentConditionInput
+  ) {
+    deleteComment(input: $input, condition: $condition) {
+      id
+      postId
+      authorEmail
+      content
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const createLike = /* GraphQL */ `
+  mutation CreateLike(
+    $input: CreateLikeInput!
+    $condition: ModelLikeConditionInput
+  ) {
+    createLike(input: $input, condition: $condition) {
+      id
+      postId
+      userEmail
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const updateLike = /* GraphQL */ `
+  mutation UpdateLike(
+    $input: UpdateLikeInput!
+    $condition: ModelLikeConditionInput
+  ) {
+    updateLike(input: $input, condition: $condition) {
+      id
+      postId
+      userEmail
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const deleteLike = /* GraphQL */ `
+  mutation DeleteLike(
+    $input: DeleteLikeInput!
+    $condition: ModelLikeConditionInput
+  ) {
+    deleteLike(input: $input, condition: $condition) {
+      id
+      postId
+      userEmail
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const createRegion = /* GraphQL */ `
+  mutation CreateRegion(
+    $input: CreateRegionInput!
+    $condition: ModelRegionConditionInput
+  ) {
+    createRegion(input: $input, condition: $condition) {
+      id
+      name
+      slug
+      sortOrder
+      prefectures {
+        nextToken
+        __typename
+      }
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const updateRegion = /* GraphQL */ `
+  mutation UpdateRegion(
+    $input: UpdateRegionInput!
+    $condition: ModelRegionConditionInput
+  ) {
+    updateRegion(input: $input, condition: $condition) {
+      id
+      name
+      slug
+      sortOrder
+      prefectures {
+        nextToken
+        __typename
+      }
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const deleteRegion = /* GraphQL */ `
+  mutation DeleteRegion(
+    $input: DeleteRegionInput!
+    $condition: ModelRegionConditionInput
+  ) {
+    deleteRegion(input: $input, condition: $condition) {
+      id
+      name
+      slug
+      sortOrder
+      prefectures {
+        nextToken
+        __typename
+      }
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const createPrefecture = /* GraphQL */ `
+  mutation CreatePrefecture(
+    $input: CreatePrefectureInput!
+    $condition: ModelPrefectureConditionInput
+  ) {
+    createPrefecture(input: $input, condition: $condition) {
+      id
+      regionId
+      region {
+        id
+        name
+        slug
+        sortOrder
+        createdAt
+        updatedAt
+        __typename
+      }
+      name
+      slug
+      sortOrder
+      districts {
+        nextToken
+        __typename
+      }
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const updatePrefecture = /* GraphQL */ `
+  mutation UpdatePrefecture(
+    $input: UpdatePrefectureInput!
+    $condition: ModelPrefectureConditionInput
+  ) {
+    updatePrefecture(input: $input, condition: $condition) {
+      id
+      regionId
+      region {
+        id
+        name
+        slug
+        sortOrder
+        createdAt
+        updatedAt
+        __typename
+      }
+      name
+      slug
+      sortOrder
+      districts {
+        nextToken
+        __typename
+      }
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const deletePrefecture = /* GraphQL */ `
+  mutation DeletePrefecture(
+    $input: DeletePrefectureInput!
+    $condition: ModelPrefectureConditionInput
+  ) {
+    deletePrefecture(input: $input, condition: $condition) {
+      id
+      regionId
+      region {
+        id
+        name
+        slug
+        sortOrder
+        createdAt
+        updatedAt
+        __typename
+      }
+      name
+      slug
+      sortOrder
+      districts {
+        nextToken
+        __typename
+      }
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const createDistrict = /* GraphQL */ `
+  mutation CreateDistrict(
+    $input: CreateDistrictInput!
+    $condition: ModelDistrictConditionInput
+  ) {
+    createDistrict(input: $input, condition: $condition) {
+      id
+      prefectureId
+      prefecture {
+        id
+        regionId
+        name
+        slug
+        sortOrder
+        createdAt
+        updatedAt
+        __typename
+      }
+      name
+      sortOrder
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const updateDistrict = /* GraphQL */ `
+  mutation UpdateDistrict(
+    $input: UpdateDistrictInput!
+    $condition: ModelDistrictConditionInput
+  ) {
+    updateDistrict(input: $input, condition: $condition) {
+      id
+      prefectureId
+      prefecture {
+        id
+        regionId
+        name
+        slug
+        sortOrder
+        createdAt
+        updatedAt
+        __typename
+      }
+      name
+      sortOrder
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const deleteDistrict = /* GraphQL */ `
+  mutation DeleteDistrict(
+    $input: DeleteDistrictInput!
+    $condition: ModelDistrictConditionInput
+  ) {
+    deleteDistrict(input: $input, condition: $condition) {
+      id
+      prefectureId
+      prefecture {
+        id
+        regionId
+        name
+        slug
+        sortOrder
+        createdAt
+        updatedAt
+        __typename
+      }
+      name
+      sortOrder
+      createdAt
+      updatedAt
       __typename
     }
   }

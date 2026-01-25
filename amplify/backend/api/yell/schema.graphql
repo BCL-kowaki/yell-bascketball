@@ -1,38 +1,79 @@
-# Yell Basketball App Schema
-
-type User @model @auth(rules: [
-  { allow: owner },
-  { allow: private, operations: [read] }
-]) {
+type User @model @auth(rules: [{allow: public}]) {
   id: ID!
+  firstName: String!
+  lastName: String!
   email: String!
-  displayName: String
-  profileImage: String
   bio: String
-  createdAt: AWSDateTime
-  updatedAt: AWSDateTime
+  location: String
+  avatar: String
+  coverImage: String
+  category: String
+  regionBlock: String
+  prefecture: String
+  district: String
 }
 
-type Team @model @auth(rules: [
-  { allow: private, operations: [read] },
-  { allow: groups, groups: ["Admin"], operations: [create, update, delete] }
-]) {
-  id: ID!
-  name: String!
-  description: String
-  logoImage: String
-  createdAt: AWSDateTime
-  updatedAt: AWSDateTime
-}
-
-type Post @model @auth(rules: [
-  { allow: owner },
-  { allow: private, operations: [read] }
-]) {
+# タイムライン投稿
+type Post @model @auth(rules: [{allow: public}]) {
   id: ID!
   content: String!
   imageUrl: String
-  authorId: String!
+  pdfUrl: String
+  pdfName: String
+  locationName: String
+  locationAddress: String
+  linkUrl: String
+  linkTitle: String
+  linkDescription: String
+  linkImage: String
+  likesCount: Int!
+  commentsCount: Int!
+  authorEmail: String
   createdAt: AWSDateTime
   updatedAt: AWSDateTime
+}
+
+# コメント
+type Comment @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  postId: ID!
+  authorEmail: String
+  content: String!
+  createdAt: AWSDateTime
+}
+
+# いいね（重複防止用）
+type Like @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  postId: ID! @index(name: "byPostAndUser", sortKeyFields: ["userEmail"], queryField: "likesByPostAndUser")
+  userEmail: String!
+}
+
+# 地域ブロック
+type Region @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  name: String! # 例: "北海道", "関東", "九州・沖縄"
+  slug: String! @index(name: "bySlug", queryField: "regionBySlug") # 例: "hokkaido", "kanto", "kyushu"
+  sortOrder: Int! # 表示順序
+  prefectures: [Prefecture] @hasMany(indexName: "byRegion", fields: ["id"])
+}
+
+# 都道府県
+type Prefecture @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  regionId: ID! @index(name: "byRegion", sortKeyFields: ["sortOrder"])
+  region: Region @belongsTo(fields: ["regionId"])
+  name: String! # 例: "東京都", "神奈川県"
+  slug: String! @index(name: "bySlug", queryField: "prefectureBySlug") # 例: "tokyo", "kanagawa"
+  sortOrder: Int! # 表示順序
+  districts: [District] @hasMany(indexName: "byPrefecture", fields: ["id"])
+}
+
+# 地区（市区町村）
+type District @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  prefectureId: ID! @index(name: "byPrefecture", sortKeyFields: ["sortOrder"])
+  prefecture: Prefecture @belongsTo(fields: ["prefectureId"])
+  name: String! # 例: "千代田区", "横浜市"
+  sortOrder: Int! # 表示順序
 }
