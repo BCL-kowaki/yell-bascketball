@@ -261,8 +261,8 @@ export default function CreateTeamPage() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="mb-6">
+      <div className="max-w-4xl mx-auto px-2 py-4">
+        <div className="mb-2">
           <Link href="/teams">
             <Button variant="outline">
               <ChevronLeft className="w-4 h-4 mr-2" />

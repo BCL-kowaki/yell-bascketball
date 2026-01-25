@@ -1157,22 +1157,32 @@ export async function createTeam(input: Partial<DbTeam>): Promise<DbTeam> {
 }
 
 export async function listTeams(limit = 50, filter?: { isApproved?: boolean }): Promise<DbTeam[]> {
-  // GraphQLスキーマに存在するフィールドのみを使用
   const query = /* GraphQL */ `
     query ListTeams($filter: ModelTeamFilterInput, $limit: Int) {
       listTeams(filter: $filter, limit: $limit) {
         items {
-          id name category region prefecture district description createdAt
+          id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website ownerEmail editorEmails isApproved createdAt updatedAt
         }
       }
     }
   `
 
   try {
-    // isApprovedフィールドはスキーマに存在しないため、フィルターを削除
+    // フィルターを構築
+    const graphqlFilter: any = {}
+    if (filter?.isApproved !== undefined) {
+      graphqlFilter.isApproved = { eq: filter.isApproved }
+    }
+
+    console.log('listTeams called with filter:', filter)
+    console.log('GraphQL filter:', graphqlFilter)
+
     const result = await client.graphql({
       query,
-      variables: { filter: undefined, limit },
+      variables: { 
+        filter: Object.keys(graphqlFilter).length > 0 ? graphqlFilter : undefined, 
+        limit 
+      },
       authMode: 'apiKey'
     }) as any
 
@@ -1181,7 +1191,9 @@ export async function listTeams(limit = 50, filter?: { isApproved?: boolean }): 
       throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
     }
 
-    return result.data.listTeams.items || []
+    const teams = result.data.listTeams.items || []
+    console.log(`listTeams returned ${teams.length} teams`)
+    return teams
   } catch (error: any) {
     console.error('listTeams error:', error)
     throw error
@@ -1193,11 +1205,10 @@ export async function getTeam(id: string): Promise<DbTeam | null> {
   console.log('[getTeam] ID type:', typeof id)
   console.log('[getTeam] ID length:', id.length)
 
-  // GraphQLスキーマに存在するフィールドのみを使用
   const query = /* GraphQL */ `
     query GetTeam($id: ID!) {
       getTeam(id: $id) {
-        id name category region prefecture district description createdAt
+        id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website ownerEmail editorEmails isApproved createdAt updatedAt
       }
     }
   `

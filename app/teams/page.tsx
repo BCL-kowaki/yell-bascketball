@@ -269,13 +269,21 @@ export default function TeamsPage() {
   async function loadTeams() {
     setIsLoading(true)
     try {
+      console.log('🔍 Loading teams with filter: isApproved=true')
       // isApproved=trueのチームのみ取得
       const approvedTeams = await listTeams(100, { isApproved: true })
+      console.log(`✅ Loaded ${approvedTeams.length} approved teams`)
+      console.log('📋 Team details:', approvedTeams.map(t => ({ 
+        id: t.id, 
+        name: t.name, 
+        isApproved: t.isApproved,
+        category: t.category,
+        region: t.region,
+        prefecture: t.prefecture
+      })))
       setTeams(approvedTeams)
-      console.log(`Loaded ${approvedTeams.length} approved teams`)
-      console.log('Team IDs:', approvedTeams.map(t => ({ id: t.id, name: t.name })))
     } catch (error) {
-      console.error("Failed to load teams:", error)
+      console.error("❌ Failed to load teams:", error)
       setTeams([])
     } finally {
       setIsLoading(false)
