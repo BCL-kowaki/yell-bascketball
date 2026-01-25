@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Layout } from "@/components/layout"
-import { ChevronLeft, Info, Upload, X, Loader2 } from "lucide-react"
+import { ChevronLeft, Info, Upload, X, Loader2, Search, UserPlus } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -16,7 +16,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { createTeam, getCurrentUserEmail, searchUsers } from "@/lib/api"
 import { uploadImageToS3 } from "@/lib/storage"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Search, UserPlus, X } from "lucide-react"
 
 const regions = {
   北海道: ["北海道"],
