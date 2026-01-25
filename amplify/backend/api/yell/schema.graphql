@@ -1,0 +1,38 @@
+# Yell Basketball App Schema
+
+type User @model @auth(rules: [
+  { allow: owner },
+  { allow: private, operations: [read] }
+]) {
+  id: ID!
+  email: String!
+  displayName: String
+  profileImage: String
+  bio: String
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+}
+
+type Team @model @auth(rules: [
+  { allow: private, operations: [read] },
+  { allow: groups, groups: ["Admin"], operations: [create, update, delete] }
+]) {
+  id: ID!
+  name: String!
+  description: String
+  logoImage: String
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+}
+
+type Post @model @auth(rules: [
+  { allow: owner },
+  { allow: private, operations: [read] }
+]) {
+  id: ID!
+  content: String!
+  imageUrl: String
+  authorId: String!
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+}

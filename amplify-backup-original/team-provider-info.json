@@ -1,0 +1,23 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-yell-dev-87669-authRole",
+      "UnauthRoleArn": "arn:aws:iam::661984796222:role/amplify-yell-dev-87669-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::661984796222:role/amplify-yell-dev-87669-authRole",
+      "Region": "ap-northeast-1",
+      "DeploymentBucketName": "amplify-yell-dev-87669-deployment",
+      "UnauthRoleName": "amplify-yell-dev-87669-unauthRole",
+      "StackName": "amplify-yell-dev-87669",
+      "StackId": "arn:aws:cloudformation:ap-northeast-1:661984796222:stack/amplify-yell-dev-87669/a1f53490-f98a-11f0-9b69-0eb060f0833f",
+      "AmplifyAppId": "d3di4kddvmiean"
+    },
+    "categories": {
+      "auth": {
+        "yellbackend": {}
+      }
+    }
+  },
+  "main": {
+    "awscloudformation": {}
+  }
+}

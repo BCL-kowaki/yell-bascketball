@@ -35,7 +35,7 @@ amplify_backup_old/
 amplify-backup-temp/
 
 # Amplify directory (to prevent auto-detection of backend)
-amplify/
+# amplify/  # Temporarily commented out for backend setup
 
 # Claude settings
 .claude/
