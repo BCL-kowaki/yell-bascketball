@@ -11,7 +11,7 @@ import {
   Filter
 } from "lucide-react"
 import { Layout } from "@/components/layout"
-import { listTournaments, DbTournament, listRegions, DbRegion } from "@/lib/api"
+import { listTournaments, DbTournament } from "@/lib/api"
 import {
   Select,
   SelectContent,
@@ -20,23 +20,35 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { CATEGORIES } from "@/lib/regionData"
+import { REGION_SLUG_TO_NAME } from "@/lib/regionMapping"
+
+// ハードコードされた地域リスト（Regionテーブルが空の場合に使用）
+const REGIONS = [
+  { id: "hokkaido", name: "北海道", slug: "hokkaido", sortOrder: 1 },
+  { id: "tohoku", name: "東北", slug: "tohoku", sortOrder: 2 },
+  { id: "kanto", name: "関東", slug: "kanto", sortOrder: 3 },
+  { id: "hokushinetsu", name: "北信越", slug: "hokushinetsu", sortOrder: 4 },
+  { id: "tokai", name: "東海", slug: "tokai", sortOrder: 5 },
+  { id: "kinki", name: "近畿", slug: "kinki", sortOrder: 6 },
+  { id: "chugoku", name: "中国", slug: "chugoku", sortOrder: 7 },
+  { id: "shikoku", name: "四国", slug: "shikoku", sortOrder: 8 },
+  { id: "kyushu", name: "九州・沖縄", slug: "kyushu", sortOrder: 9 },
+]
 
 export default function TournamentsPage() {
   const router = useRouter()
   const [tournaments, setTournaments] = useState<DbTournament[]>([])
-  const [regions, setRegions] = useState<DbRegion[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [regionCounts, setRegionCounts] = useState<Record<string, number>>({})
 
   useEffect(() => {
     loadTournaments()
-    loadRegions()
   }, [])
 
   useEffect(() => {
     calculateRegionCounts()
-  }, [tournaments, selectedCategory, regions])
+  }, [tournaments, selectedCategory])
 
   async function loadTournaments() {
     try {
@@ -55,16 +67,6 @@ export default function TournamentsPage() {
     }
   }
 
-  async function loadRegions() {
-    try {
-      const allRegions = await listRegions()
-      console.log("📍 Regions loaded from DB:", allRegions.length)
-      setRegions(allRegions)
-    } catch (error) {
-      console.error("Failed to load regions:", error)
-    }
-  }
-
   function calculateRegionCounts() {
     const counts: Record<string, number> = {}
     const filteredTournaments = selectedCategory === "all"
@@ -73,10 +75,10 @@ export default function TournamentsPage() {
 
     console.log("🔍 Calculating region counts for", filteredTournaments.length, "tournaments")
 
-    // 地域名からslugへのマッピング
+    // 地域名からslugへのマッピング（REGION_SLUG_TO_NAMEの逆マッピング）
     const regionNameToSlug: Record<string, string> = {}
-    regions.forEach(region => {
-      regionNameToSlug[region.name] = region.slug
+    Object.entries(REGION_SLUG_TO_NAME).forEach(([slug, name]) => {
+      regionNameToSlug[name] = slug
     })
 
     filteredTournaments.forEach(tournament => {
@@ -84,6 +86,8 @@ export default function TournamentsPage() {
       const slug = regionNameToSlug[regionBlock]
       if (slug) {
         counts[slug] = (counts[slug] || 0) + 1
+      } else {
+        console.warn("⚠️ Unknown regionBlock:", regionBlock, "for tournament:", tournament.name)
       }
     })
 
@@ -135,8 +139,8 @@ export default function TournamentsPage() {
             <p className="mt-4 text-gray-500">読み込み中...</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {regions.map((region) => {
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 px-2 md:px-6">
+            {REGIONS.map((region) => {
               const count = regionCounts[region.slug] || 0
               return (
                 <Link key={region.id} href={`/tournaments/${region.slug}`}>
