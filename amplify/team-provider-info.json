@@ -1,0 +1,13 @@
+{
+  "main": {
+    "awscloudformation": {
+      "Region": "ap-northeast-1",
+      "AmplifyAppId": "d1ddguwptwihgp"
+    },
+    "categories": {
+      "auth": {
+        "yellbackend": {}
+      }
+    }
+  }
+}
