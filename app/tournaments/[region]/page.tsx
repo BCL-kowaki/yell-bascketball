@@ -119,7 +119,7 @@ export default function RegionTournamentsPage() {
   if (!regionName) {
     return (
       <Layout>
-        <div className="max-w-7xl mx-auto px-2 py-6">
+        <div className="max-w-7xl mx-auto px-2 py-4">
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg">地域が見つかりません</p>
             <Link href="/tournaments">
@@ -135,9 +135,9 @@ export default function RegionTournamentsPage() {
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto px-2 py-6">
+      <div className="max-w-7xl mx-auto px-2 py-4">
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 mb-6 text-sm">
+        <div className="flex items-center gap-2 mb-2 text-sm">
           <Link href="/tournaments" className="text-gray-500 hover:text-gray-700">
             大会トップ
           </Link>
@@ -146,8 +146,8 @@ export default function RegionTournamentsPage() {
         </div>
 
         {/* Statistics */}
-        <div className="mb-8">
-          <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg p-6">
+        <div className="mb-2">
+          <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg p-4">
             <div className="flex items-center gap-3 mb-2">
               <Trophy className="w-6 h-6 text-red-600" />
               <h3 className="text-lg font-bold text-gray-900">{regionName}エリアの大会</h3>
@@ -158,9 +158,9 @@ export default function RegionTournamentsPage() {
 
         {/* All Prefectures - Unified Layout */}
         <div className="mb-12">
-          <div className="flex items-center gap-2 mb-6">
+          <div className="flex items-center gap-2 mb-2">
             <MapPin className="w-5 h-5 text-red-600" />
-            <h2 className="text-2xl font-bold text-gray-900">都道府県から探す</h2>
+            <h2 className="text-xl font-bold text-gray-900">都道府県から探す</h2>
           </div>
 
           {isLoading ? (
@@ -175,7 +175,7 @@ export default function RegionTournamentsPage() {
                 const count = tournamentCounts[prefectureName] || 0
                 return (
                   <Link key={prefectureName} href={`/tournaments/${regionSlug}/${prefectureSlug}`}>
-                    <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer group border-2 hover:scale-105 h-full">
+                    <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group h-full">
                       <CardHeader className="pt-3 pb-3">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-xl font-bold">
