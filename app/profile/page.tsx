@@ -699,7 +699,7 @@ export default function ProfilePage() {
 
       <div className="max-w-6xl mx-auto pb-20">
         {/* Profile Header */}
-        <div className="bg-card px-4 md:px-8 pt-16 md:pt-20 pb-6 border-b border-border">
+        <div className="bg-card px-4 md:px-8 pt-16 md:pt-20 pb-0">
           <div className="flex flex-col md:flex-row items-start justify-between">
             <div className="flex-1 mb-4 md:mb-0">
               {isEditing ? (
@@ -1007,18 +1007,27 @@ export default function ProfilePage() {
               )}
             </div>
           </div>
-        </div>
 
-        {/* Profile Content */}
-        <div className="pt-2 pb-2 md:p-6">
-          <Tabs defaultValue="about" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-white">
-              <TabsTrigger value="about">基本情報</TabsTrigger>
-              <TabsTrigger value="activity">アクティビティ</TabsTrigger>
-            </TabsList>
+          {/* Navigation Tabs - Facebook style */}
+          <div className="border-t border-border mt-4">
+            <Tabs defaultValue="about" className="w-full">
+              <TabsList className="h-auto bg-transparent p-0 w-full justify-start gap-0">
+                <TabsTrigger 
+                  value="about" 
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
+                >
+                  基本情報
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="activity" 
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
+                >
+                  アクティビティ
+                </TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="about" className="mt-2 md:mt-4">
-              <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+              <TabsContent value="about" className="mt-0 px-4 md:px-8 pb-6">
+                <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
                 <CardHeader>
                   <h3 className="font-semibold text-lg">基本情報</h3>
                 </CardHeader>
@@ -1085,15 +1094,19 @@ export default function ProfilePage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="activity" className="mt-4 md:mt-6">
-              <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+              <TabsContent value="activity" className="mt-0 px-4 md:px-8 pb-6">
+                <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
                 <CardContent className="p-8 text-center">
                   <p className="text-muted-foreground">アクティビティ履歴は近日公開予定です</p>
                 </CardContent>
               </Card>
-            </TabsContent>
-          </Tabs>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
 
+        {/* Profile Content */}
+        <div className="pt-2 pb-2 md:p-6">
           {/* 投稿一覧セクション */}
           <div className="mt-4">
             <h2 className="text-lg font-bold mb-2 px-2">投稿</h2>
