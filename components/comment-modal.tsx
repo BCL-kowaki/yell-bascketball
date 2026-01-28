@@ -53,6 +53,7 @@ interface CommentModalProps {
   onCommentSubmit: () => void
   onLike?: (postId: string) => void
   isLoading?: boolean
+  isLoadingComments?: boolean
 }
 
 export function CommentModal({
@@ -66,6 +67,7 @@ export function CommentModal({
   onCommentSubmit,
   onLike,
   isLoading = false,
+  isLoadingComments = false,
 }: CommentModalProps) {
   const [refreshedPostImage, setRefreshedPostImage] = useState<string | null>(null)
   const [refreshedPostVideo, setRefreshedPostVideo] = useState<string | null>(null)
@@ -216,7 +218,11 @@ export function CommentModal({
           <div className="border-t border-gray-100 pt-4">
             <h4 className="font-semibold text-sm mb-4">コメント ({comments.length})</h4>
             
-            {comments.length === 0 ? (
+            {isLoadingComments ? (
+              <div className="text-center text-gray-500 py-8">
+                <p className="text-sm">読み込み中...</p>
+              </div>
+            ) : comments.length === 0 ? (
               <div className="text-center text-gray-500 py-8">
                 <p className="text-sm">まだコメントがありません</p>
               </div>

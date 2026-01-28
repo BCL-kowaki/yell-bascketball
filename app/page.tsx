@@ -9,7 +9,7 @@ import { Layout } from "@/components/layout"
 import { Navigation } from "@/components/navigation"
 import Link from "next/link"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
-import { listPosts, getTimelinePosts, createPost as createDbPost, toggleLike as toggleDbLike, addComment as addDbComment, updatePostCounts, getCurrentUserEmail, getUserByEmail, updatePost, deletePost } from "@/lib/api"
+import { listPosts, getTimelinePosts, createPost as createDbPost, toggleLike as toggleDbLike, addComment as addDbComment, updatePostCounts, getCurrentUserEmail, getUserByEmail, updatePost, deletePost, getCommentsByPost } from "@/lib/api"
 import { uploadImageToS3, uploadPdfToS3, uploadVideoToS3, refreshS3Url } from "@/lib/storage"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input as DialogInput } from "@/components/ui/input"
@@ -595,13 +595,70 @@ export default function TimelinePage() {
     });
   }
 
-  const toggleComments = (postId: number) => {
+  const toggleComments = async (postId: number) => {
     // モーダルを開く
     const post = posts.find(p => p.id === postId)
-    if (post) {
+    if (post && post.dbId) {
       setSelectedPostForComment(post)
       setModalComment("")
       setCommentModalOpen(true)
+      setIsLoadingModalComments(true)
+      
+      // データベースからコメントを取得
+      try {
+        const dbComments = await getCommentsByPost(post.dbId)
+        
+        // コメントのユーザー情報を取得
+        const commentsWithUsers = await Promise.all(
+          dbComments.map(async (dbComment) => {
+            let userName = "匿名ユーザー"
+            let userAvatar = "/placeholder.svg"
+            
+            if (dbComment.authorEmail) {
+              try {
+                const user = await getUserByEmail(dbComment.authorEmail)
+                if (user) {
+                  userName = `${user.lastName} ${user.firstName}`
+                  if (user.avatar) {
+                    try {
+                      userAvatar = await refreshS3Url(user.avatar, true) || user.avatar
+                    } catch (e) {
+                      console.error('Failed to refresh avatar URL:', e)
+                    }
+                  }
+                }
+              } catch (e) {
+                console.error('Failed to get user for comment:', e)
+              }
+            }
+            
+            return {
+              id: dbComment.id,
+              user: {
+                name: userName,
+                avatar: userAvatar,
+                email: dbComment.authorEmail,
+              },
+              content: dbComment.content,
+              timestamp: new Date(dbComment.createdAt).toLocaleDateString('ja-JP', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              }),
+              likesCount: 0,
+            }
+          })
+        )
+        
+        setModalComments(commentsWithUsers)
+      } catch (e) {
+        console.error('Failed to load comments:', e)
+        setModalComments([])
+      } finally {
+        setIsLoadingModalComments(false)
+      }
     }
   }
 
@@ -723,6 +780,59 @@ export default function TimelinePage() {
           await updatePostCounts(selectedPostForComment.dbId, { 
             commentsCount: (selectedPostForComment.comments || 0) + 1 
           })
+          
+          // コメントを再取得
+          try {
+            const dbComments = await getCommentsByPost(selectedPostForComment.dbId)
+            
+            // コメントのユーザー情報を取得
+            const commentsWithUsers = await Promise.all(
+              dbComments.map(async (dbComment) => {
+                let userName = "匿名ユーザー"
+                let userAvatar = "/placeholder.svg"
+                
+                if (dbComment.authorEmail) {
+                  try {
+                    const user = await getUserByEmail(dbComment.authorEmail)
+                    if (user) {
+                      userName = `${user.lastName} ${user.firstName}`
+                      if (user.avatar) {
+                        try {
+                          userAvatar = await refreshS3Url(user.avatar, true) || user.avatar
+                        } catch (e) {
+                          console.error('Failed to refresh avatar URL:', e)
+                        }
+                      }
+                    }
+                  } catch (e) {
+                    console.error('Failed to get user for comment:', e)
+                  }
+                }
+                
+                return {
+                  id: dbComment.id,
+                  user: {
+                    name: userName,
+                    avatar: userAvatar,
+                    email: dbComment.authorEmail,
+                  },
+                  content: dbComment.content,
+                  timestamp: new Date(dbComment.createdAt).toLocaleDateString('ja-JP', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }),
+                  likesCount: 0,
+                }
+              })
+            )
+            
+            setModalComments(commentsWithUsers)
+          } catch (e) {
+            console.error('Failed to reload comments:', e)
+          }
         }
       }
 
@@ -1580,15 +1690,16 @@ export default function TimelinePage() {
             commentsCount: selectedPostForComment.comments || 0,
             isLiked: selectedPostForComment.liked || false,
           }}
-          comments={(comments[selectedPostForComment.id] || []).map((c) => ({
+          comments={modalComments.map((c) => ({
             id: c.id.toString(),
             user: {
               name: c.user.name,
               avatar: c.user.avatar,
+              email: c.user.email,
             },
             content: c.content,
             timestamp: c.timestamp,
-            likesCount: c.likes || 0,
+            likesCount: c.likesCount || 0,
           }))}
           currentUser={currentUser}
           newComment={modalComment}
@@ -1607,6 +1718,7 @@ export default function TimelinePage() {
             }
           }}
           isLoading={isSubmittingComment}
+          isLoadingComments={isLoadingModalComments}
         />
       )}
 
