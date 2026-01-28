@@ -14,6 +14,7 @@ import { uploadImageToS3, uploadPdfToS3, uploadVideoToS3, refreshS3Url } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input as DialogInput } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
+import { CommentModal } from "@/components/comment-modal"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -321,6 +322,10 @@ export default function TimelinePage() {
   const [comments, setComments] = useState(mockComments)
   const [showComments, setShowComments] = useState<{ [key: number]: boolean }>({})
   const [newComment, setNewComment] = useState<{ [key: number]: string }>({})
+  const [commentModalOpen, setCommentModalOpen] = useState(false)
+  const [selectedPostForComment, setSelectedPostForComment] = useState<Post | null>(null)
+  const [modalComment, setModalComment] = useState("")
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false)
   const [replyingTo, setReplyingTo] = useState<{ postId: number; commentId: number } | null>(null)
   const [replyContent, setReplyContent] = useState("")
   const { toast } = useToast()
@@ -591,10 +596,13 @@ export default function TimelinePage() {
   }
 
   const toggleComments = (postId: number) => {
-    setShowComments((prev) => ({
-      ...prev,
-      [postId]: !prev[postId],
-    }))
+    // モーダルを開く
+    const post = posts.find(p => p.id === postId)
+    if (post) {
+      setSelectedPostForComment(post)
+      setModalComment("")
+      setCommentModalOpen(true)
+    }
   }
 
   const handleSubmitComment = async (postId: number) => {
@@ -658,6 +666,83 @@ export default function TimelinePage() {
       } catch (e) {
         console.error("add comment failed", e)
       }
+    }
+  }
+
+  const handleModalCommentSubmit = async () => {
+    if (!selectedPostForComment || !modalComment.trim()) return
+
+    setIsSubmittingComment(true)
+    try {
+      const commentText = modalComment.trim()
+      const userForComment = currentUser ? {
+        id: Date.now(),
+        name: currentUser.name,
+        avatar: currentUser.avatar || "/placeholder.svg",
+      } : defaultUser
+
+      const newCommentObj: Comment = {
+        id: Date.now(),
+        user: userForComment,
+        content: commentText,
+        timestamp: "今",
+        likes: 0,
+        liked: false,
+        replies: [],
+      }
+
+      setComments((prevComments) => ({
+        ...prevComments,
+        [selectedPostForComment.id]: [...(prevComments[selectedPostForComment.id] || []), newCommentObj],
+      }))
+
+      setPosts(
+        posts.map((post) =>
+          post.id === selectedPostForComment.id
+            ? {
+                ...post,
+                comments: post.comments + 1,
+              }
+            : post,
+        ),
+      )
+
+      setModalComment("")
+
+      // DBへ書き込み
+      if (selectedPostForComment.dbId) {
+        let email: string | undefined
+        try {
+          email = await getCurrentUserEmail()
+        } catch (error) {
+          console.error('Failed to get current user email:', error)
+        }
+
+        if (email) {
+          await addDbComment(selectedPostForComment.dbId, commentText, email)
+          await updatePostCounts(selectedPostForComment.dbId, { 
+            commentsCount: (selectedPostForComment.comments || 0) + 1 
+          })
+        }
+      }
+
+      // 投稿を再読み込みして最新のコメントを取得
+      const updatedPost = posts.find(p => p.id === selectedPostForComment.id)
+      if (updatedPost) {
+        setSelectedPostForComment({
+          ...updatedPost,
+          comments: (updatedPost.comments || 0) + 1,
+        })
+      }
+    } catch (e) {
+      console.error("add comment failed", e)
+      toast({
+        title: "エラー",
+        description: "コメントの投稿に失敗しました",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmittingComment(false)
     }
   }
 
@@ -1466,77 +1551,6 @@ export default function TimelinePage() {
                 </div>
               </div>
 
-              {showComments[post.id] && (
-                <div className="border-t border-gray-100 pt-6">
-                  <div className="flex items-start gap-4 mb-6">
-                    <Avatar className="w-[43px] h-[43px]">
-                      <AvatarImage src={currentUser?.avatar || "/placeholder.svg"} alt={currentUser?.name || 'ユーザー'} />
-                      <AvatarFallback className="text-[20px] bg-blue-600 text-white font-normal">
-                        {currentUser?.name
-                          ? currentUser.name
-                          .split(" ")
-                          .map((n: string) => n[0])
-                          .join("")
-                          : "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="bg-[#ececec] rounded-[10px] px-4 py-3">
-                        <Textarea
-                          placeholder="コメントを入力..."
-                          value={newComment[post.id] || ""}
-                          onChange={(e) => setNewComment((prev) => ({
-                            ...prev,
-                            [post.id]: e.target.value
-                          }))}
-                          className="resize-none border-none border-0 shadow-none !focus-visible:ring-0 !focus-visible:ring-offset-0 !focus:ring-0 !focus:ring-offset-0 !focus:outline-none !outline-none !ring-0 !ring-offset-0 text-[15px] bg-transparent rounded-[10px] placeholder:text-gray-400 p-0 min-h-[60px]"
-                          style={{ border: 'none', outline: 'none', boxShadow: 'none' }}
-                        />
-                      </div>
-                      <div className="flex justify-end mt-2">
-                        <Button
-                          onClick={() => handleSubmitComment(post.id)}
-                          disabled={!newComment[post.id]?.trim()}
-                          className="px-4 py-2 bg-[#dc0000] hover:bg-[#B80000] text-white font-bold text-[15px] rounded-[10px] disabled:bg-gray-300"
-                        >
-                          投稿
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                  {/* Comment Header */}
-                  <h4 className="font-bold text-[15px] text-black mb-4 border-t border-gray-100 pt-6">▼コメント一覧</h4>
-
-                  {/* Comments List */}
-                  <div className="space-y-4 mb-6">
-
-                  {/* Comment Input */}
-                 
-                    {comments[post.id]?.map((comment) => (
-                      <div key={comment.id} className="flex items-start gap-4">
-                        <Avatar className="w-[43px] h-[43px]">
-                          <AvatarImage src={comment.user.avatar || "/placeholder.svg"} alt={comment.user.name} />
-                          <AvatarFallback className="text-[20px] bg-blue-600 text-white font-normal">
-                            {comment.user.name
-                              .split(" ")
-                              .map((n: string) => n[0])
-                              .join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="bg-[#ececec] rounded-[10px] px-5 py-3">
-                            <div className="font-bold text-[15px] mb-2 text-black">{comment.user.name}</div>
-                            <p className="text-[15px] text-black leading-[24px] font-light">{comment.content}</p>
-                          </div>
-                          <div className="text-[12px] text-[#9d9d9d] font-bold mt-2">{comment.timestamp}</div>
-
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                </div>
-              )}
             </CardContent>
           </Card>
           ))
@@ -1544,6 +1558,57 @@ export default function TimelinePage() {
           </div>
         </div>
       </div>
+
+      {/* コメントモーダル */}
+      {selectedPostForComment && (
+        <CommentModal
+          open={commentModalOpen}
+          onOpenChange={setCommentModalOpen}
+          post={{
+            id: selectedPostForComment.id.toString(),
+            user: {
+              name: selectedPostForComment.user.name,
+              avatar: selectedPostForComment.user.avatar,
+              email: selectedPostForComment.authorEmail,
+            },
+            content: selectedPostForComment.content,
+            timestamp: selectedPostForComment.timestamp,
+            image: selectedPostForComment.image,
+            video: selectedPostForComment.videoUrl,
+            pdf: selectedPostForComment.pdfUrl,
+            likesCount: selectedPostForComment.likes || 0,
+            commentsCount: selectedPostForComment.comments || 0,
+            isLiked: selectedPostForComment.liked || false,
+          }}
+          comments={(comments[selectedPostForComment.id] || []).map((c) => ({
+            id: c.id.toString(),
+            user: {
+              name: c.user.name,
+              avatar: c.user.avatar,
+            },
+            content: c.content,
+            timestamp: c.timestamp,
+            likesCount: c.likes || 0,
+          }))}
+          currentUser={currentUser}
+          newComment={modalComment}
+          onCommentChange={setModalComment}
+          onCommentSubmit={handleModalCommentSubmit}
+          onLike={(postId) => {
+            const post = posts.find(p => p.id === parseInt(postId))
+            if (post) {
+              handleLike(post.id)
+              // モーダル内の投稿も更新
+              setSelectedPostForComment({
+                ...post,
+                liked: !post.liked,
+                likes: (post.likes || 0) + (post.liked ? -1 : 1),
+              })
+            }
+          }}
+          isLoading={isSubmittingComment}
+        />
+      )}
 
       {/* 削除確認ダイアログ */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
