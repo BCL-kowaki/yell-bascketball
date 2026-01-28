@@ -1011,8 +1011,9 @@ export default function ProfilePage() {
 
           {/* Navigation Tabs - Facebook style */}
           <div className="border-t border-border mt-4">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="h-auto bg-transparent p-0 w-full justify-start gap-0">
+            <div className="max-w-6xl mx-auto px-4 md:px-8">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="h-auto bg-transparent p-0 w-full justify-start gap-0">
                 <TabsTrigger 
                   value="about" 
                   className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
@@ -1027,11 +1028,12 @@ export default function ProfilePage() {
                 </TabsTrigger>
               </TabsList>
             </Tabs>
+            </div>
           </div>
         </div>
 
         {/* Tab Content - Outside header, as cards */}
-        <div className="max-w-6xl mx-auto px-4 md:px-8">
+        <div className="max-w-6xl mx-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsContent value="about" className="mt-4">
               <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
