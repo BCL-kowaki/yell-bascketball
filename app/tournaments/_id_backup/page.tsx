@@ -976,9 +976,9 @@ export default function TournamentDetailPage() {
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto pb-20">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 mb-2 px-2 pt-2">
+      {/* Breadcrumb */}
+      <div className="max-w-6xl mx-auto px-2 pt-2">
+        <div className="flex items-center gap-2 mb-2">
           <Link href="/tournaments">
             <Button variant="ghost" size="sm">
               <ChevronLeft className="w-4 h-4 mr-2" />
@@ -986,28 +986,30 @@ export default function TournamentDetailPage() {
             </Button>
           </Link>
         </div>
+      </div>
 
-        {/* カバー画像 */}
-        <div className="relative">
-          <div className="h-48 md:h-64 bg-gradient-to-r from-orange-400 to-red-400 overflow-hidden">
-            {coverImageUrl ? (
-              <img
-                src={coverImageUrl}
-                alt={tournament.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement
-                  target.style.display = 'none'
-                }}
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Trophy className="w-24 h-24 text-white/50" />
-              </div>
-            )}
-          </div>
+      {/* カバー画像 - Full Width */}
+      <div className="relative w-full">
+        <div className="h-48 md:h-64 bg-gradient-to-r from-orange-400 to-red-400 overflow-hidden">
+          {coverImageUrl ? (
+            <img
+              src={coverImageUrl}
+              alt={tournament.name}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement
+                target.style.display = 'none'
+              }}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <Trophy className="w-24 h-24 text-white/50" />
+            </div>
+          )}
         </div>
+      </div>
 
+      <div className="max-w-6xl mx-auto pb-20">
         {/* 大会ヘッダー */}
         <div className="bg-card px-4 md:px-8 pt-8 pb-6 border-b border-border">
           <div className="flex flex-col md:flex-row items-start justify-between gap-4">

@@ -522,9 +522,9 @@ export default function TeamDetailPage() {
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto pb-20">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 mb-2 px-1 pt-2">
+      {/* Breadcrumb */}
+      <div className="max-w-6xl mx-auto px-1 pt-2">
+        <div className="flex items-center gap-2 mb-2">
           <Link href="/teams">
             <Button variant="ghost" size="sm">
               <ChevronLeft className="w-4 h-4 mr-2" />
@@ -532,44 +532,51 @@ export default function TeamDetailPage() {
             </Button>
           </Link>
         </div>
+      </div>
 
-        {/* カバー画像 */}
-        <div className="relative">
-          <div className="h-48 md:h-64 bg-gradient-to-r from-orange-400 to-red-400 overflow-hidden">
-            {team.coverImageUrl ? (
-              <img
-                src={team.coverImageUrl}
-                alt={team.name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Users className="w-24 h-24 text-white/50" />
-              </div>
-            )}
-          </div>
-
-          <div className="absolute -bottom-12 md:-bottom-16 left-4 md:left-8">
-            <div className="relative">
-              <Avatar className="w-24 h-24 md:w-32 md:h-32 border-4 border-card">
-                <AvatarImage src={team.logoUrl || undefined} alt={team.name} />
-                <AvatarFallback className="text-2xl bg-gradient-to-br from-orange-500 to-red-500 text-white font-bold">
-                  {(team.shortName || team.name).slice(0, 2)}
-                </AvatarFallback>
-              </Avatar>
-            </div>
-          </div>
-
-          {canEdit && (
-            <div className="absolute bottom-2 right-2 md:bottom-4 md:right-4">
-              <Button size="sm" variant="outline" className="bg-card text-xs md:text-sm gap-2">
-                <Camera className="w-4 h-4" />
-                カバー写真を変更
-              </Button>
+      {/* カバー画像 - Full Width */}
+      <div className="relative w-full">
+        <div className="h-48 md:h-64 bg-gradient-to-r from-orange-400 to-red-400 overflow-hidden">
+          {team.coverImageUrl ? (
+            <img
+              src={team.coverImageUrl}
+              alt={team.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <Users className="w-24 h-24 text-white/50" />
             </div>
           )}
         </div>
 
+        {/* Logo and Cover Edit Button - Positioned relative to max-w-6xl container */}
+        <div className="absolute -bottom-12 md:-bottom-16 left-1/2 -translate-x-1/2 w-full max-w-6xl px-4 md:px-8">
+          <div className="relative">
+            <div className="absolute left-0 -bottom-0">
+              <div className="relative">
+                <Avatar className="w-24 h-24 md:w-32 md:h-32 border-4 border-card">
+                  <AvatarImage src={team.logoUrl || undefined} alt={team.name} />
+                  <AvatarFallback className="text-2xl bg-gradient-to-br from-orange-500 to-red-500 text-white font-bold">
+                    {(team.shortName || team.name).slice(0, 2)}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+            </div>
+
+            {canEdit && (
+              <div className="absolute right-0 bottom-2 md:bottom-4">
+                <Button size="sm" variant="outline" className="bg-card text-xs md:text-sm gap-2">
+                  <Camera className="w-4 h-4" />
+                  カバー写真を変更
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto pb-20">
         {/* チームヘッダー */}
         <div className="bg-card px-4 md:px-8 pt-16 md:pt-20 pb-6 border-b border-border">
           <div className="flex flex-col md:flex-row items-start justify-between">

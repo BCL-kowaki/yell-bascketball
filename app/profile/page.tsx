@@ -632,67 +632,72 @@ export default function ProfilePage() {
 
   return (
     <Layout isLoggedIn={true} currentUser={{ name: displayName, avatar: getAvatarUrl() || undefined }}>
-      <div className="max-w-6xl mx-auto pb-20">
-        {/* Cover Photo & Profile Info */}
-        <div className="relative">
-          <div className="h-48 md:h-64 bg-gradient-to-r from-orange-400 to-red-400 overflow-hidden">
-            <img
-              src={getCoverImageUrl()}
-              alt="Cover"
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                // 画像の読み込みに失敗した場合、プレースホルダーを表示
-                const target = e.target as HTMLImageElement
-                target.src = "/placeholder.svg?height=300&width=800"
-              }}
-            />
-          </div>
+      {/* Cover Photo - Full Width */}
+      <div className="relative w-full">
+        <div className="h-48 md:h-64 bg-gradient-to-r from-orange-400 to-red-400 overflow-hidden">
+          <img
+            src={getCoverImageUrl()}
+            alt="Cover"
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              // 画像の読み込みに失敗した場合、プレースホルダーを表示
+              const target = e.target as HTMLImageElement
+              target.src = "/placeholder.svg?height=300&width=800"
+            }}
+          />
+        </div>
 
-          <div className="absolute -bottom-12 md:-bottom-16 left-4 md:left-8">
-            <div className="relative">
-              <Avatar className="w-24 h-24 md:w-32 md:h-32 border-4 border-card">
-                <AvatarImage
-                  src={getAvatarUrl()}
-                  alt={displayName}
-                />
-                <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
-                  {user.firstName[0]}{user.lastName[0]}
-                </AvatarFallback>
-              </Avatar>
-              {isEditing && (
-                <label className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90 transition">
-                  <Camera className="w-4 h-4" />
+        {/* Avatar and Cover Edit Button - Positioned relative to max-w-6xl container */}
+        <div className="absolute -bottom-12 md:-bottom-16 left-1/2 -translate-x-1/2 w-full max-w-6xl px-4 md:px-8">
+          <div className="relative">
+            <div className="absolute left-0 -bottom-0">
+              <div className="relative">
+                <Avatar className="w-24 h-24 md:w-32 md:h-32 border-4 border-card">
+                  <AvatarImage
+                    src={getAvatarUrl()}
+                    alt={displayName}
+                  />
+                  <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
+                    {user.firstName[0]}{user.lastName[0]}
+                  </AvatarFallback>
+                </Avatar>
+                {isEditing && (
+                  <label className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90 transition">
+                    <Camera className="w-4 h-4" />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarChange}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
+            </div>
+
+            {isEditing && (
+              <div className="absolute right-0 bottom-2 md:bottom-4">
+                <label className="inline-block">
+                  <Button size="sm" variant="outline" className="bg-card text-xs md:text-sm" asChild>
+                    <span className="cursor-pointer">
+                      <Camera className="w-4 h-4 mr-1 md:mr-2" />
+                      カバー写真を変更
+                    </span>
+                  </Button>
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={handleAvatarChange}
+                    onChange={handleCoverChange}
                     className="hidden"
                   />
                 </label>
-              )}
-            </div>
-          </div>
-
-          <div className="absolute bottom-2 right-2 md:bottom-4 md:right-4">
-            {isEditing && (
-              <label className="inline-block">
-                <Button size="sm" variant="outline" className="bg-card text-xs md:text-sm" asChild>
-                  <span className="cursor-pointer">
-                    <Camera className="w-4 h-4 mr-1 md:mr-2" />
-                    カバー写真を変更
-                  </span>
-                </Button>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleCoverChange}
-                  className="hidden"
-                />
-              </label>
+              </div>
             )}
           </div>
         </div>
+      </div>
 
+      <div className="max-w-6xl mx-auto pb-20">
         {/* Profile Header */}
         <div className="bg-card px-4 md:px-8 pt-16 md:pt-20 pb-6 border-b border-border">
           <div className="flex flex-col md:flex-row items-start justify-between">
