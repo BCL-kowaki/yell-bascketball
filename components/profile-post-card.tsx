@@ -6,9 +6,11 @@ interface ProfilePostCardProps {
   post: DbPost
   user: DbUser
   isVisible: boolean
+  onToggleComments?: (postId: string) => void
+  onLike?: (postId: string) => void
 }
 
-export function ProfilePostCard({ post, user, isVisible }: ProfilePostCardProps) {
+export function ProfilePostCard({ post, user, isVisible, onToggleComments, onLike }: ProfilePostCardProps) {
   const author: PostAuthor = {
     name: `${user.lastName} ${user.firstName}`,
     avatar: user.avatar || null,
@@ -24,6 +26,8 @@ export function ProfilePostCard({ post, user, isVisible }: ProfilePostCardProps)
       <TimelinePostCard
         post={post}
         author={author}
+        onToggleComments={onToggleComments}
+        onLike={onLike}
       />
         </div>
   )

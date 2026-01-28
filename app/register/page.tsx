@@ -218,17 +218,17 @@ export default function RegisterPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <Input
-                  name="firstName"
-                  placeholder="名"
-                  value={formData.firstName}
+                  name="lastName"
+                  placeholder="姓"
+                  value={formData.lastName}
                   onChange={handleChange}
                   className="h-12"
                   required
                 />
                 <Input
-                  name="lastName"
-                  placeholder="姓"
-                  value={formData.lastName}
+                  name="firstName"
+                  placeholder="名"
+                  value={formData.firstName}
                   onChange={handleChange}
                   className="h-12"
                   required

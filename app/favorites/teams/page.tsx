@@ -59,11 +59,16 @@ export default function FavoriteTeamsPage() {
     }
   }
 
+  // 重複を除去（同じIDのチームが複数存在する場合に備える）
+  const uniqueTeams = teams.filter((team, index, self) => 
+    index === self.findIndex((t) => t.id === team.id)
+  )
+
   const categories = [
-    { id: "all", name: "すべて", count: teams.length },
-    { id: "U12", name: "U12", count: teams.filter(t => t.category === "U12").length },
-    { id: "U15", name: "U15", count: teams.filter(t => t.category === "U15").length },
-    { id: "U18", name: "U18", count: teams.filter(t => t.category === "U18").length },
+    { id: "all", name: "すべて", count: uniqueTeams.length },
+    { id: "U12", name: "U12", count: uniqueTeams.filter(t => t.category === "U12").length },
+    { id: "U15", name: "U15", count: uniqueTeams.filter(t => t.category === "U15").length },
+    { id: "U18", name: "U18", count: uniqueTeams.filter(t => t.category === "U18").length },
   ]
 
   // エリア選択時に都道府県リストを更新
@@ -77,7 +82,7 @@ export default function FavoriteTeamsPage() {
     setSelectedPrefecture("all")
   }
 
-  const filteredTeams = teams.filter(team => {
+  const filteredTeams = uniqueTeams.filter(team => {
     const matchesSearch = team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (team.prefecture && team.prefecture.toLowerCase().includes(searchTerm.toLowerCase())) ||
                          (team.category && team.category.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -230,93 +235,32 @@ export default function FavoriteTeamsPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-2">
             {filteredTeams.map((team) => (
               <Link key={team.id} href={`/teams/${team.id}`}>
-                <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer group hover:scale-105 relative">
-                  {/* Favorite Badge */}
-                  <div className="absolute top-3 right-3 z-10">
-                    <Heart className="w-5 h-5 text-red-500 fill-red-500" />
-                  </div>
-
-                  <div className="relative overflow-hidden">
-                    <img
-                      src={team.coverImageUrl || "/placeholder.svg?height=200&width=400&text=No+Cover"}
-                      alt={team.name}
-                      className="w-full h-32 object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-
-                    {/* Team Logo */}
-                    <div className="absolute bottom-4 left-4">
-                      <Avatar className="w-12 h-12 border-2 border-white">
+                <Card className="border-0 shadow-sm hover:bg-gray-50 transition-colors cursor-pointer bg-white">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="w-12 h-12">
                         <AvatarImage src={team.logoUrl || undefined} />
-                        <AvatarFallback className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold">
-                          {(team.shortName || team.name).slice(0, 2)}
+                        <AvatarFallback>
+                          {team.name[0] || "T"}
                         </AvatarFallback>
                       </Avatar>
-                    </div>
-                  </div>
-
-                  <CardHeader className="pt-3 pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg font-bold text-gray-900 group-hover:text-orange-600 transition-colors">
-                        {team.name}
-                      </CardTitle>
-                      <ChevronRight className="w-5 h-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <MapPin className="w-4 h-4" />
-                      <span>{team.prefecture || team.region || "未設定"}</span>
-                      {team.category && (
-                        <>
-                          <span>•</span>
-                          <span>{team.category}</span>
-                        </>
-                      )}
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="space-y-4">
-                    {/* Team Info */}
-                    {team.description && (
-                      <p className="text-sm text-gray-600 line-clamp-2">{team.description}</p>
-                    )}
-
-                    {/* Category Badge */}
-                    {team.category && (
-                      <div className="flex items-center gap-2">
-                        {getCategoryIcon(team.category)}
-                        <Badge variant="outline" className="text-xs">
-                          {team.category}
-                        </Badge>
-                        {team.headcount && (
-                          <Badge variant="outline" className="text-xs">
-                            <Users className="w-3 h-3 mr-1" />
-                            {team.headcount}名
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Footer */}
-                    <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                      {team.founded && (
-                        <div className="text-xs text-gray-500 flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          <span>設立: {team.founded}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-base text-gray-900 truncate">{team.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          {team.prefecture && (
+                            <p className="text-xs text-gray-500">{team.prefecture}</p>
+                          )}
+                          {team.category && (
+                            <>
+                              {team.prefecture && <span className="text-xs text-gray-400">•</span>}
+                              <p className="text-xs text-gray-500">{team.category}</p>
+                            </>
+                          )}
                         </div>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="default"
-                        className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
-                        onClick={(e) => {
-                          e.preventDefault()
-                        }}
-                      >
-                        詳細を見る
-                      </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

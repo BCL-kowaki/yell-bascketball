@@ -49,6 +49,7 @@ export type DbUser = {
   teams?: string[] | null
   isEmailPublic?: boolean | null
   isRegistrationDatePublic?: boolean | null
+  instagramUrl?: string | null
   createdAt?: string | null
   updatedAt?: string | null
 }
@@ -68,6 +69,7 @@ export type DbTournament = {
   startDate?: string | null
   endDate?: string | null
   favoritesCount?: number | null
+  instagramUrl?: string | null
   createdAt?: string | null
   updatedAt?: string | null
 }
@@ -117,6 +119,11 @@ export type DbTournamentResult = {
   title: string
   content: string
   ranking?: string[] | null
+  startDate?: string | null
+  endDate?: string | null
+  imageUrl?: string | null
+  pdfUrl?: string | null
+  pdfName?: string | null
   createdBy: string
   createdAt?: string | null
   updatedAt?: string | null
@@ -145,6 +152,7 @@ export type DbTeam = {
   category?: string | null
   description?: string | null
   website?: string | null
+  instagramUrl?: string | null
   ownerEmail: string
   editorEmails?: string[] | null
   isApproved: boolean
@@ -204,7 +212,7 @@ export async function getUserByEmail(email: string): Promise<DbUser | null> {
     query ListUsers($filter: ModelUserFilterInput) {
       listUsers(filter: $filter) {
         items {
-          id firstName lastName email bio avatar coverImage
+          id firstName lastName email bio avatar coverImage instagramUrl
           category location region regionBlock prefecture district
           teams isEmailPublic isRegistrationDatePublic
           createdAt updatedAt
@@ -276,7 +284,7 @@ export async function updateUser(id: string, input: Partial<DbUser>): Promise<Db
       updateUser(input: $input) {
         id firstName lastName email bio avatar coverImage
         category location region regionBlock prefecture district
-        teams isEmailPublic isRegistrationDatePublic
+        teams isEmailPublic isRegistrationDatePublic instagramUrl
         createdAt updatedAt
       }
     }
@@ -325,10 +333,10 @@ export async function updateUser(id: string, input: Partial<DbUser>): Promise<Db
 // チーム検索（名前でフィルタリング）
 export async function searchTeams(searchTerm: string): Promise<DbTeam[]> {
   const query = /* GraphQL */ `
-    query ListTeams($filter: ModelTeamFilterInput) {
-      listTeams(filter: $filter) {
+    query ListTeams($filter: ModelTeamFilterInput, $limit: Int) {
+      listTeams(filter: $filter, limit: $limit) {
         items {
-          id name category region prefecture district description createdAt
+          id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website instagramUrl ownerEmail editorEmails isApproved createdAt updatedAt
         }
       }
     }
@@ -339,8 +347,12 @@ export async function searchTeams(searchTerm: string): Promise<DbTeam[]> {
       query,
       variables: {
         filter: {
-          name: { contains: searchTerm }
-        }
+          and: [
+            { name: { contains: searchTerm } },
+            { isApproved: { eq: true } }
+          ]
+        },
+        limit: 50
       },
       authMode: 'apiKey'
     }) as any
@@ -785,6 +797,26 @@ export async function toggleLike(postId: string, userEmail: string, currentLikes
   }
 }
 
+export async function checkLikeStatus(postId: string, userEmail: string): Promise<boolean> {
+  const query = /* GraphQL */ `
+    query LikesByPostAndUser($postId: ID!, $userEmail: String!) {
+      likesByPostAndUser(postId: $postId, userEmail: { eq: $userEmail }) { items { id } }
+    }
+  `
+
+  try {
+    const { data } = await client.graphql({ 
+      query, 
+      variables: { postId, userEmail },
+      authMode: 'apiKey'
+    }) as any
+    return (data?.likesByPostAndUser?.items?.length || 0) > 0
+  } catch (error) {
+    console.error('Failed to check like status:', error)
+    return false
+  }
+}
+
 export async function updatePost(id: string, input: Partial<DbPost>): Promise<DbPost> {
   const fallbackFields = `
     id content imageUrl pdfUrl pdfName locationName locationAddress
@@ -898,7 +930,7 @@ export async function listTournaments(limit = 50): Promise<DbTournament[]> {
       listTournaments(limit: $limit, nextToken: $nextToken) {
         items {
           id name iconUrl coverImage category regionBlock prefecture district
-          description ownerEmail coAdminEmails startDate endDate favoritesCount createdAt updatedAt
+          description ownerEmail coAdminEmails startDate endDate favoritesCount instagramUrl createdAt updatedAt
         }
         nextToken
       }
@@ -946,7 +978,7 @@ export async function getTournament(id: string): Promise<DbTournament | null> {
     query GetTournament($id: ID!) {
       getTournament(id: $id) {
         id name iconUrl coverImage category regionBlock prefecture district
-        description ownerEmail coAdminEmails startDate endDate favoritesCount createdAt updatedAt
+        description ownerEmail coAdminEmails startDate endDate favoritesCount instagramUrl createdAt updatedAt
       }
     }
   `
@@ -1027,7 +1059,7 @@ export async function updateTournament(id: string, input: Partial<DbTournament>)
     mutation UpdateTournament($input: UpdateTournamentInput!) {
       updateTournament(input: $input) {
         id name iconUrl coverImage category regionBlock prefecture district
-        description ownerEmail coAdminEmails startDate endDate favoritesCount createdAt updatedAt
+        description ownerEmail coAdminEmails startDate endDate favoritesCount instagramUrl createdAt updatedAt
       }
     }
   `
@@ -1161,7 +1193,7 @@ export async function listTeams(limit = 50, filter?: { isApproved?: boolean }): 
     query ListTeams($filter: ModelTeamFilterInput, $limit: Int) {
       listTeams(filter: $filter, limit: $limit) {
         items {
-          id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website ownerEmail editorEmails isApproved createdAt updatedAt
+          id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website instagramUrl ownerEmail editorEmails isApproved createdAt updatedAt
         }
       }
     }
@@ -1208,7 +1240,7 @@ export async function getTeam(id: string): Promise<DbTeam | null> {
   const query = /* GraphQL */ `
     query GetTeam($id: ID!) {
       getTeam(id: $id) {
-        id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website ownerEmail editorEmails isApproved createdAt updatedAt
+        id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website instagramUrl ownerEmail editorEmails isApproved createdAt updatedAt
       }
     }
   `
@@ -1254,7 +1286,7 @@ export async function updateTeam(id: string, input: Partial<DbTeam>): Promise<Db
   const mutation = /* GraphQL */ `
     mutation UpdateTeam($input: UpdateTeamInput!) {
       updateTeam(input: $input) {
-        id name category region prefecture district description createdAt
+        id name category region prefecture district description website instagramUrl createdAt
       }
     }
   `
@@ -1268,6 +1300,8 @@ export async function updateTeam(id: string, input: Partial<DbTeam>): Promise<Db
     if (input.prefecture) sanitizedInput.prefecture = input.prefecture
     if ((input as any).district) sanitizedInput.district = (input as any).district
     if (input.description) sanitizedInput.description = input.description
+    if (input.website) sanitizedInput.website = input.website
+    if (input.instagramUrl) sanitizedInput.instagramUrl = input.instagramUrl
 
     const result = await client.graphql({
       query: mutation,
@@ -1965,8 +1999,8 @@ export async function listDistricts(prefectureId: string): Promise<DbDistrict[]>
 
 export async function getTournamentTeams(tournamentId: string): Promise<(DbTournamentTeam & { team?: DbTeam | null })[]> {
   const query = /* GraphQL */ `
-    query TeamsByTournament($tournamentId: ID!) {
-      teamsByTournament(tournamentId: $tournamentId) {
+    query TournamentTeamsByTournamentId($tournamentId: ID!) {
+      tournamentTeamsByTournamentId(tournamentId: $tournamentId) {
         items {
           id tournamentId teamId teamName participationYear createdAt updatedAt
         }
@@ -1975,6 +2009,7 @@ export async function getTournamentTeams(tournamentId: string): Promise<(DbTourn
   `
 
   try {
+    console.log('getTournamentTeams: Querying with tournamentId:', tournamentId)
     const result = await client.graphql({
       query,
       variables: { tournamentId },
@@ -1983,10 +2018,13 @@ export async function getTournamentTeams(tournamentId: string): Promise<(DbTourn
 
     if (result.errors) {
       console.error('GraphQL errors in getTournamentTeams:', result.errors)
+      console.error('Error details:', JSON.stringify(result.errors, null, 2))
       return []
     }
 
-    const tournamentTeams = result?.data?.teamsByTournament?.items ?? []
+    console.log('getTournamentTeams: Raw result:', result)
+    const tournamentTeams = result?.data?.tournamentTeamsByTournamentId?.items ?? []
+    console.log('getTournamentTeams: Tournament teams found:', tournamentTeams.length)
     
     // チーム情報を取得
     const teamsWithData = await Promise.all(
@@ -2004,6 +2042,10 @@ export async function getTournamentTeams(tournamentId: string): Promise<(DbTourn
     return teamsWithData
   } catch (error: any) {
     console.error('getTournamentTeams error:', error)
+    console.error('Error message:', error?.message)
+    console.error('Error name:', error?.name)
+    console.error('Error stack:', error?.stack)
+    console.error('Error details:', JSON.stringify(error, null, 2))
     return []
   }
 }
@@ -2073,10 +2115,10 @@ export async function removeTournamentTeam(id: string): Promise<void> {
 
 export async function getTournamentResults(tournamentId: string): Promise<DbTournamentResult[]> {
   const query = /* GraphQL */ `
-    query ResultsByTournament($tournamentId: ID!) {
-      resultsByTournament(tournamentId: $tournamentId) {
+    query TournamentResultsByTournamentId($tournamentId: ID!) {
+      tournamentResultsByTournamentId(tournamentId: $tournamentId) {
         items {
-          id tournamentId year title content ranking createdBy createdAt updatedAt
+          id tournamentId year title content ranking startDate endDate imageUrl pdfUrl pdfName createdBy createdAt updatedAt
         }
       }
     }
@@ -2094,9 +2136,11 @@ export async function getTournamentResults(tournamentId: string): Promise<DbTour
       return []
     }
 
-    return result?.data?.resultsByTournament?.items ?? []
+    return result?.data?.tournamentResultsByTournamentId?.items ?? []
   } catch (error: any) {
     console.error('getTournamentResults error:', error)
+    console.error('Error message:', error?.message)
+    console.error('Error details:', JSON.stringify(error, null, 2))
     return []
   }
 }
@@ -2105,7 +2149,7 @@ export async function createTournamentResult(input: Partial<DbTournamentResult>)
   const mutation = /* GraphQL */ `
     mutation CreateTournamentResult($input: CreateTournamentResultInput!) {
       createTournamentResult(input: $input) {
-        id tournamentId year title content ranking createdBy createdAt updatedAt
+        id tournamentId year title content ranking startDate endDate imageUrl pdfUrl pdfName createdBy createdAt updatedAt
       }
     }
   `
@@ -2125,6 +2169,13 @@ export async function createTournamentResult(input: Partial<DbTournamentResult>)
     return result.data.createTournamentResult
   } catch (error: any) {
     console.error('createTournamentResult error:', error)
+    console.error('Error message:', error?.message)
+    console.error('Error name:', error?.name)
+    console.error('Error stack:', error?.stack)
+    console.error('Error details:', JSON.stringify(error, null, 2))
+    if (error?.errors) {
+      console.error('GraphQL errors:', error.errors)
+    }
     throw error
   }
 }
@@ -2133,7 +2184,7 @@ export async function updateTournamentResult(id: string, input: Partial<DbTourna
   const mutation = /* GraphQL */ `
     mutation UpdateTournamentResult($input: UpdateTournamentResultInput!) {
       updateTournamentResult(input: $input) {
-        id tournamentId year title content ranking createdBy createdAt updatedAt
+        id tournamentId year title content ranking startDate endDate imageUrl pdfUrl pdfName createdBy createdAt updatedAt
       }
     }
   `
@@ -2372,7 +2423,7 @@ export async function searchTournaments(searchTerm: string): Promise<DbTournamen
       listTournaments(filter: $filter, limit: $limit) {
         items {
           id name iconUrl coverImage category regionBlock prefecture district
-          description ownerEmail coAdminEmails startDate endDate favoritesCount createdAt updatedAt
+          description ownerEmail coAdminEmails startDate endDate favoritesCount instagramUrl createdAt updatedAt
         }
       }
     }

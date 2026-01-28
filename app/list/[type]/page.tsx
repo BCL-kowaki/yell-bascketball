@@ -275,11 +275,14 @@ export default function ListPage() {
                       {users.map((user) => (
                         <Card 
                           key={user.id} 
-                          className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                          className="border-0 shadow-sm hover:bg-gray-50 transition-colors cursor-pointer bg-white"
                           onClick={() => router.push(`/users/${encodeURIComponent(user.email)}`)}
                         >
                           <CardContent className="p-4">
-                            <div className="flex items-center gap-3">
+                            <Link 
+                              href={`/users/${encodeURIComponent(user.email)}`}
+                              className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+                            >
                               <Avatar className="w-12 h-12">
                                 <AvatarImage src={user.avatar || undefined} />
                                 <AvatarFallback className="bg-blue-500 text-white">
@@ -287,14 +290,22 @@ export default function ListPage() {
                                 </AvatarFallback>
                               </Avatar>
                               <div className="flex-1 min-w-0">
-                                <p className="font-semibold truncate">
+                                <p className="font-semibold text-base text-gray-900 truncate">
                                   {user.lastName} {user.firstName}
                                 </p>
-                                <p className="text-sm text-muted-foreground truncate">
-                                  {user.bio || user.email}
-                                </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  {user.prefecture && (
+                                    <p className="text-xs text-gray-500">{user.prefecture}</p>
+                                  )}
+                                  {user.category && (
+                                    <>
+                                      {user.prefecture && <span className="text-xs text-gray-400">•</span>}
+                                      <p className="text-xs text-gray-500">{user.category}</p>
+                                    </>
+                                  )}
+                                </div>
                               </div>
-                            </div>
+                            </Link>
                           </CardContent>
                         </Card>
                       ))}
@@ -327,22 +338,35 @@ export default function ListPage() {
                       {teams.map((team) => (
                         <Card 
                           key={team.id} 
-                          className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                          className="border-0 shadow-sm hover:bg-gray-50 transition-colors cursor-pointer bg-white"
                           onClick={() => router.push(`/teams/${team.id}`)}
                         >
                           <CardContent className="p-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                                <Users className="w-6 h-6 text-green-600" />
-                              </div>
+                            <Link 
+                              href={`/teams/${team.id}`}
+                              className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+                            >
+                              <Avatar className="w-12 h-12">
+                                <AvatarImage src={team.logoUrl || undefined} />
+                                <AvatarFallback>
+                                  {team.name[0] || "T"}
+                                </AvatarFallback>
+                              </Avatar>
                               <div className="flex-1 min-w-0">
-                                <p className="font-semibold truncate">{team.name}</p>
-                                <p className="text-sm text-muted-foreground truncate">
-                                  {team.category && `${team.category} / `}
-                                  {team.prefecture || team.region}
-                                </p>
+                                <p className="font-semibold text-base text-gray-900 truncate">{team.name}</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  {team.prefecture && (
+                                    <p className="text-xs text-gray-500">{team.prefecture}</p>
+                                  )}
+                                  {team.category && (
+                                    <>
+                                      {team.prefecture && <span className="text-xs text-gray-400">•</span>}
+                                      <p className="text-xs text-gray-500">{team.category}</p>
+                                    </>
+                                  )}
+                                </div>
                               </div>
-                            </div>
+                            </Link>
                           </CardContent>
                         </Card>
                       ))}
@@ -375,30 +399,35 @@ export default function ListPage() {
                       {tournaments.map((tournament) => (
                         <Card 
                           key={tournament.id} 
-                          className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                          className="border-0 shadow-sm hover:bg-gray-50 transition-colors cursor-pointer bg-white"
                           onClick={() => router.push(`/tournaments/${tournament.regionBlock}/${tournament.id}`)}
                         >
                           <CardContent className="p-4">
-                            <div className="flex items-center gap-3">
-                              {tournament.iconUrl ? (
-                                <img
-                                  src={tournament.iconUrl}
-                                  alt={tournament.name}
-                                  className="w-12 h-12 rounded-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                            <Link 
+                              href={`/tournaments/${tournament.regionBlock}/${tournament.id}`}
+                              className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+                            >
+                              <Avatar className="w-12 h-12">
+                                <AvatarImage src={tournament.iconUrl || undefined} />
+                                <AvatarFallback className="bg-orange-100">
                                   <Trophy className="w-6 h-6 text-orange-600" />
-                                </div>
-                              )}
+                                </AvatarFallback>
+                              </Avatar>
                               <div className="flex-1 min-w-0">
-                                <p className="font-semibold truncate">{tournament.name}</p>
-                                <p className="text-sm text-muted-foreground truncate">
-                                  {tournament.category && `${tournament.category} / `}
-                                  {tournament.prefecture || tournament.regionBlock}
-                                </p>
+                                <p className="font-semibold text-base text-gray-900 truncate">{tournament.name}</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  {tournament.prefecture && (
+                                    <p className="text-xs text-gray-500">{tournament.prefecture}</p>
+                                  )}
+                                  {tournament.category && (
+                                    <>
+                                      {tournament.prefecture && <span className="text-xs text-gray-400">•</span>}
+                                      <p className="text-xs text-gray-500">{tournament.category}</p>
+                                    </>
+                                  )}
+                                </div>
                               </div>
-                            </div>
+                            </Link>
                           </CardContent>
                         </Card>
                       ))}

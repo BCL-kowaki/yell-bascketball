@@ -18,6 +18,7 @@ type User @model @auth(rules: [{allow: public}]) {
   teams: [String]
   isEmailPublic: Boolean
   isRegistrationDatePublic: Boolean
+  instagramUrl: String
   createdAt: AWSDateTime
   updatedAt: AWSDateTime
 }
@@ -38,6 +39,7 @@ type Tournament @model @auth(rules: [{allow: public}]) {
   startDate: AWSDateTime
   endDate: AWSDateTime
   favoritesCount: Int
+  instagramUrl: String
   createdAt: AWSDateTime
   updatedAt: AWSDateTime
   
@@ -63,6 +65,7 @@ type Team @model @auth(rules: [{allow: public}]) {
   category: String
   description: String
   website: String
+  instagramUrl: String
   ownerEmail: String!
   editorEmails: [String]
   isApproved: Boolean!
@@ -172,6 +175,11 @@ type TournamentResult @model @auth(rules: [{allow: public}]) {
   title: String!
   content: String!
   ranking: [String]
+  startDate: AWSDateTime
+  endDate: AWSDateTime
+  imageUrl: String
+  pdfUrl: String
+  pdfName: String
   createdBy: String!
   createdAt: AWSDateTime
   updatedAt: AWSDateTime

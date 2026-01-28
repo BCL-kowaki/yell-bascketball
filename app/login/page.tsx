@@ -51,6 +51,16 @@ function translateCognitoError(errorMessage: string): string {
     return "ログイン試行回数が多すぎます。しばらく待ってからお試しください"
   }
   
+  // 認証フローエラー
+  if (errorMessage.includes("AuthFlow") || errorMessage.includes("InvalidParameterException")) {
+    return "認証設定に問題があります。管理者にお問い合わせください"
+  }
+  
+  // 設定エラー
+  if (errorMessage.includes("configuration") || errorMessage.includes("Config")) {
+    return "認証設定が正しくありません。ページをリロードしてください"
+  }
+  
   // ネットワークエラー
   if (errorMessage.includes("Network") || errorMessage.includes("network")) {
     return "ネットワークエラーが発生しました。接続を確認してください"
@@ -301,35 +311,45 @@ export default function LoginPage() {
       window.location.href = '/'
 
     } catch (error: any) {
+      console.error("=== Login Error Details ===")
+      console.error("Error name:", error?.name)
+      console.error("Error message:", error?.message)
+      console.error("Error code:", error?.code)
+      console.error("Error recoverySuggestion:", error?.recoverySuggestion)
+      console.error("Full error object:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2))
+      
       // 既にサインイン済みの場合
       if (error?.name === 'UserAlreadyAuthenticatedException') {
+        console.log('User already authenticated, redirecting...')
         router.replace('/')
         return
       }
       
       // ユーザーが存在しない場合
-      if (error?.name === 'UserNotFoundException') {
+      if (error?.name === 'UserNotFoundException' || error?.message?.includes('User does not exist')) {
         setError('メールアドレスまたはパスワードが正しくありません。アカウントが存在しない可能性があります。')
         setIsLoading(false)
         return
       }
       
       // パスワードが間違っている場合
-      if (error?.name === 'NotAuthorizedException') {
+      if (error?.name === 'NotAuthorizedException' || error?.message?.includes('Incorrect username or password')) {
         setError('メールアドレスまたはパスワードが正しくありません。')
         setIsLoading(false)
         return
       }
       
+      // 設定エラーの場合
+      if (error?.message?.includes('configuration') || error?.message?.includes('Config') || error?.message?.includes('User pool client')) {
+        setError('認証設定に問題があります。ページをリロードするか、管理者にお問い合わせください。')
+        setIsLoading(false)
+        return
+      }
+      
       // その他のエラー
-      console.error("Login error:", error)
-      console.error("Error name:", error?.name)
-      console.error("Error message:", error?.message)
-      console.error("Error code:", error?.code)
-      console.error("Full error object:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2))
       // Cognitoのエラーメッセージを日本語に翻訳
-      const translatedError = translateCognitoError(error?.message || '')
-      setError(translatedError)
+      const translatedError = translateCognitoError(error?.message || error?.toString() || '')
+      setError(translatedError || 'ログインに失敗しました。メールアドレスとパスワードを確認してください。')
       setIsLoading(false)
     }
   }
@@ -337,11 +357,9 @@ export default function LoginPage() {
   // 認証チェック中はローディング表示
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen bg-[#E5E5E5] flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
         <div className="text-center">
-          <h1 className="text-3xl md:text-4xl font-bold text-[#DC0000] tracking-wide mb-4">
-            Yell Basketball
-          </h1>
+          <img src="/images/logo.png" alt="Yell Basketball" className="h-16 md:h-20 w-auto mx-auto mb-4" />
           <p className="text-gray-600">読み込み中...</p>
         </div>
       </div>
@@ -349,12 +367,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#E5E5E5] flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
       {/* Logo */}
       <div className="text-center mb-8">
-        <h1 className="text-3xl md:text-4xl font-bold text-[#DC0000] tracking-wide">
-          Yell Basketball
-        </h1>
+        <img src="/images/logo.png" alt="Yell Basketball" className="h-16 md:h-20 w-auto mx-auto" />
       </div>
 
       {/* Login Card */}

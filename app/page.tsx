@@ -1661,6 +1661,33 @@ export default function TimelinePage() {
                     コメント <span className="font-normal">({post.comments || 0})</span>
                   </span>
                 </div>
+                <div className="flex items-center gap-2 flex-1 justify-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="p-0 h-auto hover:bg-transparent"
+                    onClick={() => {
+                      const url = `${window.location.origin}/posts/${post.id}`
+                      navigator.clipboard.writeText(url).then(() => {
+                        toast({
+                          title: "シェアリンクをコピーしました",
+                          description: "リンクをクリップボードにコピーしました",
+                        })
+                      }).catch(() => {
+                        toast({
+                          title: "エラー",
+                          description: "リンクのコピーに失敗しました",
+                          variant: "destructive",
+                        })
+                      })
+                    }}
+                  >
+                    <Share2 className="w-[30px] h-[30px] text-black" />
+                  </Button>
+                  <span className="text-[15px] text-black font-medium">
+                    シェア
+                  </span>
+                </div>
               </div>
 
             </CardContent>

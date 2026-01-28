@@ -249,87 +249,32 @@ export default function FavoriteTournamentsPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-2">
             {filteredTournaments.map((tournament) => (
               <Link key={tournament.id} href={`/tournaments/${tournament.id}`}>
-                <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer group hover:scale-105 relative h-full">
-                  {/* Favorite Badge */}
-                  <div className="absolute top-3 right-3 z-10">
-                    <Heart className="w-5 h-5 text-red-500 fill-red-500" />
-                  </div>
-
-                  <div className="relative overflow-hidden">
-                    <img
-                      src={tournament.coverImage || "/placeholder.svg?height=200&width=400&text=No+Cover"}
-                      alt={tournament.name}
-                      className="w-full h-32 object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-
-                    {/* Tournament Icon */}
-                    <div className="absolute bottom-4 left-4">
-                      <Avatar className="w-12 h-12 border-2 border-white">
+                <Card className="border-0 shadow-sm hover:bg-gray-50 transition-colors cursor-pointer bg-white">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="w-12 h-12">
                         <AvatarImage src={tournament.iconUrl || undefined} />
-                        <AvatarFallback className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold">
-                          <Trophy className="w-6 h-6" />
+                        <AvatarFallback className="bg-orange-100">
+                          <Trophy className="w-6 h-6 text-orange-600" />
                         </AvatarFallback>
                       </Avatar>
-                    </div>
-                  </div>
-
-                  <CardHeader className="pt-3 pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg font-bold text-gray-900 group-hover:text-orange-600 transition-colors line-clamp-1">
-                        {tournament.name}
-                      </CardTitle>
-                      <ChevronRight className="w-5 h-5 text-gray-400 group-hover:translate-x-1 transition-transform flex-shrink-0" />
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <MapPin className="w-4 h-4" />
-                      <span>{tournament.prefecture || tournament.regionBlock || "未設定"}</span>
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="space-y-4">
-                    {/* Tournament Info */}
-                    {tournament.description && (
-                      <p className="text-sm text-gray-600 line-clamp-2">{tournament.description}</p>
-                    )}
-
-                    {/* Category and Date */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {tournament.category && (
-                        <Badge className={`text-xs ${getCategoryBadgeColor(tournament.category)}`}>
-                          {tournament.category}
-                        </Badge>
-                      )}
-                      {tournament.favoritesCount !== undefined && tournament.favoritesCount > 0 && (
-                        <Badge variant="outline" className="text-xs">
-                          <Heart className="w-3 h-3 mr-1 text-red-500 fill-red-500" />
-                          {tournament.favoritesCount}
-                        </Badge>
-                      )}
-                    </div>
-
-                    {/* Footer */}
-                    <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                      <div className="text-xs text-gray-500 flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        <span>
-                          {tournament.startDate ? formatDate(tournament.startDate) : "日程未定"}
-                          {tournament.endDate && ` ~ ${formatDate(tournament.endDate)}`}
-                        </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-base text-gray-900 truncate">{tournament.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          {tournament.prefecture && (
+                            <p className="text-xs text-gray-500">{tournament.prefecture}</p>
+                          )}
+                          {tournament.category && (
+                            <>
+                              {tournament.prefecture && <span className="text-xs text-gray-400">•</span>}
+                              <p className="text-xs text-gray-500">{tournament.category}</p>
+                            </>
+                          )}
+                        </div>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="default"
-                        className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
-                        onClick={(e) => {
-                          e.preventDefault()
-                        }}
-                      >
-                        詳細を見る
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>

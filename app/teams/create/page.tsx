@@ -44,6 +44,7 @@ export default function CreateTeamPage() {
     category: "",
     description: "",
     website: "",
+    instagramUrl: "",
     logo: null as File | null,
     coverImage: null as File | null,
     editors: [] as Array<{ id: string; email: string; firstName: string; lastName: string; avatar?: string }>,
@@ -211,6 +212,7 @@ export default function CreateTeamPage() {
         headcount: formData.headcount ? parseInt(formData.headcount) : undefined,
         description: formData.description || undefined,
         website: formData.website || undefined,
+        instagramUrl: formData.instagramUrl || undefined,
         ownerEmail: currentUserEmail,
         editorEmails: formData.editors.length > 0 ? formData.editors.map(e => e.email) : undefined,
         isApproved: true,
@@ -235,6 +237,7 @@ export default function CreateTeamPage() {
         category: "",
         description: "",
         website: "",
+        instagramUrl: "",
         logo: null,
         coverImage: null,
         editors: [],
@@ -413,6 +416,19 @@ export default function CreateTeamPage() {
               </div>
 
               <div className="space-y-2">
+                  <Label htmlFor="instagramUrl">Instagram URL</Label>
+                  <Input
+                    id="instagramUrl"
+                    type="text"
+                    value={formData.instagramUrl}
+                    onChange={handleInputChange}
+                    placeholder="https://instagram.com/username または @username"
+                    className="bg-white"
+                    disabled={isSubmitting}
+                  />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="description">チーム紹介</Label>
                 <Textarea
                   id="description"
@@ -425,7 +441,7 @@ export default function CreateTeamPage() {
               </div>
 
               <div className="space-y-4">
-                <Label>編集権限を付与するユーザー (最大5名)</Label>
+                <Label>チーム管理者 (最大5名)</Label>
                 {formData.editors.length < 5 && (
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">

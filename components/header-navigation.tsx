@@ -76,9 +76,9 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser }: HeaderNavi
         style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
       >
         {/* ロゴ */}
-        <Link href="/" className="text-[#DC0000] text-xl font-bold shrink-0">
-          YeLL
-          </Link>
+        <Link href="/" className="shrink-0">
+          <img src="/images/symbol.png" alt="YeLL" className="h-8 w-auto" />
+        </Link>
 
         {/* 右側: 検索 & メニュー */}
         <div className="flex items-center gap-1 shrink-0">
