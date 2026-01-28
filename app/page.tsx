@@ -326,6 +326,8 @@ export default function TimelinePage() {
   const [selectedPostForComment, setSelectedPostForComment] = useState<Post | null>(null)
   const [modalComment, setModalComment] = useState("")
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
+  const [modalComments, setModalComments] = useState<Comment[]>([])
+  const [isLoadingModalComments, setIsLoadingModalComments] = useState(false)
   const [replyingTo, setReplyingTo] = useState<{ postId: number; commentId: number } | null>(null)
   const [replyContent, setReplyContent] = useState("")
   const { toast } = useToast()
