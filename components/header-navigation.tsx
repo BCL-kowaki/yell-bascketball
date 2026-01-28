@@ -78,7 +78,7 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser }: HeaderNavi
         {/* ロゴ */}
         <Link href="/" className="text-[#DC0000] text-xl font-bold shrink-0">
           YeLL
-        </Link>
+          </Link>
 
         {/* 右側: 検索 & メニュー */}
         <div className="flex items-center gap-1 shrink-0">
@@ -96,8 +96,8 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser }: HeaderNavi
 
           {/* メニュー（設定） */}
           {isLoggedIn ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
                 <button className="flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 shrink-0">
                   <Menu className="w-[18px] h-[18px] text-gray-700" />
                 </button>
@@ -115,23 +115,23 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser }: HeaderNavi
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/settings" className="flex items-center cursor-pointer">
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings" className="flex items-center cursor-pointer">
                     <Settings className="mr-3 h-4 w-4" />
-                    設定
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
+                      設定
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer">
                   <LogOut className="mr-3 h-4 w-4" />
-                  ログアウト
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                    ログアウト
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
           ) : (
             <div className="flex items-center gap-1">
               <Link href="/login" className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded whitespace-nowrap">
-                ログイン
+                  ログイン
               </Link>
               <Link href="/register" className="px-2 py-1 text-sm bg-[#DC0000] text-white rounded hover:bg-[#B80000] whitespace-nowrap">
                 登録

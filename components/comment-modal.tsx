@@ -87,7 +87,7 @@ export function CommentModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100%-2rem)] max-w-2xl max-h-[90vh] overflow-y-auto p-0 sm:max-w-2xl">
+      <DialogContent className="!fixed !top-[50%] !left-[50%] !translate-x-[-50%] !translate-y-[-50%] w-[calc(100%-2rem)] max-w-[680px] max-h-[90vh] overflow-y-auto p-0 sm:max-w-[680px] bg-white">
         <DialogHeader className="p-4 border-b border-gray-200 sticky top-0 bg-white z-10">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-lg font-semibold">{post.user.name}さんの投稿</DialogTitle>

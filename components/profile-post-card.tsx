@@ -25,6 +25,6 @@ export function ProfilePostCard({ post, user, isVisible }: ProfilePostCardProps)
         post={post}
         author={author}
       />
-    </div>
+        </div>
   )
 }

@@ -466,7 +466,7 @@ export default function CreateTournamentPage() {
                     {isSearching ? (
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     ) : (
-                      <Search className="w-4 h-4" />
+                    <Search className="w-4 h-4" />
                     )}
                   </Button>
                 </div>

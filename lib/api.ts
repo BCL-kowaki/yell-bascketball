@@ -1450,29 +1450,29 @@ export async function checkFavoriteTeam(teamId: string, userEmail: string): Prom
 export async function getUserFavorites(userEmail: string): Promise<{ tournaments: DbTournament[], teams: DbTeam[] }> {
   try {
     // まずfavoritesByUserを試す（GSIがデプロイされている場合）
-    try {
-      const result = await client.graphql({
-        query: `
-          query FavoritesByUser($userEmail: String!) {
-            favoritesByUser(userEmail: $userEmail) {
-              items {
-                id
-                tournamentId
-                teamId
-              }
+  try {
+    const result = await client.graphql({
+      query: `
+        query FavoritesByUser($userEmail: String!) {
+          favoritesByUser(userEmail: $userEmail) {
+            items {
+              id
+              tournamentId
+              teamId
             }
           }
-        `,
-        variables: {
-          userEmail
-        },
-        authMode: 'apiKey'
-      }) as any
+        }
+      `,
+      variables: {
+        userEmail
+      },
+      authMode: 'apiKey'
+    }) as any
 
       if (result.data?.favoritesByUser?.items) {
         const favorites = result.data.favoritesByUser.items
-        const tournamentIds = favorites.filter((f: any) => f.tournamentId).map((f: any) => f.tournamentId)
-        const teamIds = favorites.filter((f: any) => f.teamId).map((f: any) => f.teamId)
+    const tournamentIds = favorites.filter((f: any) => f.tournamentId).map((f: any) => f.tournamentId)
+    const teamIds = favorites.filter((f: any) => f.teamId).map((f: any) => f.teamId)
 
         const tournaments = await Promise.all(
           tournamentIds.map((id: string) => getTournament(id))
