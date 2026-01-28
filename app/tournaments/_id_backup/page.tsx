@@ -989,7 +989,7 @@ export default function TournamentDetailPage() {
       </div>
 
       {/* カバー画像 - Full Width */}
-      <div className="relative w-full">
+      <div className="relative w-screen -mx-[calc((100vw-100%)/2)]">
         <div className="h-48 md:h-64 bg-gradient-to-r from-orange-400 to-red-400 overflow-hidden">
           {coverImageUrl ? (
             <img
@@ -1009,9 +1009,9 @@ export default function TournamentDetailPage() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto pb-20">
-        {/* 大会ヘッダー */}
-        <div className="bg-card px-4 md:px-8 pt-8 pb-6 border-b border-border">
+      {/* 大会ヘッダー - Full Width */}
+      <div className="w-screen -mx-[calc((100vw-100%)/2)] bg-card">
+        <div className="max-w-6xl mx-auto px-4 md:px-8 pt-8 pb-6 border-b border-border">
           <div className="flex flex-col md:flex-row items-start justify-between gap-4">
             <div className="flex-1">
               {isEditing ? (
@@ -1154,7 +1154,9 @@ export default function TournamentDetailPage() {
             </div>
           </div>
         </div>
+      </div>
 
+      <div className="max-w-6xl mx-auto pb-20">
         {/* 主催者情報 */}
         <div className="py-2">
           <Card>

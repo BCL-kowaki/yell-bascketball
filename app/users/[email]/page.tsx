@@ -438,7 +438,6 @@ export default function UserPage() {
 
           {/* 投稿一覧セクション */}
           <div className="mt-8">
-            <h2 className="text-2xl font-bold mb-6 px-2">投稿</h2>
 
             {isLoadingPosts ? (
               <div className="text-center py-12">

@@ -535,7 +535,7 @@ export default function TeamDetailPage() {
       </div>
 
       {/* カバー画像 - Full Width */}
-      <div className="relative w-full">
+      <div className="relative w-screen -mx-[calc((100vw-100%)/2)]">
         <div className="h-48 md:h-64 bg-gradient-to-r from-orange-400 to-red-400 overflow-hidden">
           {team.coverImageUrl ? (
             <img
@@ -576,9 +576,9 @@ export default function TeamDetailPage() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto pb-20">
-        {/* チームヘッダー */}
-        <div className="bg-card px-4 md:px-8 pt-16 md:pt-20 pb-6 border-b border-border">
+      {/* チームヘッダー - Full Width */}
+      <div className="w-screen -mx-[calc((100vw-100%)/2)] bg-card">
+        <div className="max-w-6xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-6 border-b border-border">
           <div className="flex flex-col md:flex-row items-start justify-between">
             <div className="flex-1 mb-4 md:mb-0">
               <h1 className="text-2xl md:text-3xl font-bold mb-2">{team.name}</h1>
@@ -629,7 +629,9 @@ export default function TeamDetailPage() {
             </div>
           </div>
         </div>
+      </div>
 
+      <div className="max-w-6xl mx-auto pb-20">
         {/* タブコンテンツ */}
         <div className="w-full max-w-[680px] mx-auto px-0">
           <Tabs defaultValue="timeline" className="flex flex-col mt-2 w-full">

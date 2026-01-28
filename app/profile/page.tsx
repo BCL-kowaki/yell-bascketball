@@ -633,7 +633,7 @@ export default function ProfilePage() {
   return (
     <Layout isLoggedIn={true} currentUser={{ name: displayName, avatar: getAvatarUrl() || undefined }}>
       {/* Cover Photo - Full Width */}
-      <div className="relative w-full">
+      <div className="relative w-screen -mx-[calc((100vw-100%)/2)]">
         <div className="h-48 md:h-64 bg-gradient-to-r from-orange-400 to-red-400 overflow-hidden">
           <img
             src={getCoverImageUrl()}
