@@ -58,6 +58,7 @@ export default function ProfilePage() {
   const [isFollowing, setIsFollowing] = useState(false)
   const [followCounts, setFollowCounts] = useState({ followers: 0, following: 0 })
   const [isLoadingFollow, setIsLoadingFollow] = useState(false)
+  const [activeTab, setActiveTab] = useState("about")
 
   // お気に入り関連
   const [favoriteTeams, setFavoriteTeams] = useState<DbTeam[]>([])
@@ -1010,7 +1011,7 @@ export default function ProfilePage() {
 
           {/* Navigation Tabs - Facebook style */}
           <div className="border-t border-border mt-4">
-            <Tabs defaultValue="about" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="h-auto bg-transparent p-0 w-full justify-start gap-0">
                 <TabsTrigger 
                   value="about" 
@@ -1025,9 +1026,15 @@ export default function ProfilePage() {
                   アクティビティ
                 </TabsTrigger>
               </TabsList>
+            </Tabs>
+          </div>
+        </div>
 
-              <TabsContent value="about" className="mt-0 px-4 md:px-8 pb-6">
-                <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+        {/* Tab Content - Outside header, as cards */}
+        <div className="max-w-6xl mx-auto px-4 md:px-8">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsContent value="about" className="mt-4">
+              <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
                 <CardHeader>
                   <h3 className="font-semibold text-lg">基本情報</h3>
                 </CardHeader>
@@ -1094,22 +1101,20 @@ export default function ProfilePage() {
               </Card>
             </TabsContent>
 
-              <TabsContent value="activity" className="mt-0 px-4 md:px-8 pb-6">
-                <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+            <TabsContent value="activity" className="mt-4">
+              <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
                 <CardContent className="p-8 text-center">
                   <p className="text-muted-foreground">アクティビティ履歴は近日公開予定です</p>
                 </CardContent>
               </Card>
-              </TabsContent>
-            </Tabs>
-          </div>
+            </TabsContent>
+          </Tabs>
         </div>
 
         {/* Profile Content */}
-        <div className="pt-2 pb-2 md:p-6">
+        <div className="pt-2 pb-2">
           {/* 投稿一覧セクション */}
           <div className="mt-4">
-            <h2 className="text-lg font-bold mb-2 px-2">投稿</h2>
 
             {isLoadingPosts ? (
               <div className="text-center py-12">
