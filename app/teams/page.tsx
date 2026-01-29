@@ -26,6 +26,7 @@ import {
 import { Layout } from "@/components/layout"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { listTeams, type DbTeam } from "@/lib/api"
+import { refreshS3Url } from "@/lib/storage"
 
 // Area and Prefecture data
 const areaData = {
@@ -273,7 +274,35 @@ export default function TeamsPage() {
       // isApproved=trueのチームのみ取得
       const approvedTeams = await listTeams(100, { isApproved: true })
       console.log(`✅ Loaded ${approvedTeams.length} approved teams`)
-      console.log('📋 Team details:', approvedTeams.map(t => ({ 
+      
+      // 画像URLを更新
+      const teamsWithRefreshedImages = await Promise.all(
+        approvedTeams.map(async (team) => {
+          const updatedTeam = { ...team }
+          
+          // ロゴ画像のURLを更新
+          if (updatedTeam.logoUrl && !updatedTeam.logoUrl.startsWith('data:') && !updatedTeam.logoUrl.startsWith('blob:')) {
+            try {
+              updatedTeam.logoUrl = await refreshS3Url(updatedTeam.logoUrl, true) || updatedTeam.logoUrl
+            } catch (error) {
+              console.error('Failed to refresh logo URL:', error)
+            }
+          }
+          
+          // カバー画像のURLを更新
+          if (updatedTeam.coverImageUrl && !updatedTeam.coverImageUrl.startsWith('data:') && !updatedTeam.coverImageUrl.startsWith('blob:')) {
+            try {
+              updatedTeam.coverImageUrl = await refreshS3Url(updatedTeam.coverImageUrl, true) || updatedTeam.coverImageUrl
+            } catch (error) {
+              console.error('Failed to refresh cover image URL:', error)
+            }
+          }
+          
+          return updatedTeam
+        })
+      )
+      
+      console.log('📋 Team details:', teamsWithRefreshedImages.map(t => ({ 
         id: t.id, 
         name: t.name, 
         isApproved: t.isApproved,
@@ -281,7 +310,7 @@ export default function TeamsPage() {
         region: t.region,
         prefecture: t.prefecture
       })))
-      setTeams(approvedTeams)
+      setTeams(teamsWithRefreshedImages)
     } catch (error) {
       console.error("❌ Failed to load teams:", error)
       setTeams([])

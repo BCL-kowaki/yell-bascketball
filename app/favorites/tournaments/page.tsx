@@ -22,6 +22,7 @@ import { Layout } from "@/components/layout"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getUserFavorites, getCurrentUserEmail, type DbTournament } from "@/lib/api"
 import { REGION_BLOCKS, PREFECTURES_BY_REGION, CATEGORIES } from "@/lib/regionData"
+import { refreshS3Url } from "@/lib/storage"
 
 export default function FavoriteTournamentsPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -48,8 +49,29 @@ export default function FavoriteTournamentsPage() {
       setUserEmail(email)
 
       const favorites = await getUserFavorites(email)
-      setTournaments(favorites.tournaments)
-      console.log(`Loaded ${favorites.tournaments.length} favorite tournaments`)
+      // 画像URLを更新
+      const tournamentsWithRefreshedImages = await Promise.all(
+        favorites.tournaments.map(async (tournament) => {
+          const updatedTournament = { ...tournament }
+          if (updatedTournament.iconUrl && !updatedTournament.iconUrl.startsWith('data:') && !updatedTournament.iconUrl.startsWith('blob:')) {
+            try {
+              updatedTournament.iconUrl = await refreshS3Url(updatedTournament.iconUrl, true) || updatedTournament.iconUrl
+            } catch (error) {
+              console.error('Failed to refresh icon URL:', error)
+            }
+          }
+          if (updatedTournament.coverImage && !updatedTournament.coverImage.startsWith('data:') && !updatedTournament.coverImage.startsWith('blob:')) {
+            try {
+              updatedTournament.coverImage = await refreshS3Url(updatedTournament.coverImage, true) || updatedTournament.coverImage
+            } catch (error) {
+              console.error('Failed to refresh cover image URL:', error)
+            }
+          }
+          return updatedTournament
+        })
+      )
+      setTournaments(tournamentsWithRefreshedImages)
+      console.log(`Loaded ${tournamentsWithRefreshedImages.length} favorite tournaments`)
     } catch (error) {
       console.error("Failed to load favorite tournaments:", error)
       setTournaments([])

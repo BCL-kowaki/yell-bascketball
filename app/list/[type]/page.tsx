@@ -16,6 +16,7 @@ import {
   type DbTeam, 
   type DbTournament 
 } from "@/lib/api"
+import { refreshS3Url } from "@/lib/storage"
 import { Layout } from "@/components/layout"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -103,14 +104,56 @@ export default function ListPage() {
         case "favorite-teams":
           if (userEmail) {
             const favorites = await getUserFavorites(userEmail)
-            setTeams(favorites.teams)
+            // 画像URLを更新
+            const teamsWithRefreshedImages = await Promise.all(
+              favorites.teams.map(async (team) => {
+                const updatedTeam = { ...team }
+                if (updatedTeam.logoUrl && !updatedTeam.logoUrl.startsWith('data:') && !updatedTeam.logoUrl.startsWith('blob:')) {
+                  try {
+                    updatedTeam.logoUrl = await refreshS3Url(updatedTeam.logoUrl, true) || updatedTeam.logoUrl
+                  } catch (error) {
+                    console.error('Failed to refresh logo URL:', error)
+                  }
+                }
+                if (updatedTeam.coverImageUrl && !updatedTeam.coverImageUrl.startsWith('data:') && !updatedTeam.coverImageUrl.startsWith('blob:')) {
+                  try {
+                    updatedTeam.coverImageUrl = await refreshS3Url(updatedTeam.coverImageUrl, true) || updatedTeam.coverImageUrl
+                  } catch (error) {
+                    console.error('Failed to refresh cover image URL:', error)
+                  }
+                }
+                return updatedTeam
+              })
+            )
+            setTeams(teamsWithRefreshedImages)
           }
           break
           
         case "favorite-tournaments":
           if (userEmail) {
             const favorites = await getUserFavorites(userEmail)
-            setTournaments(favorites.tournaments)
+            // 画像URLを更新
+            const tournamentsWithRefreshedImages = await Promise.all(
+              favorites.tournaments.map(async (tournament) => {
+                const updatedTournament = { ...tournament }
+                if (updatedTournament.iconUrl && !updatedTournament.iconUrl.startsWith('data:') && !updatedTournament.iconUrl.startsWith('blob:')) {
+                  try {
+                    updatedTournament.iconUrl = await refreshS3Url(updatedTournament.iconUrl, true) || updatedTournament.iconUrl
+                  } catch (error) {
+                    console.error('Failed to refresh icon URL:', error)
+                  }
+                }
+                if (updatedTournament.coverImage && !updatedTournament.coverImage.startsWith('data:') && !updatedTournament.coverImage.startsWith('blob:')) {
+                  try {
+                    updatedTournament.coverImage = await refreshS3Url(updatedTournament.coverImage, true) || updatedTournament.coverImage
+                  } catch (error) {
+                    console.error('Failed to refresh cover image URL:', error)
+                  }
+                }
+                return updatedTournament
+              })
+            )
+            setTournaments(tournamentsWithRefreshedImages)
           }
           break
           
@@ -133,21 +176,77 @@ export default function ListPage() {
     try {
       if (type === "all" || type === "users") {
         const userResults = await searchUsers(query)
-        setUsers(userResults)
+        // ユーザーのアバター画像URLを更新
+        const usersWithRefreshedImages = await Promise.all(
+          userResults.map(async (user) => {
+            const updatedUser = { ...user }
+            if (updatedUser.avatar && !updatedUser.avatar.startsWith('data:') && !updatedUser.avatar.startsWith('blob:')) {
+              try {
+                updatedUser.avatar = await refreshS3Url(updatedUser.avatar, true) || updatedUser.avatar
+              } catch (error) {
+                console.error('Failed to refresh avatar URL:', error)
+              }
+            }
+            return updatedUser
+          })
+        )
+        setUsers(usersWithRefreshedImages)
       } else {
         setUsers([])
       }
       
       if (type === "all" || type === "teams") {
         const teamResults = await searchTeams(query)
-        setTeams(teamResults)
+        // チームの画像URLを更新
+        const teamsWithRefreshedImages = await Promise.all(
+          teamResults.map(async (team) => {
+            const updatedTeam = { ...team }
+            if (updatedTeam.logoUrl && !updatedTeam.logoUrl.startsWith('data:') && !updatedTeam.logoUrl.startsWith('blob:')) {
+              try {
+                updatedTeam.logoUrl = await refreshS3Url(updatedTeam.logoUrl, true) || updatedTeam.logoUrl
+              } catch (error) {
+                console.error('Failed to refresh logo URL:', error)
+              }
+            }
+            if (updatedTeam.coverImageUrl && !updatedTeam.coverImageUrl.startsWith('data:') && !updatedTeam.coverImageUrl.startsWith('blob:')) {
+              try {
+                updatedTeam.coverImageUrl = await refreshS3Url(updatedTeam.coverImageUrl, true) || updatedTeam.coverImageUrl
+              } catch (error) {
+                console.error('Failed to refresh cover image URL:', error)
+              }
+            }
+            return updatedTeam
+          })
+        )
+        setTeams(teamsWithRefreshedImages)
       } else {
         setTeams([])
       }
       
       if (type === "all" || type === "tournaments") {
         const tournamentResults = await searchTournaments(query)
-        setTournaments(tournamentResults)
+        // 大会の画像URLを更新
+        const tournamentsWithRefreshedImages = await Promise.all(
+          tournamentResults.map(async (tournament) => {
+            const updatedTournament = { ...tournament }
+            if (updatedTournament.iconUrl && !updatedTournament.iconUrl.startsWith('data:') && !updatedTournament.iconUrl.startsWith('blob:')) {
+              try {
+                updatedTournament.iconUrl = await refreshS3Url(updatedTournament.iconUrl, true) || updatedTournament.iconUrl
+              } catch (error) {
+                console.error('Failed to refresh icon URL:', error)
+              }
+            }
+            if (updatedTournament.coverImage && !updatedTournament.coverImage.startsWith('data:') && !updatedTournament.coverImage.startsWith('blob:')) {
+              try {
+                updatedTournament.coverImage = await refreshS3Url(updatedTournament.coverImage, true) || updatedTournament.coverImage
+              } catch (error) {
+                console.error('Failed to refresh cover image URL:', error)
+              }
+            }
+            return updatedTournament
+          })
+        )
+        setTournaments(tournamentsWithRefreshedImages)
       } else {
         setTournaments([])
       }

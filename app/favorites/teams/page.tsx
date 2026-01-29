@@ -23,6 +23,7 @@ import { Layout } from "@/components/layout"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getUserFavorites, getCurrentUserEmail, type DbTeam } from "@/lib/api"
 import { REGION_BLOCKS, PREFECTURES_BY_REGION } from "@/lib/regionData"
+import { refreshS3Url } from "@/lib/storage"
 
 export default function FavoriteTeamsPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -49,8 +50,29 @@ export default function FavoriteTeamsPage() {
       setUserEmail(email)
 
       const favorites = await getUserFavorites(email)
-      setTeams(favorites.teams)
-      console.log(`Loaded ${favorites.teams.length} favorite teams`)
+      // 画像URLを更新
+      const teamsWithRefreshedImages = await Promise.all(
+        favorites.teams.map(async (team) => {
+          const updatedTeam = { ...team }
+          if (updatedTeam.logoUrl && !updatedTeam.logoUrl.startsWith('data:') && !updatedTeam.logoUrl.startsWith('blob:')) {
+            try {
+              updatedTeam.logoUrl = await refreshS3Url(updatedTeam.logoUrl, true) || updatedTeam.logoUrl
+            } catch (error) {
+              console.error('Failed to refresh logo URL:', error)
+            }
+          }
+          if (updatedTeam.coverImageUrl && !updatedTeam.coverImageUrl.startsWith('data:') && !updatedTeam.coverImageUrl.startsWith('blob:')) {
+            try {
+              updatedTeam.coverImageUrl = await refreshS3Url(updatedTeam.coverImageUrl, true) || updatedTeam.coverImageUrl
+            } catch (error) {
+              console.error('Failed to refresh cover image URL:', error)
+            }
+          }
+          return updatedTeam
+        })
+      )
+      setTeams(teamsWithRefreshedImages)
+      console.log(`Loaded ${teamsWithRefreshedImages.length} favorite teams`)
     } catch (error) {
       console.error("Failed to load favorite teams:", error)
       setTeams([])

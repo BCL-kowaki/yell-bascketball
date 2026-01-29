@@ -16,6 +16,7 @@ import {
 import { Layout } from "@/components/layout"
 import { listTournaments, DbTournament } from "@/lib/api"
 import { REGION_SLUG_TO_NAME, PREFECTURE_SLUG_TO_NAME } from "@/lib/regionMapping"
+import { refreshS3Url } from "@/lib/storage"
 
 export default function PrefectureTournamentsPage() {
   const params = useParams()
@@ -56,9 +57,36 @@ export default function PrefectureTournamentsPage() {
         t => t.regionBlock === regionName && t.prefecture === prefectureName
       )
       
+      // 画像URLを更新
+      const tournamentsWithRefreshedImages = await Promise.all(
+        filteredTournaments.map(async (tournament) => {
+          const updatedTournament = { ...tournament }
+          
+          // アイコン画像のURLを更新
+          if (updatedTournament.iconUrl && !updatedTournament.iconUrl.startsWith('data:') && !updatedTournament.iconUrl.startsWith('blob:')) {
+            try {
+              updatedTournament.iconUrl = await refreshS3Url(updatedTournament.iconUrl, true) || updatedTournament.iconUrl
+            } catch (error) {
+              console.error('Failed to refresh icon URL:', error)
+            }
+          }
+          
+          // カバー画像のURLを更新
+          if (updatedTournament.coverImage && !updatedTournament.coverImage.startsWith('data:') && !updatedTournament.coverImage.startsWith('blob:')) {
+            try {
+              updatedTournament.coverImage = await refreshS3Url(updatedTournament.coverImage, true) || updatedTournament.coverImage
+            } catch (error) {
+              console.error('Failed to refresh cover image URL:', error)
+            }
+          }
+          
+          return updatedTournament
+        })
+      )
+      
       console.log('✅ Filtered tournaments:', {
-        count: filteredTournaments.length,
-        tournaments: filteredTournaments.map(t => ({
+        count: tournamentsWithRefreshedImages.length,
+        tournaments: tournamentsWithRefreshedImages.map(t => ({
           id: t.id,
           name: t.name,
           regionBlock: t.regionBlock,
@@ -66,7 +94,7 @@ export default function PrefectureTournamentsPage() {
         }))
       })
       
-      setTournaments(filteredTournaments)
+      setTournaments(tournamentsWithRefreshedImages)
     } catch (error) {
       console.error("Failed to load tournaments:", error)
     } finally {
@@ -157,7 +185,7 @@ export default function PrefectureTournamentsPage() {
                   )}
 
                   <CardHeader>
-                    <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start justify-between gap-2 mt-3">
                       <CardTitle className="text-lg font-bold group-hover:text-red-600 transition-colors">
                         {tournament.name}
                       </CardTitle>

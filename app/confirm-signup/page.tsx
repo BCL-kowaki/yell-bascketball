@@ -3,7 +3,7 @@
 import { useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
-import { confirmSignUp, resendSignUpCode } from "aws-amplify/auth"
+import { confirmSignUp, resendSignUpCode, signIn } from "aws-amplify/auth"
 import { generateClient } from 'aws-amplify/api'
 import { createUser } from '@/src/graphql/mutations'
 import { HeaderNavigation } from "@/components/header-navigation"
@@ -54,11 +54,27 @@ function ConfirmSignUpForm() {
           }
         })
 
-        toast({
-          title: "登録が完了しました！",
-          description: "ログインページに移動します。",
+        // セッションストレージからパスワードを取得して自動ログイン
+        const pendingPassword = sessionStorage.getItem('pendingPassword')
+        if (pendingPassword) {
+          try {
+            await signIn({
+              username: email,
+              password: pendingPassword,
+            })
+            // パスワードをセッションストレージから削除
+            sessionStorage.removeItem('pendingPassword')
+          } catch (signInError) {
+            console.error("Auto sign-in error:", signInError)
+            // ログインに失敗してもプロフィール設定画面に遷移（ユーザーが手動でログインできる）
+          }
+        }
+
+        // プロフィール詳細入力画面に遷移
+        const params = new URLSearchParams({
+          email: email,
         })
-        router.push("/login")
+        router.push(`/setup-profile?${params.toString()}`)
       }
     } catch (error: any) {
       console.error("Confirmation error:", error)

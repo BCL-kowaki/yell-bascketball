@@ -166,15 +166,17 @@ export default function RegisterPage() {
         })
         console.log('DynamoDB save successful:', result)
         
-        // メール確認が必要な場合は確認画面へ
+        // メール確認が必要な場合は確認画面へ（パスワードはセッションストレージに保存）
         if (nextStep.signUpStep === 'CONFIRM_SIGN_UP') {
           console.log('Redirecting to confirmation page')
-      const params = new URLSearchParams({
-        email: formData.email,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-      })
-      router.push(`/confirm-signup?${params.toString()}`)
+          // セッションストレージにパスワードを一時保存（認証完了後に使用）
+          sessionStorage.setItem('pendingPassword', formData.password)
+          const params = new URLSearchParams({
+            email: formData.email,
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+          })
+          router.push(`/confirm-signup?${params.toString()}`)
         } else {
           // メール確認が不要な場合は、ログイン画面へ
           setSuccess('登録完了しました')

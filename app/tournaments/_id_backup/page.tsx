@@ -29,6 +29,7 @@ import {
   FileText,
   Send,
   MessageCircle,
+  Instagram,
   MoreHorizontal,
   Loader2,
   Video,
@@ -1350,32 +1351,18 @@ export default function TournamentDetailPage() {
 
       // 新しいフィールドが存在し、空文字列でない場合のみ追加
       // AWSDateTime型は有効なISO 8601形式の日付文字列またはnullを期待するため、空文字列は送信しない
-      if (resultForm.startDate && resultForm.startDate.trim() !== "" && resultForm.startDate !== "Invalid Date") {
-        try {
-          // 日付が有効かチェックし、ISO 8601形式に変換
-          // YYYY-MM-DD形式の文字列をUTCの日付として解釈
-          const startDateStr = resultForm.startDate.trim()
-          const startDateObj = new Date(startDateStr + 'T00:00:00.000Z')
-          if (!isNaN(startDateObj.getTime()) && startDateObj.getFullYear() > 1900) {
-            // ISO 8601形式（YYYY-MM-DDTHH:mm:ss.sssZ）に変換
-            resultData.startDate = startDateObj.toISOString()
-          }
-        } catch (e) {
-          console.warn('Invalid startDate:', resultForm.startDate, e)
+      if (resultForm.startDate && resultForm.startDate.trim() !== "") {
+        // 日付が有効かチェック
+        const startDateObj = new Date(resultForm.startDate)
+        if (!isNaN(startDateObj.getTime())) {
+          resultData.startDate = resultForm.startDate
         }
       }
-      if (resultForm.endDate && resultForm.endDate.trim() !== "" && resultForm.endDate !== "Invalid Date") {
-        try {
-          // 日付が有効かチェックし、ISO 8601形式に変換
-          // YYYY-MM-DD形式の文字列をUTCの日付として解釈
-          const endDateStr = resultForm.endDate.trim()
-          const endDateObj = new Date(endDateStr + 'T00:00:00.000Z')
-          if (!isNaN(endDateObj.getTime()) && endDateObj.getFullYear() > 1900) {
-            // ISO 8601形式（YYYY-MM-DDTHH:mm:ss.sssZ）に変換
-            resultData.endDate = endDateObj.toISOString()
-          }
-        } catch (e) {
-          console.warn('Invalid endDate:', resultForm.endDate, e)
+      if (resultForm.endDate && resultForm.endDate.trim() !== "") {
+        // 日付が有効かチェック
+        const endDateObj = new Date(resultForm.endDate)
+        if (!isNaN(endDateObj.getTime())) {
+          resultData.endDate = resultForm.endDate
         }
       }
       if (imageUrl && imageUrl.trim() !== "") {
@@ -1735,8 +1722,8 @@ export default function TournamentDetailPage() {
                           ))}
                         </SelectContent>
                       </Select>
-                      </div>
-                    )}
+                    </div>
+                  )}
 
                   {availableDistricts.length > 0 && (
                     <div>
@@ -1767,7 +1754,7 @@ export default function TournamentDetailPage() {
                       placeholder="https://instagram.com/username または @username"
                       className="mt-1"
                     />
-              </div>
+                  </div>
 
                   {/* 大会管理者 */}
                   <div>
@@ -1808,18 +1795,18 @@ export default function TournamentDetailPage() {
                             }
                           }}
                         />
-                <Button
+                        <Button
                           type="button"
                           onClick={handleCoAdminSearch}
                           disabled={isSearchingCoAdmins}
-                  size="sm"
+                          size="sm"
                         >
                           {isSearchingCoAdmins ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
                           ) : (
                             "検索"
                           )}
-                </Button>
+                        </Button>
                       </div>
                     )}
 
@@ -1854,7 +1841,7 @@ export default function TournamentDetailPage() {
                               }}
                             >
                               <Users className="w-4 h-4 text-green-500" />
-                        </Button>
+                            </Button>
                           </div>
                         ))}
                       </div>
@@ -1902,8 +1889,8 @@ export default function TournamentDetailPage() {
                               }}
                             >
                               <X className="w-4 h-4" />
-                        </Button>
-                      </div>
+                </Button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -1928,7 +1915,7 @@ export default function TournamentDetailPage() {
                         >
                           <ImageIcon className="w-4 h-4 mr-2" />
                           カバー画像を選択
-                      </Button>
+                        </Button>
                         {coverImagePreview && (
                           <div className="relative">
                             <img
@@ -1988,7 +1975,7 @@ export default function TournamentDetailPage() {
               {/* 大会管理者 */}
               <div className="mt-4 pt-4">
                 <p className="text-sm font-medium mb-2 text-gray-700">大会運営者:</p>
-                  <div className="space-y-2">
+                <div className="space-y-2">
                   {tournamentManagers.length > 0 ? (
                     tournamentManagers.map((manager, index) => (
                       <Link 
@@ -2004,13 +1991,13 @@ export default function TournamentDetailPage() {
                         </Avatar>
                         <div>
                           <p className="font-medium text-sm">{manager.name}</p>
-                      </div>
+                        </div>
                       </Link>
                     ))
                   ) : (
                     <p className="text-muted-foreground text-sm">大会管理者が登録されていません</p>
                   )}
-                  </div>
+                </div>
               </div>
 
                 {/* Instagram URL */}
@@ -2025,8 +2012,8 @@ export default function TournamentDetailPage() {
                     >
                       {tournament.instagramUrl}
                     </a>
-                </div>
-              )}
+                  </div>
+                )}
               </div>
             </div>
 

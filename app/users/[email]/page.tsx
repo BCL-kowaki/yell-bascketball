@@ -9,7 +9,7 @@ import { refreshS3Url } from "@/lib/storage"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Heart, MessageCircle, Share2, MapPin, Calendar, FileText, UserPlus, Edit2 } from "lucide-react"
+import { Heart, MessageCircle, Share2, MapPin, Calendar, FileText, UserPlus, Edit2, Instagram } from "lucide-react"
 import { Layout } from "@/components/layout"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
@@ -48,6 +48,9 @@ export default function UserPage() {
   const [selectedPostForComment, setSelectedPostForComment] = useState<DbPost | null>(null)
   const [modalComment, setModalComment] = useState("")
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
+
+  // タブ管理
+  const [activeTab, setActiveTab] = useState("timeline")
   const [modalComments, setModalComments] = useState<any[]>([])
   const [isLoadingModalComments, setIsLoadingModalComments] = useState(false)
   const [currentUserData, setCurrentUserData] = useState<{ name: string; avatar: string } | null>(null)
@@ -519,7 +522,7 @@ export default function UserPage() {
 
   return (
     <Layout isLoggedIn={!!currentUserEmail} currentUser={currentUserEmail ? { name: displayName, avatar: getAvatarUrl() || undefined } : undefined}>
-      <div className="max-w-6xl mx-auto pb-20">
+      <div className="max-w-6xl mx-auto">
         {/* Cover Photo & Profile Info */}
         <div className="relative">
           <div className="h-48 md:h-64 bg-gradient-to-r from-orange-400 to-red-400 overflow-hidden">
@@ -537,6 +540,7 @@ export default function UserPage() {
                 <AvatarImage
                   src={getAvatarUrl()}
                   alt={displayName}
+                  className="object-contain"
                   onError={handleAvatarError}
                 />
                 <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
@@ -601,6 +605,41 @@ export default function UserPage() {
                   <span>お気に入り大会</span>
                 </Link>
               </div>
+
+              {/* インスタグラムリンク */}
+              {user.instagramUrl && (() => {
+                const getInstagramAccountId = (url: string): string => {
+                  if (!url) return ''
+                  let accountId = url.replace(/^@/, '')
+                  const match = accountId.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^\/\?]+)/)
+                  if (match) {
+                    accountId = match[1]
+                  }
+                  accountId = accountId.split('/')[0].split('?')[0]
+                  return accountId
+                }
+                const accountId = getInstagramAccountId(user.instagramUrl)
+                const instagramUrl = user.instagramUrl.startsWith('http') ? user.instagramUrl : `https://instagram.com/${accountId}`
+                return (
+                  <div className="mb-4">
+                    <a
+                      href={instagramUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 transition-colors"
+                      style={{
+                        background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text'
+                      }}
+                    >
+                      <Instagram className="w-5 h-5" style={{ color: '#E4405F' }} />
+                      <span className="text-sm font-medium">{accountId}</span>
+                    </a>
+                  </div>
+                )
+              })()}
             </div>
 
             <div className="flex gap-2 w-full md:w-auto flex-wrap">
@@ -628,11 +667,16 @@ export default function UserPage() {
                 </div>
               </div>
 
-          {/* Navigation Tabs - Facebook style */}
-          <div className="border-t border-border mt-4">
-            <div className="max-w-6xl mx-auto px-4 md:px-8">
-              <Tabs defaultValue="about" className="w-full">
-                <TabsList className="h-auto bg-transparent p-0 w-full justify-start gap-0">
+          {/* タブメニュー */}
+          <div className="mt-6 border-t border-border border-b border-border">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-3 bg-transparent h-auto p-0 gap-0">
+                <TabsTrigger 
+                  value="timeline" 
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
+                >
+                  タイムライン
+                </TabsTrigger>
                 <TabsTrigger 
                   value="about" 
                   className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
@@ -640,23 +684,79 @@ export default function UserPage() {
                   基本情報
                 </TabsTrigger>
                 <TabsTrigger 
-                  value="activity" 
+                  value="photos" 
                   className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
                 >
-                  アクティビティ
+                  写真
                 </TabsTrigger>
-            </TabsList>
+              </TabsList>
             </Tabs>
-            </div>
           </div>
         </div>
+      </div>
 
-        {/* Tab Content - Outside header, as cards */}
-        <div className="max-w-6xl mx-auto">
-          <div className="w-full px-0">
-            <Tabs defaultValue="about" className="w-full">
+      <div className="max-w-6xl pb-20">
+        <div className="w-full max-w-[680px] mx-auto px-0 overflow-hidden box-border">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsContent value="timeline" className="mt-2 space-y-2 w-full overflow-hidden box-border">
+                {/* 投稿一覧セクション */}
+                <div>
+                  {isLoadingPosts ? (
+                    <div className="text-center py-12">
+                      <p className="text-muted-foreground">読み込み中...</p>
+                    </div>
+                  ) : userPosts.length === 0 ? (
+                    <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+                      <CardContent className="p-8 text-center">
+                        <p className="text-muted-foreground">まだ投稿がありません</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-2">
+                      {userPosts.map((post) => {
+                        if (!user) return null
+                        return (
+                          <div
+                            key={post.id}
+                            ref={(el) => {
+                              if (el) postRefs.current.set(post.id, el)
+                              else postRefs.current.delete(post.id)
+                            }}
+                            data-post-id={post.id}
+                            className={`transition-opacity duration-500 ${
+                              visiblePosts.has(post.id) ? 'opacity-100' : 'opacity-0'
+                            }`}
+                          >
+                            <ProfilePostCard
+                              post={post}
+                              user={user}
+                              isVisible={visiblePosts.has(post.id)}
+                              onToggleComments={async () => {
+                                setSelectedPostForComment(post)
+                                setCommentModalOpen(true)
+                              }}
+                              onLike={async () => {
+                                if (!currentUserEmail) return
+                                try {
+                                  const currentLikes = post.likesCount || 0
+                                  await toggleDbLike(post.id, currentUserEmail, currentLikes)
+                                  // 投稿を再読み込み
+                                  const posts = await listPosts(50, { authorEmail: user.email })
+                                  setUserPosts(posts)
+                                } catch (error) {
+                                  console.error('Failed to toggle like:', error)
+                                }
+                              }}
+                            />
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
 
-              <TabsContent value="about" className="mt-4">
+              <TabsContent value="about" className="mt-2">
                 <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
               <CardHeader>
                 <h3 className="font-semibold text-lg">基本情報</h3>
@@ -720,88 +820,109 @@ export default function UserPage() {
                       </p>
                   </div>
                 )}
-                {user.instagramUrl && (
-                  <div>
-                    <h4 className="font-medium mb-2">Instagram</h4>
-                    <a 
-                      href={user.instagramUrl.startsWith('http') ? user.instagramUrl : `https://instagram.com/${user.instagramUrl.replace(/^@/, '')}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      {user.instagramUrl}
-                    </a>
-                  </div>
-                )}
+                {user.instagramUrl && (() => {
+                  const getInstagramAccountId = (url: string): string => {
+                    if (!url) return ''
+                    let accountId = url.replace(/^@/, '')
+                    const match = accountId.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^\/\?]+)/)
+                    if (match) {
+                      accountId = match[1]
+                    }
+                    accountId = accountId.split('/')[0].split('?')[0]
+                    return accountId
+                  }
+                  const accountId = getInstagramAccountId(user.instagramUrl)
+                  const instagramUrl = user.instagramUrl.startsWith('http') ? user.instagramUrl : `https://instagram.com/${accountId}`
+                  return (
+                    <div>
+                      <h4 className="font-medium mb-2">Instagram</h4>
+                      <a 
+                        href={instagramUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 transition-colors"
+                        style={{
+                          background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                          backgroundClip: 'text'
+                        }}
+                      >
+                        <Instagram className="w-5 h-5" style={{ color: '#E4405F' }} />
+                        <span className="break-all">{accountId}</span>
+                      </a>
+                    </div>
+                  )
+                })()}
               </CardContent>
             </Card>
           </TabsContent>
 
-            <TabsContent value="activity" className="mt-4">
-            <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
-                <CardContent className="p-8 text-center">
-                  <p className="text-muted-foreground">アクティビティ履歴は近日公開予定です</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-          </div>
-        </div>
+            <TabsContent value="photos" className="mt-2 space-y-2 w-full overflow-hidden box-border">
+              <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+                <CardHeader>
+                  <h3 className="font-semibold text-lg">写真</h3>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingPosts ? (
+                    <div className="text-center py-12">
+                      <p className="text-muted-foreground">読み込み中...</p>
+                    </div>
+                  ) : (() => {
+                    // 画像を含む投稿をフィルタリング
+                    const photoPosts = userPosts.filter(post => post.imageUrl)
+                    
+                    if (photoPosts.length === 0) {
+                      return (
+                        <div className="text-center py-12">
+                          <p className="text-muted-foreground">まだ写真がありません</p>
+                        </div>
+                      )
+                    }
 
-        {/* Profile Content */}
-        <div className="pt-2 pb-2">
-          <div className="w-full px-0">
-        {/* 投稿一覧セクション */}
-        <div className="mt-4">
-
-            {isLoadingPosts ? (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">読み込み中...</p>
-              </div>
-            ) : userPosts.length === 0 ? (
-              <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
-                <CardContent className="p-8 text-center">
-                  <p className="text-muted-foreground">まだ投稿がありません</p>
+                    return (
+                      <div className="grid grid-cols-3 gap-1 md:gap-2">
+                        {photoPosts.map((post) => (
+                          <div
+                            key={post.id}
+                            className="relative aspect-square overflow-hidden rounded-md cursor-pointer group hover:opacity-90 transition-opacity"
+                            onClick={() => {
+                              // クリックで投稿詳細に遷移またはモーダル表示
+                              setSelectedPostForComment(post)
+                              setCommentModalOpen(true)
+                            }}
+                          >
+                            <img
+                              src={post.imageUrl || '/placeholder.svg'}
+                              alt={post.content || '写真'}
+                              className="w-full h-full object-cover"
+                              onError={async (e) => {
+                                if (post.imageUrl && !post.imageUrl.startsWith('data:') && !post.imageUrl.startsWith('blob:')) {
+                                  try {
+                                    const refreshed = await refreshS3Url(post.imageUrl, true)
+                                    if (refreshed) {
+                                      (e.target as HTMLImageElement).src = refreshed
+                                    }
+                                  } catch (err) {
+                                    console.error('Failed to refresh image URL:', err)
+                                  }
+                                }
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                              <div className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-sm font-medium">
+                                {post.likesCount || 0} <Heart className="w-4 h-4 inline" fill="currentColor" />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })()}
                 </CardContent>
               </Card>
-            ) : (
-              <div className="space-y-4">
-                {userPosts.slice(0, 10).map((post, index) => (
-                  <div
-                    key={post.id}
-                    ref={(el) => {
-                      if (el) {
-                        postRefs.current.set(post.id, el)
-                      } else {
-                        postRefs.current.delete(post.id)
-                      }
-                    }}
-                    data-post-id={post.id}
-                    style={{
-                      transitionDelay: `${index * 100}ms`
-                    }}
-                  >
-                    <ProfilePostCard
-                      post={post}
-                      user={user}
-                      isVisible={visiblePosts.has(post.id)}
-                    />
-                  </div>
-                ))}
-
-                {userPosts.length > 10 && (
-                  <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
-                    <CardContent className="p-6 text-center">
-                      <p className="text-muted-foreground">
-                        {userPosts.length - 10}件の投稿がさらにあります
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            )}
-            </div>
-          </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </Layout>

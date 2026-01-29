@@ -6,8 +6,8 @@ interface ProfilePostCardProps {
   post: DbPost
   user: DbUser
   isVisible: boolean
-  onToggleComments?: (postId: string) => void
-  onLike?: (postId: string) => void
+  onToggleComments?: () => void
+  onLike?: () => void
 }
 
 export function ProfilePostCard({ post, user, isVisible, onToggleComments, onLike }: ProfilePostCardProps) {

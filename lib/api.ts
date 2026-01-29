@@ -1286,7 +1286,7 @@ export async function updateTeam(id: string, input: Partial<DbTeam>): Promise<Db
   const mutation = /* GraphQL */ `
     mutation UpdateTeam($input: UpdateTeamInput!) {
       updateTeam(input: $input) {
-        id name category region prefecture district description website instagramUrl createdAt
+        id name shortName category region prefecture description website instagramUrl logoUrl coverImageUrl editorEmails createdAt
       }
     }
   `
@@ -1295,13 +1295,20 @@ export async function updateTeam(id: string, input: Partial<DbTeam>): Promise<Db
     // スキーマに存在するフィールドのみを送信
     const sanitizedInput: any = { id }
     if (input.name) sanitizedInput.name = input.name
+    if (input.shortName) sanitizedInput.shortName = input.shortName
+    if (input.founded) sanitizedInput.founded = input.founded
     if (input.category) sanitizedInput.category = input.category
     if (input.region) sanitizedInput.region = input.region
     if (input.prefecture) sanitizedInput.prefecture = input.prefecture
-    if ((input as any).district) sanitizedInput.district = (input as any).district
     if (input.description) sanitizedInput.description = input.description
     if (input.website) sanitizedInput.website = input.website
     if (input.instagramUrl) sanitizedInput.instagramUrl = input.instagramUrl
+    if (input.logoUrl !== undefined) sanitizedInput.logoUrl = input.logoUrl
+    if (input.coverImageUrl !== undefined) sanitizedInput.coverImageUrl = input.coverImageUrl
+    if (input.editorEmails !== undefined) sanitizedInput.editorEmails = input.editorEmails
+    if (input.headcount) sanitizedInput.headcount = input.headcount
+
+    console.log('updateTeam: Sending input:', JSON.stringify(sanitizedInput, null, 2))
 
     const result = await client.graphql({
       query: mutation,
@@ -1309,17 +1316,74 @@ export async function updateTeam(id: string, input: Partial<DbTeam>): Promise<Db
       authMode: 'apiKey'
     }) as any
 
-    if (result.errors) {
-      console.error('GraphQL errors in updateTeam:', result.errors)
-      throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
+    // レスポンス全体をログに記録（デバッグ用）
+    console.log('updateTeam: Full GraphQL response:', JSON.stringify(result, null, 2))
+
+    // GraphQLエラーのチェック（errors配列が存在し、空でない場合）
+    if (result.errors && Array.isArray(result.errors) && result.errors.length > 0) {
+      const firstError = result.errors[0]
+      const errorMessage = firstError?.message || 'GraphQL error occurred'
+      console.error('GraphQL errors in updateTeam:', JSON.stringify(result.errors, null, 2))
+      throw new Error(`GraphQL error: ${errorMessage}`)
+    }
+
+    // データが存在しない場合のチェック
+    if (!result.data || !result.data.updateTeam) {
+      // dataがnullまたはupdateTeamがnullの場合
+      const errorDetails = {
+        hasData: !!result.data,
+        hasUpdateTeam: !!(result.data?.updateTeam),
+        errors: result.errors,
+        fullResponse: result
+      }
+      console.error('updateTeam: No data returned. Details:', JSON.stringify(errorDetails, null, 2))
+      throw new Error('Update team returned no data. The team may not exist or you may not have permission to update it.')
     }
 
     console.log('Team updated successfully:', result.data.updateTeam)
     return result.data.updateTeam
   } catch (error: any) {
-    console.error('updateTeam error:', error)
-    console.error('Error stack:', error?.stack)
-    throw error
+    // エラーが既にErrorオブジェクトの場合はそのまま使用
+    if (error instanceof Error) {
+      console.error('updateTeam error (Error instance):', error.message)
+      throw error
+    }
+    
+    // エラーがオブジェクトの場合
+    if (typeof error === 'object' && error !== null) {
+      // エラーオブジェクトの詳細を取得
+      let errorMessage = 'Unknown error'
+      
+      if (error.message) {
+        errorMessage = error.message
+      } else if (error.toString && typeof error.toString === 'function') {
+        const toStringResult = error.toString()
+        if (toStringResult !== '[object Object]') {
+          errorMessage = toStringResult
+        }
+      }
+      
+      // JSON.stringifyを試みる（循環参照を避けるため）
+      try {
+        const jsonString = JSON.stringify(error, (key, value) => {
+          if (key === 'stack') return undefined // stackトレースは除外
+          return value
+        }, 2)
+        if (jsonString && jsonString !== '{}') {
+          errorMessage = jsonString
+        }
+      } catch (e) {
+        // JSON.stringifyが失敗した場合（循環参照など）
+        errorMessage = `Error object: ${Object.keys(error).join(', ')}`
+      }
+      
+      console.error('updateTeam error (object):', errorMessage)
+      throw new Error(`Failed to update team: ${errorMessage}`)
+    }
+    
+    // その他の場合
+    console.error('updateTeam error (other):', String(error))
+    throw new Error(`Failed to update team: ${String(error)}`)
   }
 }
 
@@ -2082,6 +2146,53 @@ export async function addTournamentTeam(tournamentId: string, teamId: string, te
   } catch (error: any) {
     console.error('addTournamentTeam error:', error)
     throw error
+  }
+}
+
+export async function getTeamTournaments(teamId: string): Promise<(DbTournamentTeam & { tournament?: DbTournament | null })[]> {
+  const query = /* GraphQL */ `
+    query TournamentTeamsByTeamId($teamId: ID!) {
+      tournamentTeamsByTeamId(teamId: $teamId) {
+        items {
+          id tournamentId teamId teamName participationYear createdAt updatedAt
+        }
+      }
+    }
+  `
+
+  try {
+    console.log('getTeamTournaments: Querying with teamId:', teamId)
+    const result = await client.graphql({
+      query,
+      variables: { teamId },
+      authMode: 'apiKey'
+    }) as any
+
+    if (result.errors) {
+      console.error('GraphQL errors in getTeamTournaments:', result.errors)
+      return []
+    }
+
+    const tournamentTeams = result?.data?.tournamentTeamsByTeamId?.items ?? []
+    console.log('getTeamTournaments: Tournament teams found:', tournamentTeams.length)
+    
+    // 大会情報を取得
+    const tournamentsWithData = await Promise.all(
+      tournamentTeams.map(async (tt: DbTournamentTeam) => {
+        try {
+          const tournament = await getTournament(tt.tournamentId)
+          return { ...tt, tournament }
+        } catch (error) {
+          console.error('Failed to load tournament:', tt.tournamentId, error)
+          return { ...tt, tournament: null }
+        }
+      })
+    )
+
+    return tournamentsWithData
+  } catch (error: any) {
+    console.error('getTeamTournaments error:', error)
+    return []
   }
 }
 

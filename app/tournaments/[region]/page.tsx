@@ -21,6 +21,7 @@ import { Layout } from "@/components/layout"
 import { listTournaments, type DbTournament } from "@/lib/api"
 import { PREFECTURES_BY_REGION } from "@/lib/regionData"
 import { REGION_SLUG_TO_NAME, PREFECTURE_NAME_TO_SLUG } from "@/lib/regionMapping"
+import { refreshS3Url } from "@/lib/storage"
 
 // UUID形式のチェック（例: 31a08672-9241-4999-b0f4-03c3a3b00c02）
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i

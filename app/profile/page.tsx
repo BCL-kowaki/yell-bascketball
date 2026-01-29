@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Camera, MapPin, Calendar, Edit2, Save, X, Search, Plus, XCircle, UserPlus, Users, Heart } from "lucide-react"
+import { Camera, MapPin, Calendar, Edit2, Save, X, Search, Plus, XCircle, UserPlus, Users, Heart, Instagram } from "lucide-react"
 import { Layout } from "@/components/layout"
 import { useToast } from "@/hooks/use-toast"
 import { ProfilePostCard } from "@/components/profile-post-card"
@@ -62,7 +62,7 @@ export default function ProfilePage() {
   const [isFollowing, setIsFollowing] = useState(false)
   const [followCounts, setFollowCounts] = useState({ followers: 0, following: 0 })
   const [isLoadingFollow, setIsLoadingFollow] = useState(false)
-  const [activeTab, setActiveTab] = useState("about")
+  const [activeTab, setActiveTab] = useState("timeline")
 
   // お気に入り関連
   const [favoriteTeams, setFavoriteTeams] = useState<DbTeam[]>([])
@@ -924,6 +924,7 @@ export default function ProfilePage() {
                 <AvatarImage
                   src={getAvatarUrl()}
                   alt={displayName}
+                  className="object-contain"
                   onError={handleAvatarError}
                 />
                 <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
@@ -937,9 +938,9 @@ export default function ProfilePage() {
           </div>
         </div>
 
-      <div className="max-w-6xl mx-auto pb-20">
-        {/* Profile Header */}
-        <div className="bg-card px-4 md:px-8 pt-16 md:pt-20 pb-0">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <div className="w-screen -mx-[calc((100vw-100%)/2)] bg-card">
+          <div className="max-w-6xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-0">
           <div className="flex flex-col md:flex-row items-start justify-between">
             <div className="flex-1 mb-4 md:mb-0">
               <>
@@ -993,6 +994,41 @@ export default function ProfilePage() {
                       <span>お気に入り大会</span>
                     </Link>
                   </div>
+
+                  {/* インスタグラムリンク */}
+                  {user.instagramUrl && (() => {
+                    const getInstagramAccountId = (url: string): string => {
+                      if (!url) return ''
+                      let accountId = url.replace(/^@/, '')
+                      const match = accountId.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^\/\?]+)/)
+                      if (match) {
+                        accountId = match[1]
+                      }
+                      accountId = accountId.split('/')[0].split('?')[0]
+                      return accountId
+                    }
+                    const accountId = getInstagramAccountId(user.instagramUrl)
+                    const instagramUrl = user.instagramUrl.startsWith('http') ? user.instagramUrl : `https://instagram.com/${accountId}`
+                    return (
+                      <div className="mb-4">
+                        <a
+                          href={instagramUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 transition-colors"
+                          style={{
+                            background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text'
+                          }}
+                        >
+                          <Instagram className="w-5 h-5" style={{ color: '#E4405F' }} />
+                          <span className="text-sm font-medium">{accountId}</span>
+                        </a>
+                      </div>
+                    )
+                  })()}
                 </>
             </div>
 
@@ -1020,34 +1056,92 @@ export default function ProfilePage() {
           </div>
         </div>
 
-          {/* Navigation Tabs - Facebook style */}
-          <div className="border-t border-border mt-4">
-            <div className="max-w-6xl mx-auto px-4 md:px-8">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="h-auto bg-transparent p-0 w-full justify-start gap-0">
-                <TabsTrigger 
-                  value="about" 
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
-                >
-                  基本情報
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="activity" 
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
-                >
-                  アクティビティ
-                </TabsTrigger>
-            </TabsList>
+          {/* タブメニュー */}
+          <div className="mt-6 border-t border-border border-b border-border">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-3 bg-transparent h-auto p-0 gap-0">
+              <TabsTrigger 
+                value="timeline" 
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
+              >
+                タイムライン
+              </TabsTrigger>
+              <TabsTrigger 
+                value="about" 
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
+              >
+                基本情報
+              </TabsTrigger>
+              <TabsTrigger 
+                value="photos" 
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
+              >
+                写真
+              </TabsTrigger>
+              </TabsList>
             </Tabs>
-            </div>
+          </div>
           </div>
         </div>
 
-        {/* Tab Content - Outside header, as cards */}
-        <div className="max-w-6xl mx-auto">
-          <div className="w-full px-0">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsContent value="about" className="mt-4">
+      <div className="max-w-6xl pb-20">
+        <div className="w-full max-w-[680px] mx-auto px-0 overflow-hidden box-border">
+          <TabsContent value="timeline" className="mt-2 space-y-2 w-full overflow-hidden box-border">
+              {isLoadingPosts ? (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">読み込み中...</p>
+                </div>
+              ) : userPosts.length === 0 ? (
+                <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+                  <CardContent className="p-8 text-center">
+                    <p className="text-muted-foreground">まだ投稿がありません</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {userPosts.map((post) => {
+                    if (!user) return null
+                    return (
+                      <div
+                        key={post.id}
+                        ref={(el) => {
+                          if (el) postRefs.current.set(post.id, el)
+                          else postRefs.current.delete(post.id)
+                        }}
+                        data-post-id={post.id}
+                        className={`transition-opacity duration-500 ${
+                          visiblePosts.has(post.id) ? 'opacity-100' : 'opacity-0'
+                        }`}
+                      >
+                        <ProfilePostCard
+                          post={post}
+                          user={user}
+                          isVisible={visiblePosts.has(post.id)}
+                          onToggleComments={() => {
+                            setSelectedPostForComment(post)
+                            setCommentModalOpen(true)
+                          }}
+                          onLike={async () => {
+                            if (!currentUserEmail) return
+                            try {
+                              const currentLikes = post.likesCount || 0
+                              await toggleDbLike(post.id, currentUserEmail, currentLikes)
+                              // 投稿を再読み込み
+                              const posts = await listPosts(50, { authorEmail: user.email })
+                              setUserPosts(posts)
+                            } catch (error) {
+                              console.error('Failed to toggle like:', error)
+                            }
+                          }}
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="about" className="mt-2 space-y-2 w-full overflow-hidden box-border">
               <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
                 <CardHeader>
                   <h3 className="font-semibold text-lg">基本情報</h3>
@@ -1111,92 +1205,111 @@ export default function ProfilePage() {
                       </p>
                     </div>
                   )}
-                  {user.instagramUrl && (
-                    <div>
-                      <h4 className="font-medium mb-2">Instagram</h4>
-                      <a 
-                        href={user.instagramUrl.startsWith('http') ? user.instagramUrl : `https://instagram.com/${user.instagramUrl.replace(/^@/, '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
-                      >
-                        {user.instagramUrl}
-                      </a>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="activity" className="mt-4">
-              <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
-                <CardContent className="p-8 text-center">
-                  <p className="text-muted-foreground">アクティビティ履歴は近日公開予定です</p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-                    </div>
-                    </div>
-
-        {/* Profile Content */}
-        <div className="pt-2 pb-2">
-          <div className="w-full max-w-[680px] mx-auto px-0">
-          {/* 投稿一覧セクション */}
-            <div className="mt-4">
-
-            {isLoadingPosts ? (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">読み込み中...</p>
-              </div>
-            ) : userPosts.length === 0 ? (
-              <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
-                <CardContent className="p-8 text-center">
-                  <p className="text-muted-foreground">まだ投稿がありません</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {userPosts.slice(0, 10).map((post, index) => (
-                  <div
-                    key={post.id}
-                    ref={(el) => {
-                      if (el) {
-                        postRefs.current.set(post.id, el)
-                      } else {
-                        postRefs.current.delete(post.id)
+                  {user.instagramUrl && (() => {
+                    const getInstagramAccountId = (url: string): string => {
+                      if (!url) return ''
+                      let accountId = url.replace(/^@/, '')
+                      const match = accountId.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^\/\?]+)/)
+                      if (match) {
+                        accountId = match[1]
                       }
-                    }}
-                    data-post-id={post.id}
-                    style={{
-                      transitionDelay: `${index * 100}ms`
-                    }}
-                  >
-                    <ProfilePostCard
-                      post={post}
-                      user={user}
-                      isVisible={visiblePosts.has(post.id)}
-                      onToggleComments={handleToggleComments}
-                      onLike={handleLike}
-                    />
-                  </div>
-                ))}
+                      accountId = accountId.split('/')[0].split('?')[0]
+                      return accountId
+                    }
+                    const accountId = getInstagramAccountId(user.instagramUrl)
+                    const instagramUrl = user.instagramUrl.startsWith('http') ? user.instagramUrl : `https://instagram.com/${accountId}`
+                    return (
+                      <div>
+                        <h4 className="font-medium mb-2">Instagram</h4>
+                        <a 
+                          href={instagramUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 transition-colors"
+                          style={{
+                            background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text'
+                          }}
+                        >
+                          <Instagram className="w-5 h-5" style={{ color: '#E4405F' }} />
+                          <span className="break-all">{accountId}</span>
+                        </a>
+                      </div>
+                    )
+                  })()}
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-                {userPosts.length > 10 && (
-                  <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
-                    <CardContent className="p-6 text-center">
-                      <p className="text-muted-foreground">
-                        {userPosts.length - 10}件の投稿がさらにあります
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            )}
-          </div>
+            <TabsContent value="photos" className="mt-2 space-y-2 w-full overflow-hidden box-border">
+              <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+                <CardHeader>
+                  <h3 className="font-semibold text-lg">写真</h3>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingPosts ? (
+                    <div className="text-center py-12">
+                      <p className="text-muted-foreground">読み込み中...</p>
+                    </div>
+                  ) : (() => {
+                    // 画像を含む投稿をフィルタリング
+                    const photoPosts = userPosts.filter(post => post.imageUrl)
+                    
+                    if (photoPosts.length === 0) {
+                      return (
+                        <div className="text-center py-12">
+                          <p className="text-muted-foreground">まだ写真がありません</p>
+                        </div>
+                      )
+                    }
+
+                    return (
+                      <div className="grid grid-cols-3 gap-1 md:gap-2">
+                        {photoPosts.map((post) => (
+                          <div
+                            key={post.id}
+                            className="relative aspect-square overflow-hidden rounded-md cursor-pointer group hover:opacity-90 transition-opacity"
+                            onClick={() => {
+                              // クリックで投稿詳細に遷移またはモーダル表示
+                              setSelectedPostForComment(post)
+                              setCommentModalOpen(true)
+                            }}
+                          >
+                            <img
+                              src={post.imageUrl || '/placeholder.svg'}
+                              alt={post.content || '写真'}
+                              className="w-full h-full object-cover"
+                              onError={async (e) => {
+                                if (post.imageUrl && !post.imageUrl.startsWith('data:') && !post.imageUrl.startsWith('blob:')) {
+                                  try {
+                                    const refreshed = await refreshS3Url(post.imageUrl, true)
+                                    if (refreshed) {
+                                      (e.target as HTMLImageElement).src = refreshed
+                                    }
+                                  } catch (err) {
+                                    console.error('Failed to refresh image URL:', err)
+                                  }
+                                }
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                              <div className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-sm font-medium">
+                                {post.likesCount || 0} <Heart className="w-4 h-4 inline" fill="currentColor" />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })()}
+                </CardContent>
+              </Card>
+            </TabsContent>
         </div>
       </div>
-            </div>
+      </Tabs>
 
       {/* コメントモーダル */}
       {selectedPostForComment && user && (
@@ -1265,11 +1378,11 @@ export default function ProfilePage() {
             <div>
               <Label>アバター画像</Label>
               <div className="space-y-2 mt-1">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarChange}
-                  className="hidden"
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    className="hidden"
                   id="avatar-upload"
                 />
                 <div className="flex items-center gap-2">
@@ -1303,8 +1416,8 @@ export default function ProfilePage() {
                     </div>
                   )}
                 </div>
-              </div>
             </div>
+          </div>
 
             {/* カバー画像 */}
             <div>
@@ -1348,225 +1461,225 @@ export default function ProfilePage() {
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
+          </div>
+        </div>
 
             {/* 名前 */}
-            <div className="flex gap-2">
+                  <div className="flex gap-2">
               <div className="flex-1">
                 <Label htmlFor="lastName">姓</Label>
-                <Input
+                    <Input
                   id="lastName"
-                  placeholder="姓"
-                  value={editForm.lastName}
-                  onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
+                      placeholder="姓"
+                      value={editForm.lastName}
+                      onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
                   className="mt-1"
-                />
+                    />
               </div>
               <div className="flex-1">
                 <Label htmlFor="firstName">名</Label>
-                <Input
+                    <Input
                   id="firstName"
-                  placeholder="名"
-                  value={editForm.firstName}
-                  onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
+                      placeholder="名"
+                      value={editForm.firstName}
+                      onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
                   className="mt-1"
-                />
-              </div>
+                    />
+                  </div>
             </div>
 
             {/* 自己紹介 */}
             <div>
               <Label htmlFor="bio">自己紹介</Label>
-              <Textarea
+                  <Textarea
                 id="bio"
-                placeholder="自己紹介"
-                value={editForm.bio}
-                onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
-                rows={3}
+                    placeholder="自己紹介"
+                    value={editForm.bio}
+                    onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
+                    rows={3}
                 className="mt-1"
-              />
+                  />
             </div>
 
-            {/* カテゴリ選択 */}
-            <div>
+                  {/* カテゴリ選択 */}
+                  <div>
               <Label>カテゴリ</Label>
-              <Select value={editForm.category} onValueChange={(value) => setEditForm({ ...editForm, category: value })}>
+                    <Select value={editForm.category} onValueChange={(value) => setEditForm({ ...editForm, category: value })}>
                 <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="カテゴリを選択" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map((cat) => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                        <SelectValue placeholder="カテゴリを選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CATEGORIES.map((cat) => (
+                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-            {/* 地域ブロック選択 */}
-            <div>
+                  {/* 地域ブロック選択 */}
+                  <div>
               <Label>地域ブロック</Label>
-              <Select value={editForm.region} onValueChange={(value) => setEditForm({ ...editForm, region: value })}>
+                    <Select value={editForm.region} onValueChange={(value) => setEditForm({ ...editForm, region: value })}>
                 <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="地域ブロックを選択" />
-                </SelectTrigger>
-                <SelectContent>
-                  {REGION_BLOCKS.map((region) => (
-                    <SelectItem key={region} value={region}>{region}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                        <SelectValue placeholder="地域ブロックを選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {REGION_BLOCKS.map((region) => (
+                          <SelectItem key={region} value={region}>{region}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-            {/* 都道府県選択 */}
-            {availablePrefectures.length > 0 && (
-              <div>
+                  {/* 都道府県選択 */}
+                  {availablePrefectures.length > 0 && (
+                    <div>
                 <Label>都道府県</Label>
-                <Select value={editForm.prefecture} onValueChange={(value) => setEditForm({ ...editForm, prefecture: value })}>
+                      <Select value={editForm.prefecture} onValueChange={(value) => setEditForm({ ...editForm, prefecture: value })}>
                   <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="都道府県を選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availablePrefectures.map((pref) => (
-                      <SelectItem key={pref} value={pref}>{pref}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+                          <SelectValue placeholder="都道府県を選択" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availablePrefectures.map((pref) => (
+                            <SelectItem key={pref} value={pref}>{pref}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
-            {/* 地区選択（任意） */}
-            {availableDistricts.length > 0 && (
-              <div>
+                  {/* 地区選択（任意） */}
+                  {availableDistricts.length > 0 && (
+                    <div>
                 <Label>エリア（任意）</Label>
-                <Select value={editForm.district} onValueChange={(value) => setEditForm({ ...editForm, district: value })}>
+                      <Select value={editForm.district} onValueChange={(value) => setEditForm({ ...editForm, district: value })}>
                   <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="エリアを選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableDistricts.map((dist) => (
-                      <SelectItem key={dist} value={dist}>{dist}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+                          <SelectValue placeholder="エリアを選択" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableDistricts.map((dist) => (
+                            <SelectItem key={dist} value={dist}>{dist}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
-            {/* 出身チーム選択 */}
-            <div>
+                  {/* 出身チーム選択 */}
+                  <div>
               <Label>出身チーム（複数選択可）</Label>
 
-              {/* 選択済みチーム */}
-              {editForm.teams.length > 0 && (
+                    {/* 選択済みチーム */}
+                    {editForm.teams.length > 0 && (
                 <div className="mb-3 flex flex-wrap gap-2 mt-2">
-                  {editForm.teams.map((team) => (
-                    <div key={team} className="bg-gray-100 px-3 py-1 rounded-full flex items-center gap-2">
-                      <span className="text-sm">{team}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveTeam(team)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <XCircle className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* チーム検索 */}
-              <div className="flex gap-2 mb-3 mt-2">
-                <Input
-                  placeholder="チーム名を検索..."
-                  value={teamSearchTerm}
-                  onChange={(e) => setTeamSearchTerm(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      handleTeamSearch()
-                    }
-                  }}
-                />
-                <Button
-                  type="button"
-                  onClick={handleTeamSearch}
-                  disabled={isSearchingTeams}
-                  size="sm"
-                >
-                  <Search className="w-4 h-4" />
-                </Button>
-              </div>
-
-              {/* 検索結果 */}
-              {teamSearchResults.length > 0 && (
-                <div className="mb-3 border rounded-md p-2 max-h-40 overflow-y-auto">
-                  {teamSearchResults.map((team) => (
-                    <div
-                      key={team.id}
-                      className="flex items-center justify-between p-2 hover:bg-gray-50 cursor-pointer rounded"
-                      onClick={() => handleAddTeam(team.name)}
-                    >
-                      <div>
-                        <p className="font-medium">{team.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {team.category && `${team.category} / `}
-                          {team.prefecture || team.region}
-                        </p>
+                        {editForm.teams.map((team) => (
+                          <div key={team} className="bg-gray-100 px-3 py-1 rounded-full flex items-center gap-2">
+                            <span className="text-sm">{team}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveTeam(team)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
                       </div>
-                      <Plus className="w-4 h-4 text-green-500" />
+                    )}
+
+                    {/* チーム検索 */}
+              <div className="flex gap-2 mb-3 mt-2">
+                      <Input
+                        placeholder="チーム名を検索..."
+                        value={teamSearchTerm}
+                        onChange={(e) => setTeamSearchTerm(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            handleTeamSearch()
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleTeamSearch}
+                        disabled={isSearchingTeams}
+                        size="sm"
+                      >
+                        <Search className="w-4 h-4" />
+                      </Button>
                     </div>
-                  ))}
-                </div>
-              )}
 
-              {/* その他のチーム手入力 */}
+                    {/* 検索結果 */}
+                    {teamSearchResults.length > 0 && (
+                      <div className="mb-3 border rounded-md p-2 max-h-40 overflow-y-auto">
+                        {teamSearchResults.map((team) => (
+                          <div
+                            key={team.id}
+                            className="flex items-center justify-between p-2 hover:bg-gray-50 cursor-pointer rounded"
+                            onClick={() => handleAddTeam(team.name)}
+                          >
+                            <div>
+                              <p className="font-medium">{team.name}</p>
+                              <p className="text-xs text-gray-500">
+                                {team.category && `${team.category} / `}
+                                {team.prefecture || team.region}
+                              </p>
+                            </div>
+                            <Plus className="w-4 h-4 text-green-500" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* その他のチーム手入力 */}
               <div className="flex gap-2 mt-2">
-                <Input
-                  placeholder="その他のチーム名を入力..."
-                  value={otherTeamInput}
-                  onChange={(e) => setOtherTeamInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      handleAddOtherTeam()
-                    }
-                  }}
-                />
-                <Button
-                  type="button"
-                  onClick={handleAddOtherTeam}
-                  disabled={!otherTeamInput.trim()}
-                  size="sm"
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
+                      <Input
+                        placeholder="その他のチーム名を入力..."
+                        value={otherTeamInput}
+                        onChange={(e) => setOtherTeamInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            handleAddOtherTeam()
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleAddOtherTeam}
+                        disabled={!otherTeamInput.trim()}
+                        size="sm"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
 
-            {/* プライバシー設定 */}
-            <div className="space-y-2 pt-4 border-t">
+                  {/* プライバシー設定 */}
+                  <div className="space-y-2 pt-4 border-t">
               <Label>公開設定</Label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="isEmailPublic"
-                  checked={editForm.isEmailPublic}
-                  onChange={(e) => setEditForm({ ...editForm, isEmailPublic: e.target.checked })}
-                  className="rounded"
-                />
-                <label htmlFor="isEmailPublic" className="text-sm">メールアドレスを公開する</label>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="isRegistrationDatePublic"
-                  checked={editForm.isRegistrationDatePublic}
-                  onChange={(e) => setEditForm({ ...editForm, isRegistrationDatePublic: e.target.checked })}
-                  className="rounded"
-                />
-                <label htmlFor="isRegistrationDatePublic" className="text-sm">登録日を公開する</label>
-              </div>
-            </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="isEmailPublic"
+                        checked={editForm.isEmailPublic}
+                        onChange={(e) => setEditForm({ ...editForm, isEmailPublic: e.target.checked })}
+                        className="rounded"
+                      />
+                      <label htmlFor="isEmailPublic" className="text-sm">メールアドレスを公開する</label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="isRegistrationDatePublic"
+                        checked={editForm.isRegistrationDatePublic}
+                        onChange={(e) => setEditForm({ ...editForm, isRegistrationDatePublic: e.target.checked })}
+                        className="rounded"
+                      />
+                      <label htmlFor="isRegistrationDatePublic" className="text-sm">登録日を公開する</label>
+                    </div>
+                  </div>
 
             {/* Instagram URL */}
             <div>
@@ -1575,29 +1688,29 @@ export default function ProfilePage() {
                 id="instagramUrl"
                 value={editForm.instagramUrl}
                 onChange={(e) => setEditForm({ ...editForm, instagramUrl: e.target.value })}
-                placeholder="https://instagram.com/username または @username"
+                placeholder="プロフィールURLを入れてください"
                 className="mt-1"
               />
             </div>
 
             {/* 保存・キャンセルボタン */}
             <div className="flex gap-2 pt-4 border-t">
-              <Button
-                onClick={handleSave}
-                disabled={isLoading}
+                  <Button
+                    onClick={handleSave}
+                    disabled={isLoading}
                 className="flex-1"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                保存
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleCancel}
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    保存
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleCancel}
                 className="flex-1"
-              >
-                <X className="w-4 h-4 mr-2" />
-                キャンセル
-              </Button>
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    キャンセル
+                  </Button>
             </div>
           </div>
         </DialogContent>

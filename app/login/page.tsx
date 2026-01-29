@@ -81,6 +81,35 @@ export default function LoginPage() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
 
   // ページ読み込み時にログイン状態をチェック
+  // クッキーからメアドとパスワードを読み込む
+  useEffect(() => {
+    const savedEmail = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('savedEmail='))
+      ?.split('=')[1]
+    const savedPassword = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('savedPassword='))
+      ?.split('=')[1]
+    
+    if (savedEmail) {
+      try {
+        setEmail(decodeURIComponent(savedEmail))
+      } catch (e) {
+        console.error('Failed to decode saved email:', e)
+      }
+    }
+    if (savedPassword) {
+      try {
+        // パスワードはBase64でエンコードされているのでデコード
+        const decodedPassword = atob(decodeURIComponent(savedPassword))
+        setPassword(decodedPassword)
+      } catch (e) {
+        console.error('Failed to decode saved password:', e)
+      }
+    }
+  }, [])
+
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
@@ -304,7 +333,19 @@ export default function LoginPage() {
         // ただし、middleware.tsがJWTをチェックするため、リダイレクト後に再度ログインページに戻る可能性がある
       }
 
-      // 4) リダイレクト実行
+      // 4) メアドとパスワードをクッキーに保存（30日間）
+      const expiresDate = new Date()
+      expiresDate.setDate(expiresDate.getDate() + 30)
+      const expiresString = expiresDate.toUTCString()
+      
+      // メアドをクッキーに保存
+      document.cookie = `savedEmail=${encodeURIComponent(userEmail)}; expires=${expiresString}; path=/; SameSite=Lax`
+      
+      // パスワードをBase64でエンコードしてクッキーに保存（簡易的な暗号化）
+      const encodedPassword = btoa(password)
+      document.cookie = `savedPassword=${encodeURIComponent(encodedPassword)}; expires=${expiresString}; path=/; SameSite=Lax`
+
+      // 5) リダイレクト実行
       console.log('Redirecting to home page...')
       // window.location.hrefを使用してページ全体をリロード
       // これにより、CognitoセッションとJWT Cookieが完全に確立された状態でトップページが読み込まれる

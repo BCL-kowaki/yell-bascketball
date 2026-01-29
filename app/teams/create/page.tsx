@@ -422,7 +422,7 @@ export default function CreateTeamPage() {
                     type="text"
                     value={formData.instagramUrl}
                     onChange={handleInputChange}
-                    placeholder="https://instagram.com/username または @username"
+                    placeholder="プロフィールURLを入れてください"
                     className="bg-white"
                     disabled={isSubmitting}
                   />

@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import {
   ChevronLeft,
+  ChevronRight,
   Globe,
   Users,
   Calendar,
@@ -50,9 +51,11 @@ import {
   MoreHorizontal,
   Trash2,
   Search,
-  Plus
+  Plus,
+  Trophy,
+  Instagram
 } from "lucide-react"
-import { getTeam, getCurrentUserEmail, updateTeam, type DbTeam, getPostsByTeam, createPost, type DbPost, toggleFavoriteTeam, checkFavoriteTeam, getUserByEmail, deletePost, toggleLike as toggleDbLike, addComment as addDbComment, getCommentsByPost, updatePostCounts, checkLikeStatus, searchUsers, type DbUser } from "@/lib/api"
+import { getTeam, getCurrentUserEmail, updateTeam, type DbTeam, getPostsByTeam, createPost, type DbPost, toggleFavoriteTeam, checkFavoriteTeam, getUserByEmail, deletePost, toggleLike as toggleDbLike, addComment as addDbComment, getCommentsByPost, updatePostCounts, checkLikeStatus, searchUsers, getTeamTournaments, type DbUser, type DbTournamentTeam, type DbTournament } from "@/lib/api"
 import { uploadImageToS3, uploadPdfToS3, uploadVideoToS3, refreshS3Url } from "@/lib/storage"
 
 // PDF表示コンポーネント（トップページと同じ）
@@ -178,6 +181,10 @@ export default function TeamDetailPage() {
   const [isLoadingModalComments, setIsLoadingModalComments] = useState(false)
   const [teamManagers, setTeamManagers] = useState<Array<{ email: string; name: string; avatar: string }>>([])
   
+  // 参加大会関連
+  const [participatingTournaments, setParticipatingTournaments] = useState<(DbTournamentTeam & { tournament?: DbTournament | null })[]>([])
+  const [isLoadingTournaments, setIsLoadingTournaments] = useState(false)
+  
   // チーム管理者編集関連
   const [editorSearchTerm, setEditorSearchTerm] = useState("")
   const [editorSearchResults, setEditorSearchResults] = useState<DbUser[]>([])
@@ -202,6 +209,9 @@ export default function TeamDetailPage() {
   useEffect(() => {
     loadTeamData()
     loadCurrentUser()
+    if (typeof params.id === 'string') {
+      loadParticipatingTournaments()
+    }
   }, [params.id])
 
   useEffect(() => {
@@ -266,6 +276,52 @@ export default function TeamDetailPage() {
       }
     } catch (error) {
       console.error("Failed to load current user:", error)
+    }
+  }
+
+  async function loadParticipatingTournaments() {
+    if (!params.id || typeof params.id !== 'string') return
+    
+    try {
+      setIsLoadingTournaments(true)
+      const tournaments = await getTeamTournaments(params.id)
+      
+      // 大会の画像URLを更新
+      const tournamentsWithRefreshedImages = await Promise.all(
+        tournaments.map(async (tt) => {
+          if (tt.tournament) {
+            const updatedTournament = { ...tt.tournament }
+            
+            // アイコン画像のURLを更新
+            if (updatedTournament.iconUrl && !updatedTournament.iconUrl.startsWith('data:') && !updatedTournament.iconUrl.startsWith('blob:')) {
+              try {
+                updatedTournament.iconUrl = await refreshS3Url(updatedTournament.iconUrl, true) || updatedTournament.iconUrl
+              } catch (error) {
+                console.error('Failed to refresh icon URL:', error)
+              }
+            }
+            
+            // カバー画像のURLを更新
+            if (updatedTournament.coverImage && !updatedTournament.coverImage.startsWith('data:') && !updatedTournament.coverImage.startsWith('blob:')) {
+              try {
+                updatedTournament.coverImage = await refreshS3Url(updatedTournament.coverImage, true) || updatedTournament.coverImage
+              } catch (error) {
+                console.error('Failed to refresh cover image URL:', error)
+              }
+            }
+            
+            return { ...tt, tournament: updatedTournament }
+          }
+          return tt
+        })
+      )
+      
+      setParticipatingTournaments(tournamentsWithRefreshedImages)
+    } catch (error) {
+      console.error('Failed to load participating tournaments:', error)
+      setParticipatingTournaments([])
+    } finally {
+      setIsLoadingTournaments(false)
     }
   }
 
@@ -534,7 +590,6 @@ export default function TeamDetailPage() {
         headcount: editedTeam.headcount,
         category: editedTeam.category,
         description: editedTeam.description,
-        website: editedTeam.website,
         instagramUrl: editedTeam.instagramUrl,
         logoUrl: logoUrl || undefined,
         coverImageUrl: coverImageUrl || undefined,
@@ -1105,7 +1160,7 @@ export default function TeamDetailPage() {
             <div className="absolute left-0 -bottom-0">
             <div className="relative">
               <Avatar className="w-24 h-24 md:w-32 md:h-32 border-4 border-card">
-                <AvatarImage src={team.logoUrl || undefined} alt={team.name} />
+                <AvatarImage src={team.logoUrl || undefined} alt={team.name} className="object-contain" />
                 <AvatarFallback className="text-2xl bg-gradient-to-br from-orange-500 to-red-500 text-white font-bold">
                   {(team.shortName || team.name).slice(0, 2)}
                 </AvatarFallback>
@@ -1174,6 +1229,44 @@ export default function TeamDetailPage() {
                   </div>
                 )}
               </div>
+
+              {/* インスタグラムリンク */}
+              {team.instagramUrl && (() => {
+                const getInstagramAccountId = (url: string): string => {
+                  if (!url) return ''
+                  // @を削除
+                  let accountId = url.replace(/^@/, '')
+                  // URLからアカウントIDを抽出
+                  const match = accountId.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^\/\?]+)/)
+                  if (match) {
+                    accountId = match[1]
+                  }
+                  // スラッシュやクエリパラメータを削除
+                  accountId = accountId.split('/')[0].split('?')[0]
+                  return accountId
+                }
+                const accountId = getInstagramAccountId(team.instagramUrl)
+                const instagramUrl = team.instagramUrl.startsWith('http') ? team.instagramUrl : `https://instagram.com/${accountId}`
+                return (
+                  <div className="mb-4">
+                    <a
+                      href={instagramUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 transition-colors"
+                      style={{
+                        background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text'
+                      }}
+                    >
+                      <Instagram className="w-5 h-5" style={{ color: '#E4405F' }} />
+                      <span className="text-sm font-medium">{accountId}</span>
+                    </a>
+                  </div>
+                )
+              })()}
             </div>
 
             <div className="flex gap-2 w-full md:w-auto">
@@ -1212,10 +1305,10 @@ export default function TeamDetailPage() {
                 写真
               </TabsTrigger>
               <TabsTrigger 
-                value="messages"
+                value="tournaments"
                 className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
               >
-                メッセージ
+                参加大会
               </TabsTrigger>
             </TabsList>
           </div>
@@ -1513,8 +1606,8 @@ export default function TeamDetailPage() {
                             {post.pdfUrl && (
                               <div className="mb-6">
                                 <PdfViewer pdfUrl={post.pdfUrl} pdfName={post.pdfName || undefined} />
-                              </div>
-                            )}
+                                  </div>
+                                )}
                             {!post.pdfUrl && post.pdfName && (
                               <div className="mb-6 p-4 rounded-lg border border-yellow-200 bg-yellow-50">
                                 <div className="flex items-center gap-2 text-yellow-800">
@@ -1707,10 +1800,10 @@ export default function TeamDetailPage() {
                       </div>
 
                       {availablePrefectures.length > 0 && (
-                        <div>
-                          <Label htmlFor="prefecture">都道府県</Label>
+                      <div>
+                        <Label htmlFor="prefecture">都道府県</Label>
                           <Select
-                            value={editedTeam.prefecture || ''}
+                          value={editedTeam.prefecture || ''}
                             onValueChange={(value) => handleInputChange('prefecture', value)}
                           >
                             <SelectTrigger>
@@ -1722,7 +1815,7 @@ export default function TeamDetailPage() {
                               ))}
                             </SelectContent>
                           </Select>
-                        </div>
+                      </div>
                       )}
 
 
@@ -1737,24 +1830,13 @@ export default function TeamDetailPage() {
                       </div>
 
                       <div>
-                        <Label htmlFor="website">ウェブサイト</Label>
-                        <Input
-                          id="website"
-                          type="url"
-                          value={editedTeam.website || ''}
-                          onChange={(e) => handleInputChange('website', e.target.value)}
-                          placeholder="https://"
-                        />
-                      </div>
-
-                      <div>
                         <Label htmlFor="instagramUrl">Instagram URL</Label>
                         <Input
                           id="instagramUrl"
                           type="text"
                           value={editedTeam.instagramUrl || ''}
                           onChange={(e) => handleInputChange('instagramUrl', e.target.value)}
-                          placeholder="https://instagram.com/username または @username"
+                          placeholder="プロフィールURLを入れてください"
                         />
                       </div>
 
@@ -1998,35 +2080,42 @@ export default function TeamDetailPage() {
                         </div>
                       )}
 
-                      {team.website && (
-                        <div>
-                          <h4 className="font-medium mb-2">ウェブサイト</h4>
-                          <a
-                            href={team.website}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-orange-500 hover:text-orange-600 underline break-all"
-                          >
-                            {team.website}
-                          </a>
-                        </div>
-                      )}
+                      {team.instagramUrl && (() => {
+                        const getInstagramAccountId = (url: string): string => {
+                          if (!url) return ''
+                          let accountId = url.replace(/^@/, '')
+                          const match = accountId.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^\/\?]+)/)
+                          if (match) {
+                            accountId = match[1]
+                          }
+                          accountId = accountId.split('/')[0].split('?')[0]
+                          return accountId
+                        }
+                        const accountId = getInstagramAccountId(team.instagramUrl)
+                        const instagramUrl = team.instagramUrl.startsWith('http') ? team.instagramUrl : `https://instagram.com/${accountId}`
+                        return (
+                          <div>
+                            <h4 className="font-medium mb-2">Instagram</h4>
+                            <a
+                              href={instagramUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 transition-colors"
+                              style={{
+                                background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                backgroundClip: 'text'
+                              }}
+                            >
+                              <Instagram className="w-5 h-5" style={{ color: '#E4405F' }} />
+                              <span className="break-all">{accountId}</span>
+                            </a>
+                          </div>
+                        )
+                      })()}
 
-                      {team.instagramUrl && (
                         <div>
-                          <h4 className="font-medium mb-2">Instagram</h4>
-                          <a
-                            href={team.instagramUrl.startsWith('http') ? team.instagramUrl : `https://instagram.com/${team.instagramUrl.replace(/^@/, '')}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-orange-500 hover:text-orange-600 underline break-all"
-                          >
-                            {team.instagramUrl}
-                          </a>
-                        </div>
-                      )}
-
-                      <div>
                         <h4 className="font-medium mb-2">チーム管理者</h4>
                         <div className="space-y-2">
                           {teamManagers.length > 0 ? (
@@ -2089,22 +2178,100 @@ export default function TeamDetailPage() {
               </Card>
             </TabsContent>
 
-            {/* メッセージタブ */}
-            <TabsContent value="messages" className="mt-2">
-              <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
-                <CardHeader>
-                  <h3 className="font-semibold text-lg">チームへのメッセージ</h3>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-12">
-                    <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <p className="text-muted-foreground">メッセージ機能は準備中です</p>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      チームへのお問い合わせやメッセージを送信できるようになります
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+            {/* 参加大会タブ */}
+            <TabsContent value="tournaments" className="mt-2">
+              {isLoadingTournaments ? (
+                <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+                  <CardContent className="py-12">
+                    <div className="text-center">
+                      <Loader2 className="w-8 h-8 animate-spin text-orange-500 mx-auto mb-4" />
+                      <p className="text-muted-foreground">参加大会を読み込み中...</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : participatingTournaments.length === 0 ? (
+                <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+                  <CardContent className="py-12">
+                    <div className="text-center">
+                      <Trophy className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <p className="text-muted-foreground">参加している大会はありません</p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        このチームが参加登録している大会がここに表示されます
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {participatingTournaments.map((tt) => {
+                    if (!tt.tournament) return null
+                    const tournament = tt.tournament
+                    return (
+                      <Link key={tt.id} href={`/tournaments/${tournament.id}`}>
+                        <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer group h-full overflow-hidden">
+                          {/* カバー画像 */}
+                          <div className="relative w-full h-32 overflow-hidden">
+                            {tournament.coverImage ? (
+                              <img
+                                src={tournament.coverImage}
+                                alt={tournament.name}
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none'
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-r from-orange-400 to-red-400 flex items-center justify-center">
+                                <Trophy className="w-12 h-12 text-white/50" />
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                          </div>
+
+                          <CardHeader className="pt-3 pb-3">
+                            <div className="flex items-center justify-between">
+                              <h3 className="text-lg font-bold text-gray-900 group-hover:text-orange-600 transition-colors line-clamp-2">
+                                {tournament.name}
+                              </h3>
+                              <ChevronRight className="w-5 h-5 text-gray-400 group-hover:translate-x-1 transition-transform flex-shrink-0" />
+                            </div>
+                          </CardHeader>
+
+                          <CardContent className="space-y-3">
+                            {tournament.category && (
+                              <Badge variant="secondary" className="text-xs">
+                                {tournament.category}
+                              </Badge>
+                            )}
+
+                            {tournament.regionBlock && (
+                              <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <MapPin className="w-4 h-4" />
+                                <span>{tournament.regionBlock}{tournament.prefecture && ` / ${tournament.prefecture}`}</span>
+                              </div>
+                            )}
+
+                            {tournament.description && (
+                              <p className="text-sm text-gray-600 line-clamp-2">
+                                {tournament.description}
+                              </p>
+                            )}
+
+                            {tt.participationYear && (
+                              <div className="pt-2 border-t border-gray-100">
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                  <Calendar className="w-3 h-3" />
+                                  <span>参加年: {tt.participationYear}</span>
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
             </TabsContent>
         </div>
       </div>
