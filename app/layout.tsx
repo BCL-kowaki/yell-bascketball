@@ -22,8 +22,8 @@ const sourceSans = Source_Sans_3({
 })
 
 export const metadata: Metadata = {
-  title: "SocialConnect - Connect with friends",
-  description: "A modern social networking app inspired by Facebook",
+  title: "YeLL Bascketball【公式】",
+  description: "YeLL Bascketball公式サイト - バスケットボールコミュニティ",
   generator: "v0.app",
 }
 
