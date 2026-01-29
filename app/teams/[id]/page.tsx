@@ -54,6 +54,87 @@ import {
 } from "lucide-react"
 import { getTeam, getCurrentUserEmail, updateTeam, type DbTeam, getPostsByTeam, createPost, type DbPost, toggleFavoriteTeam, checkFavoriteTeam, getUserByEmail, deletePost, toggleLike as toggleDbLike, addComment as addDbComment, getCommentsByPost, updatePostCounts, checkLikeStatus, searchUsers, type DbUser } from "@/lib/api"
 import { uploadImageToS3, uploadPdfToS3, uploadVideoToS3, refreshS3Url } from "@/lib/storage"
+
+// PDF表示コンポーネント（トップページと同じ）
+function PdfViewer({ pdfUrl, pdfName }: { pdfUrl: string; pdfName?: string }) {
+  const [refreshedUrl, setRefreshedUrl] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const loadPdf = async () => {
+      if (!pdfUrl) return
+      
+      // Base64データURLの場合はそのまま使用
+      if (pdfUrl.startsWith('data:')) {
+        setRefreshedUrl(pdfUrl)
+        setIsLoading(false)
+        return
+      }
+      
+      // S3のURLを更新（ダウンロードモードを使用）
+      try {
+        const newUrl = await refreshS3Url(pdfUrl, true) // ダウンロードモードを強制
+        setRefreshedUrl(newUrl || pdfUrl)
+      } catch (error) {
+        console.error('Failed to refresh PDF URL:', error)
+        setRefreshedUrl(pdfUrl) // エラー時は元のURLを使用
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    loadPdf()
+  }, [pdfUrl])
+
+  if (isLoading) {
+    return (
+      <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center" style={{ height: '500px' }}>
+        <div className="text-center text-gray-500">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
+          <p>PDFを読み込み中...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!refreshedUrl) {
+    return (
+      <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden bg-gray-50 p-4 text-center text-gray-500">
+        <p>PDFを読み込めませんでした</p>
+      </div>
+    )
+  }
+
+  // PDFを直接表示（Google Docs ViewerのCSP問題を回避）
+  return (
+    <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden">
+      <object
+        key={refreshedUrl} // URLが変更されたときに再読み込み
+        data={refreshedUrl}
+        type="application/pdf"
+        width="100%"
+        height="500px"
+        className="w-full"
+        style={{ minHeight: '500px' }}
+      >
+        {/* フォールバック: PDFが表示できない場合 */}
+        <div className="p-8 text-center bg-gray-50">
+          <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+          <p className="text-gray-600 mb-4">PDFを表示できませんでした</p>
+          <a
+            href={refreshedUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:underline inline-flex items-center gap-2 font-medium"
+          >
+            <FileText className="w-4 h-4" />
+            {pdfName || "PDFファイル"}を新しいタブで開く
+          </a>
+        </div>
+      </object>
+    </div>
+  )
+}
 import { useToast } from "@/hooks/use-toast"
 import { CATEGORIES, REGION_BLOCKS, PREFECTURES_BY_REGION, DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS } from "@/lib/regionData"
 
@@ -496,7 +577,39 @@ export default function TeamDetailPage() {
     setIsLoadingPosts(true)
     try {
       const teamPosts = await getPostsByTeam(params.id)
-      setPosts(teamPosts)
+      
+      // 投稿の画像とPDFのURLをリフレッシュ（トップページと同じ処理）
+      const postsWithRefreshedUrls = await Promise.all(
+        teamPosts.map(async (post) => {
+          let imageUrl = post.imageUrl ?? undefined
+          let pdfUrl = post.pdfUrl ?? undefined
+          
+          // S3のURLが期限切れの場合に新しいURLを生成
+          if (imageUrl && !imageUrl.startsWith('data:') && !imageUrl.startsWith('blob:')) {
+            try {
+              imageUrl = await refreshS3Url(imageUrl, true) || undefined
+            } catch (error) {
+              console.error('Failed to refresh image URL:', error)
+            }
+          }
+          
+          if (pdfUrl && !pdfUrl.startsWith('data:') && !pdfUrl.startsWith('blob:')) {
+            try {
+              pdfUrl = await refreshS3Url(pdfUrl, true) || undefined
+            } catch (error) {
+              console.error('Failed to refresh PDF URL:', error)
+            }
+          }
+          
+          return {
+            ...post,
+            imageUrl,
+            pdfUrl
+          }
+        })
+      )
+      
+      setPosts(postsWithRefreshedUrls)
       
       // 投稿者のユーザー情報を取得
       const userMap = new Map<string, { name: string; avatar: string }>()
@@ -1397,58 +1510,12 @@ export default function TeamDetailPage() {
                               </div>
                             )}
 
-                            {post.pdfUrl ? (
+                            {post.pdfUrl && (
                               <div className="mb-6">
-                                <div className="p-4 rounded-lg border border-gray-200 bg-gray-50 flex items-center gap-4">
-                                  <FileText className="w-8 h-8 text-red-500" />
-                                  <div className="flex-1">
-                                    <a
-                                      href={post.pdfUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-blue-600 hover:underline font-medium block mb-2"
-                                    >
-                                      {post.pdfName || "PDFファイル"}
-                                    </a>
-                                    <p className="text-sm text-gray-500">
-                                      PDFを表示するには、上記のリンクをクリックしてください
-                                    </p>
-                                  </div>
-                                </div>
-                                {post.pdfUrl.startsWith('data:') ? (
-                                  <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden">
-                                    <object
-                                      data={post.pdfUrl}
-                                      type="application/pdf"
-                                      width="100%"
-                                      height="500px"
-                                      className="w-full"
-                                    >
-                                      <div className="p-4 text-center text-gray-500">
-                                        <p>PDFを表示できませんでした。</p>
-                                        <a
-                                          href={post.pdfUrl}
-                                          download={post.pdfName || "document.pdf"}
-                                          className="text-blue-600 hover:underline mt-2 inline-block"
-                                        >
-                                          ダウンロードする
-                                        </a>
-                                      </div>
-                                    </object>
-                                  </div>
-                                ) : (
-                                  <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden">
-                                    <iframe
-                                      src={`https://docs.google.com/viewer?url=${encodeURIComponent(post.pdfUrl)}&embedded=true`}
-                                      width="100%"
-                                      height="500px"
-                                      className="w-full"
-                                      title={post.pdfName || "PDFファイル"}
-                                    ></iframe>
-                                  </div>
-                                )}
+                                <PdfViewer pdfUrl={post.pdfUrl} pdfName={post.pdfName || undefined} />
                               </div>
-                            ) : post.pdfName ? (
+                            )}
+                            {!post.pdfUrl && post.pdfName && (
                               <div className="mb-6 p-4 rounded-lg border border-yellow-200 bg-yellow-50">
                                 <div className="flex items-center gap-2 text-yellow-800">
                                   <FileText className="w-5 h-5" />
@@ -1456,7 +1523,7 @@ export default function TeamDetailPage() {
                                   <span className="text-sm text-yellow-600">（PDFのアップロードに失敗しました）</span>
                                 </div>
                               </div>
-                            ) : null}
+                            )}
 
                             {post.videoUrl && (
                               <div className="mb-6 rounded-lg overflow-hidden border border-gray-100">
