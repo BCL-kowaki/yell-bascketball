@@ -1722,8 +1722,8 @@ export default function TournamentDetailPage() {
                           ))}
                         </SelectContent>
                       </Select>
-                    </div>
-                  )}
+                      </div>
+                    )}
 
                   {availableDistricts.length > 0 && (
                     <div>
@@ -1754,7 +1754,7 @@ export default function TournamentDetailPage() {
                       placeholder="https://instagram.com/username または @username"
                       className="mt-1"
                     />
-                  </div>
+              </div>
 
                   {/* 大会管理者 */}
                   <div>
@@ -1795,18 +1795,18 @@ export default function TournamentDetailPage() {
                             }
                           }}
                         />
-                        <Button
+                <Button
                           type="button"
                           onClick={handleCoAdminSearch}
                           disabled={isSearchingCoAdmins}
-                          size="sm"
+                  size="sm"
                         >
                           {isSearchingCoAdmins ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
                           ) : (
                             "検索"
                           )}
-                        </Button>
+                </Button>
                       </div>
                     )}
 
@@ -1841,7 +1841,7 @@ export default function TournamentDetailPage() {
                               }}
                             >
                               <Users className="w-4 h-4 text-green-500" />
-                            </Button>
+                        </Button>
                           </div>
                         ))}
                       </div>
@@ -1889,8 +1889,8 @@ export default function TournamentDetailPage() {
                               }}
                             >
                               <X className="w-4 h-4" />
-                </Button>
-                          </div>
+                        </Button>
+                      </div>
                         )}
                       </div>
                     </div>
@@ -1915,7 +1915,7 @@ export default function TournamentDetailPage() {
                         >
                           <ImageIcon className="w-4 h-4 mr-2" />
                           カバー画像を選択
-                        </Button>
+                      </Button>
                         {coverImagePreview && (
                           <div className="relative">
                             <img
@@ -1975,7 +1975,7 @@ export default function TournamentDetailPage() {
               {/* 大会管理者 */}
               <div className="mt-4 pt-4">
                 <p className="text-sm font-medium mb-2 text-gray-700">大会運営者:</p>
-                <div className="space-y-2">
+                  <div className="space-y-2">
                   {tournamentManagers.length > 0 ? (
                     tournamentManagers.map((manager, index) => (
                       <Link 
@@ -1991,13 +1991,13 @@ export default function TournamentDetailPage() {
                         </Avatar>
                         <div>
                           <p className="font-medium text-sm">{manager.name}</p>
-                        </div>
+                      </div>
                       </Link>
                     ))
                   ) : (
                     <p className="text-muted-foreground text-sm">大会管理者が登録されていません</p>
                   )}
-                </div>
+                  </div>
               </div>
 
                 {/* Instagram URL */}
@@ -2012,8 +2012,8 @@ export default function TournamentDetailPage() {
                     >
                       {tournament.instagramUrl}
                     </a>
-                  </div>
-                )}
+                </div>
+              )}
               </div>
             </div>
 
@@ -2093,8 +2093,8 @@ export default function TournamentDetailPage() {
                   </div>
               </div>
 
-        <div className="max-w-6xl pb-20">
-          <div className="w-full max-w-[680px] mx-auto px-0 overflow-hidden box-border">
+        <div className="pb-20">
+          <div className="w-full max-w-[680px] mx-auto overflow-hidden box-border">
             {/* タイムラインタブ */}
             <TabsContent value="timeline" className="mt-2 space-y-2 w-full overflow-hidden box-border">
               {/* 投稿作成カード - トップページと同じUI */}

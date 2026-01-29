@@ -1315,8 +1315,8 @@ export default function TeamDetailPage() {
         </div>
       </div>
 
-      <div className="max-w-6xl pb-20">
-        <div className="w-full max-w-[680px] mx-auto px-0 overflow-hidden box-border">
+      <div className="max-w-6xl mx-auto pb-20">
+        <div className="w-full max-w-[680px] mx-auto px-4 overflow-hidden box-border">
 
             {/* タイムラインタブ */}
             <TabsContent value="timeline" className="mt-2 space-y-2 w-full overflow-hidden box-border">
@@ -2094,12 +2094,12 @@ export default function TeamDetailPage() {
                         const accountId = getInstagramAccountId(team.instagramUrl)
                         const instagramUrl = team.instagramUrl.startsWith('http') ? team.instagramUrl : `https://instagram.com/${accountId}`
                         return (
-                          <div>
+                        <div>
                             <h4 className="font-medium mb-2">Instagram</h4>
-                            <a
+                          <a
                               href={instagramUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            target="_blank"
+                            rel="noopener noreferrer"
                               className="flex items-center gap-2 transition-colors"
                               style={{
                                 background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
@@ -2110,12 +2110,12 @@ export default function TeamDetailPage() {
                             >
                               <Instagram className="w-5 h-5" style={{ color: '#E4405F' }} />
                               <span className="break-all">{accountId}</span>
-                            </a>
-                          </div>
+                          </a>
+                        </div>
                         )
                       })()}
 
-                        <div>
+                      <div>
                         <h4 className="font-medium mb-2">チーム管理者</h4>
                         <div className="space-y-2">
                           {teamManagers.length > 0 ? (
@@ -2181,7 +2181,7 @@ export default function TeamDetailPage() {
             {/* 参加大会タブ */}
             <TabsContent value="tournaments" className="mt-2">
               {isLoadingTournaments ? (
-                <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+              <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
                   <CardContent className="py-12">
                     <div className="text-center">
                       <Loader2 className="w-8 h-8 animate-spin text-orange-500 mx-auto mb-4" />
@@ -2195,12 +2195,12 @@ export default function TeamDetailPage() {
                     <div className="text-center">
                       <Trophy className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                       <p className="text-muted-foreground">参加している大会はありません</p>
-                      <p className="text-sm text-muted-foreground mt-2">
+                    <p className="text-sm text-muted-foreground mt-2">
                         このチームが参加登録している大会がここに表示されます
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {participatingTournaments.map((tt) => {

@@ -221,19 +221,19 @@ export default function UserPage() {
               }
             }
             
-            return {
+        return {
               id: dbComment.id,
-              user: {
+          user: {
                 name: userName,
                 avatar: userAvatar,
                 email: dbComment.authorEmail,
               },
               content: dbComment.content,
               timestamp: new Date(dbComment.createdAt).toLocaleDateString('ja-JP', {
-                year: 'numeric',
+            year: 'numeric', 
                 month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
+            day: 'numeric',
+            hour: '2-digit',
                 minute: '2-digit',
               }),
               likesCount: 0,
@@ -583,8 +583,8 @@ export default function UserPage() {
                     <span className="font-semibold text-foreground">{followCounts.followers}</span>
                       <span className="ml-1">フォロワー</span>
                   </Link>
+                  </div>
                 </div>
-              </div>
 
               {/* お気に入りチーム・大会 */}
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -691,12 +691,12 @@ export default function UserPage() {
                 </TabsTrigger>
               </TabsList>
             </Tabs>
-          </div>
-        </div>
-      </div>
+                            </div>
+                        </div>
+                        </div>
 
-      <div className="max-w-6xl pb-20">
-        <div className="w-full max-w-[680px] mx-auto px-0 overflow-hidden box-border">
+      <div className="max-w-6xl mx-auto pb-20">
+        <div className="w-full max-w-[680px] mx-auto px-4 overflow-hidden box-border">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsContent value="timeline" className="mt-2 space-y-2 w-full overflow-hidden box-border">
                 {/* 投稿一覧セクション */}
@@ -709,8 +709,8 @@ export default function UserPage() {
                     <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
                       <CardContent className="p-8 text-center">
                         <p className="text-muted-foreground">まだ投稿がありません</p>
-                      </CardContent>
-                    </Card>
+                </CardContent>
+              </Card>
                   ) : (
                     <div className="space-y-2">
                       {userPosts.map((post) => {
@@ -752,12 +752,12 @@ export default function UserPage() {
                         )
                       })}
                     </div>
-                  )}
-                </div>
-              </TabsContent>
+          )}
+            </div>
+          </TabsContent>
 
               <TabsContent value="about" className="mt-2">
-                <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+            <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
               <CardHeader>
                 <h3 className="font-semibold text-lg">基本情報</h3>
               </CardHeader>
@@ -859,15 +859,15 @@ export default function UserPage() {
           </TabsContent>
 
             <TabsContent value="photos" className="mt-2 space-y-2 w-full overflow-hidden box-border">
-              <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
-                <CardHeader>
+            <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+              <CardHeader>
                   <h3 className="font-semibold text-lg">写真</h3>
-                </CardHeader>
-                <CardContent>
+              </CardHeader>
+              <CardContent>
                   {isLoadingPosts ? (
                     <div className="text-center py-12">
-                      <p className="text-muted-foreground">読み込み中...</p>
-                    </div>
+                    <p className="text-muted-foreground">読み込み中...</p>
+                  </div>
                   ) : (() => {
                     // 画像を含む投稿をフィルタリング
                     const photoPosts = userPosts.filter(post => post.imageUrl)
@@ -876,7 +876,7 @@ export default function UserPage() {
                       return (
                         <div className="text-center py-12">
                           <p className="text-muted-foreground">まだ写真がありません</p>
-                        </div>
+                  </div>
                       )
                     }
 
@@ -912,18 +912,18 @@ export default function UserPage() {
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                               <div className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-sm font-medium">
                                 {post.likesCount || 0} <Heart className="w-4 h-4 inline" fill="currentColor" />
-                              </div>
+                          </div>
                             </div>
                           </div>
-                        ))}
-                      </div>
+                    ))}
+                  </div>
                     )
                   })()}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+              </div>
       </div>
     </Layout>
   )
