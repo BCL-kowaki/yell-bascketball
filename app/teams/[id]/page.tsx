@@ -405,12 +405,32 @@ export default function TeamDetailPage() {
   async function handleEditClick() {
     setEditedTeam(team || {})
     setIsEditing(true)
-    // 画像プレビューを設定
+    // 画像プレビューを設定（S3 URLをリフレッシュ）
     if (team?.logoUrl) {
-      setLogoPreview(team.logoUrl)
+      if (team.logoUrl.startsWith('data:') || team.logoUrl.startsWith('blob:') || team.logoUrl.startsWith('http')) {
+        setLogoPreview(team.logoUrl)
+      } else {
+        try {
+          const refreshedLogo = await refreshS3Url(team.logoUrl, true)
+          setLogoPreview(refreshedLogo || team.logoUrl)
+        } catch (error) {
+          console.error('Failed to refresh logo URL for edit:', error)
+          setLogoPreview(team.logoUrl)
+        }
+      }
     }
     if (team?.coverImageUrl) {
-      setCoverImagePreview(team.coverImageUrl)
+      if (team.coverImageUrl.startsWith('data:') || team.coverImageUrl.startsWith('blob:') || team.coverImageUrl.startsWith('http')) {
+        setCoverImagePreview(team.coverImageUrl)
+      } else {
+        try {
+          const refreshedCover = await refreshS3Url(team.coverImageUrl, true)
+          setCoverImagePreview(refreshedCover || team.coverImageUrl)
+        } catch (error) {
+          console.error('Failed to refresh cover image URL for edit:', error)
+          setCoverImagePreview(team.coverImageUrl)
+        }
+      }
     }
     // 地域ブロックと都道府県に基づいてリストを設定
     if (team?.region && PREFECTURES_BY_REGION[team.region]) {
@@ -1160,7 +1180,7 @@ export default function TeamDetailPage() {
             <div className="absolute left-0 -bottom-0">
             <div className="relative">
               <Avatar className="w-24 h-24 md:w-32 md:h-32 border-4 border-card">
-                <AvatarImage src={team.logoUrl || undefined} alt={team.name} className="object-contain" />
+                <AvatarImage src={team.logoUrl || undefined} alt={team.name} className="object-cover object-center" />
                 <AvatarFallback className="text-2xl bg-gradient-to-br from-orange-500 to-red-500 text-white font-bold">
                   {(team.shortName || team.name).slice(0, 2)}
                 </AvatarFallback>
@@ -1315,8 +1335,8 @@ export default function TeamDetailPage() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto pb-20">
-        <div className="w-full max-w-[680px] mx-auto px-4 overflow-hidden box-border">
+      <div className="w-full max-w-6xl mx-auto pb-20 px-0">
+        <div className="w-full max-w-[680px] mx-auto px-0 overflow-hidden box-border">
 
             {/* タイムラインタブ */}
             <TabsContent value="timeline" className="mt-2 space-y-2 w-full overflow-hidden box-border">
@@ -1640,7 +1660,7 @@ export default function TeamDetailPage() {
                                 >
                                   <Heart className={`w-[26px] h-[26px] ${postLikedStates[post.id] ? "fill-current text-red-500" : "text-black"}`} />
                                 </Button>
-                                <span className="text-[15px] text-black font-medium">
+                                <span className="text-[12px] sm:text-[15px] text-black font-medium">
                                   いいね {post.likesCount > 0 && <span className="font-normal">({post.likesCount})</span>}
                                 </span>
                               </div>
@@ -1653,7 +1673,7 @@ export default function TeamDetailPage() {
                                 >
                                   <MessageCircle className="w-[30px] h-[30px] text-black" />
                                 </Button>
-                                <span className="text-[15px] text-black font-medium">
+                                <span className="text-[12px] sm:text-[15px] text-black font-medium">
                                   コメント <span className="font-normal">({post.commentsCount || 0})</span>
                                 </span>
                               </div>
@@ -1680,7 +1700,7 @@ export default function TeamDetailPage() {
                                 >
                                   <Share2 className="w-[30px] h-[30px] text-black" />
                                       </Button>
-                                <span className="text-[15px] text-black font-medium">
+                                <span className="text-[12px] sm:text-[15px] text-black font-medium">
                                   シェア
                                 </span>
                                     </div>
@@ -2181,7 +2201,7 @@ export default function TeamDetailPage() {
             {/* 参加大会タブ */}
             <TabsContent value="tournaments" className="mt-2">
               {isLoadingTournaments ? (
-              <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+              <Card className="w-full border-0 shadow-sm bg-white rounded-none sm:rounded-xl">
                   <CardContent className="py-12">
                     <div className="text-center">
                       <Loader2 className="w-8 h-8 animate-spin text-orange-500 mx-auto mb-4" />
@@ -2190,7 +2210,7 @@ export default function TeamDetailPage() {
                   </CardContent>
                 </Card>
               ) : participatingTournaments.length === 0 ? (
-                <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+                <Card className="w-full border-0 shadow-sm bg-white rounded-none sm:rounded-xl">
                   <CardContent className="py-12">
                     <div className="text-center">
                       <Trophy className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -2202,13 +2222,13 @@ export default function TeamDetailPage() {
                 </CardContent>
               </Card>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
                   {participatingTournaments.map((tt) => {
                     if (!tt.tournament) return null
                     const tournament = tt.tournament
                     return (
                       <Link key={tt.id} href={`/tournaments/${tournament.id}`}>
-                        <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer group h-full overflow-hidden">
+                        <Card className="border-0 shadow-sm sm:shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white sm:bg-white/90 sm:backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer group h-full overflow-hidden rounded-none sm:rounded-xl">
                           {/* カバー画像 */}
                           <div className="relative w-full h-32 overflow-hidden">
                             {tournament.coverImage ? (

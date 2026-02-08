@@ -447,6 +447,25 @@ export default function TournamentDetailPage() {
       }
 
       console.log('TournamentDetailPage: Setting tournament data:', tournamentData.name)
+
+      // カバー画像のURLを更新（S3キーの場合は署名付きURLに変換）
+      if (tournamentData.coverImage && !tournamentData.coverImage.startsWith('data:') && !tournamentData.coverImage.startsWith('blob:')) {
+        try {
+          tournamentData.coverImage = await refreshS3Url(tournamentData.coverImage, true) || tournamentData.coverImage
+        } catch (error) {
+          console.error('Failed to refresh cover image URL:', error)
+        }
+      }
+
+      // アイコンURLを更新（S3キーの場合は署名付きURLに変換）
+      if (tournamentData.iconUrl && !tournamentData.iconUrl.startsWith('data:') && !tournamentData.iconUrl.startsWith('blob:') && !tournamentData.iconUrl.startsWith('/placeholder')) {
+        try {
+          tournamentData.iconUrl = await refreshS3Url(tournamentData.iconUrl, true) || tournamentData.iconUrl
+        } catch (error) {
+          console.error('Failed to refresh icon URL:', error)
+        }
+      }
+
       setTournament(tournamentData)
 
       // 編集フォームを初期化
@@ -870,6 +889,36 @@ export default function TournamentDetailPage() {
       // 管理者のメールアドレスリストを作成
       const coAdminEmails = selectedCoAdmins.map(admin => admin.email)
 
+      // アイコン画像をアップロード
+      let iconUrl = tournament.iconUrl
+      if (iconFile) {
+        try {
+          iconUrl = await uploadImageToS3(iconFile, `tournaments/${tournamentId}/icon`)
+        } catch (error) {
+          console.error("Failed to upload icon:", error)
+          toast({
+            title: "警告",
+            description: "アイコンのアップロードに失敗しました",
+            variant: "destructive",
+          })
+        }
+      }
+
+      // カバー画像をアップロード
+      let coverImage = tournament.coverImage
+      if (coverImageFile) {
+        try {
+          coverImage = await uploadImageToS3(coverImageFile, `tournaments/${tournamentId}/cover`)
+        } catch (error) {
+          console.error("Failed to upload cover image:", error)
+          toast({
+            title: "警告",
+            description: "カバー画像のアップロードに失敗しました",
+            variant: "destructive",
+          })
+        }
+      }
+
       const updated = await updateTournament(tournamentId, {
         name: editForm.name,
         description: editForm.description,
@@ -880,13 +929,17 @@ export default function TournamentDetailPage() {
         prefecture: editForm.prefecture,
         district: editForm.district,
         instagramUrl: editForm.instagramUrl || null,
-        coAdminEmails: coAdminEmails.length > 0 ? coAdminEmails : null
+        coAdminEmails: coAdminEmails.length > 0 ? coAdminEmails : null,
+        iconUrl: iconUrl || null,
+        coverImage: coverImage || null,
       })
 
       setTournament(updated)
       setIsEditing(false)
+      setIconFile(null)
+      setCoverImageFile(null)
       
-      // 管理者リストを更新
+      // 管理者リストとS3 URL更新のために再読み込み
       await loadTournament()
       
       toast({
@@ -1503,9 +1556,8 @@ export default function TournamentDetailPage() {
   // 画像URLを正しく処理する関数
   const getCoverImageUrl = () => {
     if (tournament?.coverImage) {
-      if (tournament.coverImage.startsWith('data:') || tournament.coverImage.startsWith('http://') || tournament.coverImage.startsWith('https://')) {
-        return tournament.coverImage
-      }
+      // S3キー、data URL、http(s) URLすべてに対応
+      return tournament.coverImage
     }
     return null
   }
@@ -2000,20 +2052,40 @@ export default function TournamentDetailPage() {
                   </div>
               </div>
 
-                {/* Instagram URL */}
-                {tournament.instagramUrl && (
-                  <div className="mt-4 pt-4">
-                    <p className="text-sm font-medium mb-2 text-gray-700">Instagram</p>
-                    <a
-                      href={tournament.instagramUrl.startsWith('http') ? tournament.instagramUrl : `https://instagram.com/${tournament.instagramUrl.replace(/^@/, '')}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline text-sm"
-                    >
-                      {tournament.instagramUrl}
-                    </a>
-                </div>
-              )}
+                {/* Instagram */}
+                {tournament.instagramUrl && (() => {
+                  const getInstagramAccountId = (url: string): string => {
+                    if (!url) return ''
+                    let accountId = url.replace(/^@/, '')
+                    const match = accountId.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^\/\?]+)/)
+                    if (match) {
+                      accountId = match[1]
+                    }
+                    accountId = accountId.split('/')[0].split('?')[0]
+                    return accountId
+                  }
+                  const accountId = getInstagramAccountId(tournament.instagramUrl)
+                  const instagramUrl = tournament.instagramUrl.startsWith('http') ? tournament.instagramUrl : `https://instagram.com/${accountId}`
+                  return (
+                    <div className="mt-4 pt-4">
+                      <a
+                        href={instagramUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 transition-colors"
+                        style={{
+                          background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                          backgroundClip: 'text'
+                        }}
+                      >
+                        <Instagram className="w-5 h-5" style={{ color: '#E4405F' }} />
+                        <span className="text-sm font-medium">{accountId}</span>
+                      </a>
+                    </div>
+                  )
+                })()}
               </div>
             </div>
 
@@ -2063,7 +2135,7 @@ export default function TournamentDetailPage() {
 
         {/* タブメニュー */}
           <div className="mt-6 border-t border-border border-b border-border">
-            <TabsList className="grid w-full grid-cols-4 bg-transparent h-auto p-0 gap-0">
+            <TabsList className="grid w-full grid-cols-3 bg-transparent h-auto p-0 gap-0">
               <TabsTrigger 
                 value="timeline" 
                 className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
@@ -2082,19 +2154,14 @@ export default function TournamentDetailPage() {
               >
                 過去大会結果
               </TabsTrigger>
-              <TabsTrigger 
-                value="messages"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
-              >
-                メッセージ
-              </TabsTrigger>
+              
             </TabsList>
                     </div>
                   </div>
               </div>
 
-        <div className="pb-20">
-          <div className="w-full max-w-[680px] mx-auto overflow-hidden box-border">
+        <div className="pb-20 px-0">
+          <div className="w-full max-w-[680px] mx-auto px-0 overflow-hidden box-border">
             {/* タイムラインタブ */}
             <TabsContent value="timeline" className="mt-2 space-y-2 w-full overflow-hidden box-border">
               {/* 投稿作成カード - トップページと同じUI */}
@@ -2364,7 +2431,7 @@ export default function TournamentDetailPage() {
                             className="flex items-center gap-2 flex-1 justify-center py-2 hover:bg-gray-50 rounded-lg transition-colors"
                           >
                             <Heart className={`w-5 h-5 ${postLikedStates[post.id] ? "fill-current text-red-500" : "text-gray-600"}`} />
-                            <span className="text-sm text-gray-700">
+                            <span className="text-[12px] sm:text-sm text-gray-700">
                               いいね{(post.likesCount || 0) > 0 && ` (${post.likesCount})`}
                             </span>
                           </button>
@@ -2373,7 +2440,7 @@ export default function TournamentDetailPage() {
                             className="flex items-center gap-2 flex-1 justify-center py-2 hover:bg-gray-50 rounded-lg transition-colors"
                           >
                             <MessageCircle className="w-5 h-5 text-gray-600" />
-                            <span className="text-sm text-gray-700">
+                            <span className="text-[12px] sm:text-sm text-gray-700">
                               コメント ({post.commentsCount || 0})
                             </span>
                           </button>
@@ -2382,7 +2449,7 @@ export default function TournamentDetailPage() {
                             className="flex items-center gap-2 flex-1 justify-center py-2 hover:bg-gray-50 rounded-lg transition-colors"
                           >
                             <Share2 className="w-5 h-5 text-gray-600" />
-                            <span className="text-sm text-gray-700">
+                            <span className="text-[12px] sm:text-sm text-gray-700">
                               シェア
                                       </span>
                           </button>
@@ -2537,12 +2604,14 @@ export default function TournamentDetailPage() {
 
             {/* 過去大会結果タブ */}
             <TabsContent value="results" className="mt-2">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle>過去大会結果</CardTitle>
-                    {canEdit && (
-                      <Button onClick={() => {
+              <div className="space-y-3">
+                {/* ヘッダー部分 */}
+                <div className="flex items-center justify-between px-1 mb-2">
+                  <h3 className="font-bold text-base text-black">過去大会結果</h3>
+                  {canEdit && (
+                    <Button 
+                      className="bg-[#dc0000] hover:bg-[#B80000] text-white rounded-full px-4 h-9 text-sm"
+                      onClick={() => {
                         setEditingResult(null)
                         setResultForm({ title: "", content: "", ranking: [""], startDate: "", endDate: "", imageUrl: "", pdfUrl: "", pdfName: "" })
                         setResultImageFile(null)
@@ -2553,101 +2622,123 @@ export default function TournamentDetailPage() {
                         setRankingSearchResults({})
                         setSelectedRankingTeams({})
                         setShowAddResultDialog(true)
-                      }}>
-                        <Trophy className="w-4 h-4 mr-2" />
-                        結果を追加
-                      </Button>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {isLoadingResults ? (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground">読み込み中...</p>
-                    </div>
-                  ) : pastResults.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-8">過去の大会結果はまだ登録されていません</p>
-                  ) : (
-                    <div className="space-y-6">
-                      {pastResults.map((result) => (
-                        <Card key={result.id}>
-                          <CardHeader>
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <CardTitle className="text-lg">{result.title}</CardTitle>
-                                <p className="text-sm text-muted-foreground mt-1">{result.year}年</p>
-                              </div>
-                              {canEdit && (
-                                <div className="flex gap-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleEditResult(result)}
-                                  >
-                                    <Edit2 className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleDeleteResult(result.id)}
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              )}
-                            </div>
-                          </CardHeader>
-                          <CardContent>
-                            {(result.startDate || result.endDate) && (
-                              <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
-                                <Calendar className="w-4 h-4" />
-                                <span>
-                                  {result.startDate ? new Date(result.startDate).toLocaleDateString('ja-JP') : "未定"}
-                                  {result.endDate && ` 〜 ${new Date(result.endDate).toLocaleDateString('ja-JP')}`}
-                                </span>
-                              </div>
-                            )}
-                            <div className="whitespace-pre-wrap mb-4">{result.content}</div>
-                            {result.imageUrl && (
-                              <div className="mb-4 rounded-lg overflow-hidden border border-gray-100">
-                                <ImageWithRefresh imageUrl={result.imageUrl} />
-                              </div>
-                            )}
-                            {result.pdfUrl && (
-                              <div className="mb-4">
-                                <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 flex items-center gap-3">
-                                  <FileText className="w-6 h-6 text-red-500" />
-                                  <div className="flex-1">
-                                    <a
-                                      href={result.pdfUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-blue-600 hover:underline font-medium block"
-                                    >
-                                      {result.pdfName || "PDFファイル"}
-                                    </a>
-                                  </div>
-                                </div>
-                                <PdfViewer pdfUrl={result.pdfUrl} pdfName={result.pdfName} />
-                              </div>
-                            )}
-                            {result.ranking && result.ranking.length > 0 && (
-                              <div className="border-t pt-4">
-                                <p className="font-medium mb-2">順位:</p>
-                                <ol className="list-decimal list-inside space-y-1">
-                                  {result.ranking.map((rank, index) => (
-                                    <li key={index} className="text-muted-foreground">{rank}</li>
-                                  ))}
-                                </ol>
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
+                      }}
+                    >
+                      <Trophy className="w-4 h-4 mr-2" />
+                      結果を追加
+                    </Button>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+
+                {isLoadingResults ? (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">読み込み中...</p>
+                  </div>
+                ) : pastResults.length === 0 ? (
+                  <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none">
+                    <CardContent className="py-8">
+                      <p className="text-muted-foreground text-center">過去の大会結果はまだ登録されていません</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  pastResults.map((result) => (
+                    <Card key={result.id} className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-2">
+                      <CardHeader className="px-3 py-3 sm:px-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+                              <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-orange-500" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-bold text-sm sm:text-[15px] text-black mb-0.5 truncate">
+                                {result.title}
+                              </div>
+                              <div className="text-[11px] sm:text-xs text-gray-500">
+                                {result.year}年
+                                {(result.startDate || result.endDate) && (
+                                  <span className="ml-2">
+                                    {result.startDate ? new Date(result.startDate).toLocaleDateString('ja-JP') : "未定"}
+                                    {result.endDate && ` 〜 ${new Date(result.endDate).toLocaleDateString('ja-JP')}`}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          {canEdit && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full h-8 w-8 p-0">
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => handleEditResult(result)}
+                                  className="cursor-pointer"
+                                >
+                                  <Edit2 className="w-4 h-4 mr-2" />
+                                  編集
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteResult(result.id)}
+                                  className="cursor-pointer text-red-600 focus:text-red-600"
+                                >
+                                  <X className="w-4 h-4 mr-2" />
+                                  削除
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
+                      </CardHeader>
+                      <CardContent className="px-3 sm:px-4 pb-3">
+                        {result.content && (
+                          <p className="mb-3 text-black text-sm sm:text-[15px] leading-6 sm:leading-7 break-words whitespace-pre-wrap">{result.content}</p>
+                        )}
+
+                        {/* 画像 */}
+                        {result.imageUrl && (
+                          <div className="mb-4 rounded-lg overflow-hidden border border-gray-100">
+                            <ImageWithRefresh imageUrl={result.imageUrl} />
+                          </div>
+                        )}
+
+                        {/* PDF */}
+                        {result.pdfUrl && (
+                          <div className="mb-4">
+                            <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 flex items-center gap-3">
+                              <FileText className="w-6 h-6 text-red-500 flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <a
+                                  href={result.pdfUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:underline font-medium block truncate"
+                                >
+                                  {result.pdfName || "PDFファイル"}
+                                </a>
+                              </div>
+                            </div>
+                            <PdfViewer pdfUrl={result.pdfUrl} pdfName={result.pdfName} />
+                          </div>
+                        )}
+
+                        {/* 順位 */}
+                        {result.ranking && result.ranking.length > 0 && (
+                          <div className="border-t border-gray-100 pt-3 mt-2">
+                            <p className="font-bold text-sm text-black mb-2">順位</p>
+                            <ol className="list-decimal list-inside space-y-1">
+                              {result.ranking.map((rank, index) => (
+                                <li key={index} className="text-sm text-gray-700">{rank}</li>
+                              ))}
+                            </ol>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
 
               {/* 大会結果追加/編集ダイアログ */}
               <Dialog open={showAddResultDialog} onOpenChange={setShowAddResultDialog}>
@@ -2933,25 +3024,7 @@ export default function TournamentDetailPage() {
               </Dialog>
             </TabsContent>
 
-            {/* メッセージタブ */}
-            <TabsContent value="messages" className="mt-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>メッセージ</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {messages.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-8">メッセージはまだありません</p>
-                  ) : (
-                    <div className="space-y-4">
-                      {messages.map((message) => (
-                        <div key={message.id}>{message.content}</div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+            
         </div>
       </div>
       </Tabs>

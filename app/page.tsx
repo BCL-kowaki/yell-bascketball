@@ -1644,7 +1644,7 @@ export default function TimelinePage() {
                   >
                     <Heart className={`w-[26px] h-[26px] ${post.liked ? "fill-current text-red-500" : "text-black"}`} />
                   </Button>
-                  <span className="text-[15px] text-black font-medium">
+                  <span className="text-[12px] sm:text-[15px] text-black font-medium">
                     いいね {post.likes > 0 && <span className="font-normal">({post.likes})</span>}
                   </span>
                 </div>
@@ -1657,7 +1657,7 @@ export default function TimelinePage() {
                   >
                     <MessageCircle className="w-[30px] h-[30px] text-black" />
                   </Button>
-                  <span className="text-[15px] text-black font-medium">
+                  <span className="text-[12px] sm:text-[15px] text-black font-medium">
                     コメント <span className="font-normal">({post.comments || 0})</span>
                   </span>
                 </div>
@@ -1684,7 +1684,7 @@ export default function TimelinePage() {
                   >
                     <Share2 className="w-[30px] h-[30px] text-black" />
                   </Button>
-                  <span className="text-[15px] text-black font-medium">
+                  <span className="text-[12px] sm:text-[15px] text-black font-medium">
                     シェア
                   </span>
                 </div>

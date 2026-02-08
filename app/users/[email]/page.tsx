@@ -695,8 +695,8 @@ export default function UserPage() {
                         </div>
                         </div>
 
-      <div className="max-w-6xl mx-auto pb-20">
-        <div className="w-full max-w-[680px] mx-auto px-4 overflow-hidden box-border">
+      <div className="w-full max-w-6xl mx-auto pb-20 px-0">
+        <div className="w-full max-w-[680px] mx-auto px-0 overflow-hidden box-border">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsContent value="timeline" className="mt-2 space-y-2 w-full overflow-hidden box-border">
                 {/* 投稿一覧セクション */}

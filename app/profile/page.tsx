@@ -1084,8 +1084,8 @@ export default function ProfilePage() {
           </div>
         </div>
 
-      <div className="max-w-6xl mx-auto pb-20">
-        <div className="w-full max-w-[680px] mx-auto px-4 overflow-hidden box-border">
+      <div className="w-full max-w-6xl mx-auto pb-20 px-0">
+        <div className="w-full max-w-[680px] mx-auto px-0 overflow-hidden box-border">
           <TabsContent value="timeline" className="mt-2 space-y-2 w-full overflow-hidden box-border">
               {isLoadingPosts ? (
                 <div className="text-center py-12">
