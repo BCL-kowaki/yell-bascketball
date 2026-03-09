@@ -80,7 +80,7 @@ export function SidebarMenu({ isLoggedIn = false, currentUser }: SidebarMenuProp
                 <button
                   className={`flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 rounded-lg transition-all ${
                     isActive(item.href)
-                      ? "text-orange-600"
+                      ? "text-[#e84b8a]"
                       : "text-gray-500 hover:text-gray-900"
                   }`}
                 >
@@ -102,12 +102,12 @@ export function SidebarMenu({ isLoggedIn = false, currentUser }: SidebarMenuProp
           <div className="p-4 border-b border-gray-200/50">
             <Link href="/profile">
               <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
-                <Avatar className="w-10 h-10 border-2 border-orange-500">
+                <Avatar className="w-10 h-10 border-2 border-[#f06a4e]">
                   <AvatarImage 
                     src={currentUser.avatar || "/placeholder-user.jpg"} 
                     alt={currentUser.name || 'ユーザー'} 
                   />
-                  <AvatarFallback className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold text-sm">
+                  <AvatarFallback className="bg-brand-gradient text-white font-semibold text-sm">
                     {currentUser.name?.charAt(0)?.toUpperCase() || 
                      currentUser.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 
                      'U'}
@@ -139,7 +139,7 @@ export function SidebarMenu({ isLoggedIn = false, currentUser }: SidebarMenuProp
                     variant="ghost"
                     className={`w-full justify-start h-12 px-4 ${
                       isActive(item.href)
-                        ? "bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600"
+                        ? "bg-brand-gradient text-white hover:opacity-90"
                         : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                     }`}
                   >

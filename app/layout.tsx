@@ -41,6 +41,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja" className={`${playfairDisplay.variable} ${sourceSans.variable} antialiased overflow-x-hidden w-full max-w-full`} suppressHydrationWarning>
+      <head>
+        {/* ダークモード初期化（FOUC防止のためインラインスクリプト） */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            try {
+              var theme = localStorage.getItem('theme');
+              if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+              }
+            } catch(e) {}
+          })();
+        `}} />
+      </head>
       <body className="overflow-x-hidden w-full max-w-full m-0 p-0" suppressHydrationWarning={true}>
         {children}
       </body>

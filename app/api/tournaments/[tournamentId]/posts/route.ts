@@ -5,10 +5,10 @@ let mockPosts: any[] = []
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { tournamentId: string } }
+  { params }: { params: Promise<{ tournamentId: string }> }
 ) {
   try {
-    const tournamentId = params.tournamentId
+    const { tournamentId } = await params
     
     // Filter posts by tournament ID
     const tournamentPosts = mockPosts.filter(post => post.tournamentId === tournamentId)
@@ -24,10 +24,10 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { tournamentId: string } }
+  { params }: { params: Promise<{ tournamentId: string }> }
 ) {
   try {
-    const tournamentId = params.tournamentId
+    const { tournamentId } = await params
     const body = await request.json()
     const { content, authorId, authorName, authorRole, type, images = [] } = body
 
@@ -97,10 +97,10 @@ export async function POST(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { tournamentId: string } }
+  { params }: { params: Promise<{ tournamentId: string }> }
 ) {
   try {
-    const tournamentId = params.tournamentId
+    const { tournamentId } = await params
     const body = await request.json()
     const { postId, action, userId } = body
 
@@ -158,10 +158,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { tournamentId: string } }
+  { params }: { params: Promise<{ tournamentId: string }> }
 ) {
   try {
-    const tournamentId = params.tournamentId
+    const { tournamentId } = await params
     const { searchParams } = new URL(request.url)
     const postId = searchParams.get('postId')
     const userId = searchParams.get('userId')

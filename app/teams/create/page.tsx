@@ -525,7 +525,7 @@ export default function CreateTeamPage() {
               <div className="flex justify-end">
                 <Button
                   type="submit"
-                  className="bg-gradient-to-r from-orange-500 to-red-500 text-white"
+                  className="bg-brand-gradient text-white"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (

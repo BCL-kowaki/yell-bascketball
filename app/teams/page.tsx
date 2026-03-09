@@ -25,8 +25,9 @@ import {
 } from "lucide-react"
 import { Layout } from "@/components/layout"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { listTeams, type DbTeam } from "@/lib/api"
+import { listTeams, type DbTeam, getCurrentUserEmail } from "@/lib/api"
 import { refreshS3Url } from "@/lib/storage"
+import { LoginPromptModal } from "@/components/login-prompt"
 
 // Area and Prefecture data
 const areaData = {
@@ -262,9 +263,21 @@ export default function TeamsPage() {
   const [selectedPrefecture, setSelectedPrefecture] = useState("all")
   const [teams, setTeams] = useState<DbTeam[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [showLoginModal, setShowLoginModal] = useState(false)
 
   useEffect(() => {
     loadTeams()
+    // ログイン状態を確認
+    const checkAuth = async () => {
+      try {
+        const email = await getCurrentUserEmail()
+        setIsLoggedIn(!!email)
+      } catch {
+        setIsLoggedIn(false)
+      }
+    }
+    checkAuth()
   }, [])
 
   async function loadTeams() {
@@ -355,9 +368,9 @@ export default function TeamsPage() {
       case "U12":
         return <Crown className="w-4 h-4 text-yellow-600" />
       case "U15":
-        return <Shield className="w-4 h-4 text-orange-600" />
+        return <Shield className="w-4 h-4 text-[#e84b8a]" />
       case "U18":
-        return <Target className="w-4 h-4 text-purple-600" />
+        return <Target className="w-4 h-4 text-[#888]" />
       default:
         return <Users className="w-4 h-4 text-gray-600" />
     }
@@ -388,12 +401,22 @@ export default function TeamsPage() {
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">チームを探す</h1>
             <p className="text-sm sm:text-base text-gray-500">あなたの地域やお気に入りのチームを見つけよう</p>
           </div>
-          <Link href="/teams/create" className="w-full sm:w-auto">
-            <Button className="bg-gradient-to-r from-orange-500 to-red-500 text-white w-full sm:w-auto">
+          {isLoggedIn ? (
+            <Link href="/teams/create" className="w-full sm:w-auto">
+              <Button className="bg-brand-gradient hover:opacity-90 text-white w-full sm:w-auto">
+                <PlusCircle className="w-4 h-4 mr-2" />
+                新規チーム作成
+              </Button>
+            </Link>
+          ) : (
+            <Button
+              className="bg-brand-gradient hover:opacity-90 text-white w-full sm:w-auto"
+              onClick={() => setShowLoginModal(true)}
+            >
               <PlusCircle className="w-4 h-4 mr-2" />
               新規チーム作成
             </Button>
-          </Link>
+          )}
         </div>
 
         {/* Search and Filters */}
@@ -406,7 +429,7 @@ export default function TeamsPage() {
                 placeholder="チーム名、地域、リーグで検索..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border-gray-200 rounded-lg focus:ring-orange-500 focus:border-blue-500 bg-white"
+                className="w-full pl-10 pr-4 py-2 border-gray-200 rounded-lg focus:ring-[#f06a4e]/30 focus:border-[#f06a4e] bg-white"
               />
             </div>
             <div className="flex items-center gap-4">
@@ -422,7 +445,7 @@ export default function TeamsPage() {
                 onClick={() => setSelectedCategory(category.id)}
                 className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
                   selectedCategory === category.id
-                    ? "bg-blue-600 text-white"
+                    ? "bg-brand-gradient text-white"
                     : "bg-white text-gray-600 hover:bg-gray-50 border border-gray-200"
                 }`}
               >
@@ -475,7 +498,7 @@ export default function TeamsPage() {
         {/* Teams Grid */}
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+            <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#f06a4e" }} />
             <span className="ml-3 text-gray-600">チームを読み込み中...</span>
           </div>
         ) : filteredTeams.length === 0 ? (
@@ -485,7 +508,7 @@ export default function TeamsPage() {
             <p className="text-sm">別の検索条件をお試しください</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
             {filteredTeams.map((team) => (
               <Link key={team.id} href={`/teams/${team.id}`}>
                 <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer group hover:scale-105">
@@ -501,7 +524,7 @@ export default function TeamsPage() {
                     <div className="absolute bottom-4 left-4">
                       <Avatar className="w-12 h-12 border-2 border-white">
                         <AvatarImage src={team.logoUrl || undefined} />
-                        <AvatarFallback className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold">
+                        <AvatarFallback className="bg-brand-gradient text-white font-bold">
                           {(team.shortName || team.name).slice(0, 2)}
                         </AvatarFallback>
                       </Avatar>
@@ -510,7 +533,7 @@ export default function TeamsPage() {
 
                   <CardHeader className="pt-3 pb-3">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg font-bold text-gray-900 group-hover:text-orange-600 transition-colors">
+                      <CardTitle className="text-lg font-bold text-gray-900 group-hover:text-[#e84b8a] transition-colors">
                         {team.name}
                       </CardTitle>
                       <ChevronRight className="w-5 h-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
@@ -560,7 +583,7 @@ export default function TeamsPage() {
                       <Button
                         size="sm"
                         variant="default"
-                        className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+                        className="bg-brand-gradient hover:opacity-90"
                         onClick={(e) => {
                           e.preventDefault()
                           // Handle follow/unfollow
@@ -577,6 +600,13 @@ export default function TeamsPage() {
         </div>
         )}
       </div>
+
+      {/* ログイン促進モーダル */}
+      <LoginPromptModal
+        open={showLoginModal}
+        onOpenChange={setShowLoginModal}
+        action="チームを作成"
+      />
     </Layout>
   )
 }

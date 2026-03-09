@@ -4,75 +4,80 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Updated color tokens to match Facebook-inspired design */
-  --background: oklch(0.96 0.005 106.423); /* #F0F2F5 Light gray for app background */
-  --foreground: oklch(0.25 0.005 106.423); /* #242526 Dark gray for text */
-  --card: oklch(1 0 0); /* #FFFFFF White for card backgrounds */
-  --card-foreground: oklch(0.25 0.005 106.423); /* #242526 Dark gray for card text */
-  --popover: oklch(1 0 0); /* #FFFFFF White for popovers */
-  --popover-foreground: oklch(0.25 0.005 106.423); /* #242526 Dark gray for popover text */
-  --primary: oklch(0.7 0.18 50); /* #FF8A00 Energetic Orange for primary actions */
-  --primary-foreground: oklch(1 0 0); /* #FFFFFF White text on primary buttons */
-  --secondary: oklch(0.65 0.15 142.495); /* #42B72A Green for accents */
-  --secondary-foreground: oklch(1 0 0); /* #FFFFFF White text on secondary buttons */
-  --muted: oklch(0.96 0.005 106.423); /* #F0F2F5 Light gray for muted elements */
-  --muted-foreground: oklch(0.25 0.005 106.423); /* #242526 Dark gray for muted text */
-  --accent: oklch(0.65 0.15 142.495); /* #42B72A Green for highlights */
-  --accent-foreground: oklch(1 0 0); /* #FFFFFF White text on accent elements */
-  --destructive: oklch(0.55 0.22 27.33); /* #FF3B30 Red for destructive actions */
-  --destructive-foreground: oklch(1 0 0); /* #FFFFFF White text on destructive buttons */
-  --border: oklch(0.92 0.005 106.423); /* #E4E6EB Light gray for borders */
-  --input: oklch(1 0 0); /* #FFFFFF White for input backgrounds */
-  --ring: oklch(0.7 0.18 50 / 0.5); /* Soft orange ring for focus states */
-  --chart-1: oklch(0.6 0.15 258.338);
-  --chart-2: oklch(0.7 0.12 180);
-  --chart-3: oklch(0.65 0.18 85);
-  --chart-4: oklch(0.75 0.1 120);
-  --chart-5: oklch(0.5 0.2 15);
+  /* YeLL gradient color system - orange to pink */
+  --gradient-from: #f7931e; /* Orange */
+  --gradient-to: #e84b8a; /* Pink/Magenta */
+  --gradient-mid: #f06a4e; /* Mid tone for single-color fallback */
+  --gradient: linear-gradient(135deg, var(--gradient-from), var(--gradient-to));
+
+  --background: #f5f5f0;
+  --foreground: #1e1e1e;
+  --card: #ffffff;
+  --card-foreground: #1e1e1e;
+  --popover: #ffffff;
+  --popover-foreground: #1e1e1e;
+  --primary: #f06a4e; /* Gradient mid-tone as fallback */
+  --primary-foreground: #ffffff;
+  --secondary: #fef5ee; /* Warm cream */
+  --secondary-foreground: #1e1e1e;
+  --muted: #f0f0f0;
+  --muted-foreground: #888888;
+  --accent: #fef5ee;
+  --accent-foreground: #1e1e1e;
+  --destructive: #e84b8a;
+  --destructive-foreground: #ffffff;
+  --border: #d9d9d9;
+  --input: #ffffff;
+  --ring: rgba(240, 106, 78, 0.3);
+  --chart-1: #f7931e;
+  --chart-2: #e84b8a;
+  --chart-3: #888888;
+  --chart-4: #fef5ee;
+  --chart-5: #1e1e1e;
   --radius: 0.5rem;
-  --sidebar: oklch(1 0 0); /* #FFFFFF Sidebar background */
-  --sidebar-foreground: oklch(0.25 0.005 106.423); /* #242526 Sidebar text */
-  --sidebar-primary: oklch(0.96 0.005 106.423); /* #F0F2F5 Sidebar primary color */
-  --sidebar-primary-foreground: oklch(0.25 0.005 106.423); /* #242526 Sidebar primary text */
-  --sidebar-accent: oklch(0.65 0.15 142.495); /* #42B72A Sidebar accent color */
-  --sidebar-accent-foreground: oklch(1 0 0); /* #FFFFFF Sidebar accent text */
-  --sidebar-border: oklch(0.92 0.005 106.423); /* #E4E6EB Sidebar border color */
-  --sidebar-ring: oklch(0.7 0.18 50 / 0.5); /* Sidebar focus ring */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1e1e1e;
+  --sidebar-primary: #f5f5f0;
+  --sidebar-primary-foreground: #1e1e1e;
+  --sidebar-accent: #fef5ee;
+  --sidebar-accent-foreground: #1e1e1e;
+  --sidebar-border: #d9d9d9;
+  --sidebar-ring: rgba(240, 106, 78, 0.3);
 }
 
 .dark {
-  --background: oklch(0.15 0.005 106.423);
-  --foreground: oklch(0.95 0.005 106.423);
-  --card: oklch(0.18 0.005 106.423);
-  --card-foreground: oklch(0.95 0.005 106.423);
-  --popover: oklch(0.18 0.005 106.423);
-  --popover-foreground: oklch(0.95 0.005 106.423);
-  --primary: oklch(0.75 0.2 55);
-  --primary-foreground: oklch(0.15 0.005 106.423);
-  --secondary: oklch(0.3 0.005 106.423);
-  --secondary-foreground: oklch(0.95 0.005 106.423);
-  --muted: oklch(0.3 0.005 106.423);
-  --muted-foreground: oklch(0.7 0.005 106.423);
-  --accent: oklch(0.3 0.005 106.423);
-  --accent-foreground: oklch(0.95 0.005 106.423);
-  --destructive: oklch(0.45 0.2 27.33);
-  --destructive-foreground: oklch(0.6 0.22 27.33);
-  --border: oklch(0.3 0.005 106.423);
-  --input: oklch(0.3 0.005 106.423);
-  --ring: oklch(0.5 0.005 106.423);
-  --chart-1: oklch(0.55 0.2 258.338);
-  --chart-2: oklch(0.7 0.15 180);
-  --chart-3: oklch(0.75 0.18 85);
-  --chart-4: oklch(0.65 0.2 303.9);
-  --chart-5: oklch(0.65 0.22 27.33);
-  --sidebar: oklch(0.2 0.005 106.423);
-  --sidebar-foreground: oklch(0.95 0.005 106.423);
-  --sidebar-primary: oklch(0.55 0.2 258.338);
-  --sidebar-primary-foreground: oklch(0.95 0.005 106.423);
-  --sidebar-accent: oklch(0.3 0.005 106.423);
-  --sidebar-accent-foreground: oklch(0.95 0.005 106.423);
-  --sidebar-border: oklch(0.3 0.005 106.423);
-  --sidebar-ring: oklch(0.5 0.005 106.423);
+  --background: #1a1a1a;
+  --foreground: #e8e8e8;
+  --card: #242424;
+  --card-foreground: #e8e8e8;
+  --popover: #242424;
+  --popover-foreground: #e8e8e8;
+  --primary: #f06a4e;
+  --primary-foreground: #ffffff;
+  --secondary: #2a2a2a;
+  --secondary-foreground: #e8e8e8;
+  --muted: #2a2a2a;
+  --muted-foreground: #999999;
+  --accent: #2a2a2a;
+  --accent-foreground: #e8e8e8;
+  --destructive: #e84b8a;
+  --destructive-foreground: #ffffff;
+  --border: #3a3a3a;
+  --input: #2a2a2a;
+  --ring: rgba(240, 106, 78, 0.4);
+  --chart-1: #f7931e;
+  --chart-2: #e84b8a;
+  --chart-3: #999999;
+  --chart-4: #3a3a3a;
+  --chart-5: #e8e8e8;
+  --sidebar: #1e1e1e;
+  --sidebar-foreground: #e8e8e8;
+  --sidebar-primary: #f06a4e;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #2a2a2a;
+  --sidebar-accent-foreground: #e8e8e8;
+  --sidebar-border: #3a3a3a;
+  --sidebar-ring: rgba(240, 106, 78, 0.4);
 }
 
 @theme inline {
@@ -118,12 +123,11 @@
   * {
     @apply border-border outline-ring/50;
     box-sizing: border-box !important;
-    max-width: 100%;
   }
   html {
     overflow-x: hidden !important;
     width: 100% !important;
-    max-width: 100% !important;
+    max-width: 100vw !important;
     margin: 0 !important;
     padding: 0 !important;
   }
@@ -131,7 +135,7 @@
     @apply bg-background text-foreground text-sm;
     overflow-x: hidden !important;
     width: 100% !important;
-    max-width: 100% !important;
+    max-width: 100vw !important;
     margin: 0 !important;
     padding: 0 !important;
     position: relative;
@@ -142,21 +146,14 @@
 html, body {
   overflow-x: hidden !important;
   width: 100% !important;
-  max-width: 100% !important;
+  max-width: 100vw !important;
   overscroll-behavior-x: none;
 }
 
-/* すべての直接子要素の幅を制限 */
-body > * {
-  max-width: 100% !important;
+/* メインコンテナの幅を制限 */
+body > div {
+  max-width: 100vw !important;
   overflow-x: hidden !important;
-}
-
-/* fixed要素の幅制限 */
-header, nav, [class*="fixed"] {
-  max-width: 100% !important;
-  left: 0 !important;
-  right: 0 !important;
 }
 
 /* Mobile-first responsive utilities */
@@ -214,6 +211,30 @@ header, nav, [class*="fixed"] {
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* YeLL Brand Gradient Utilities */
+  .bg-brand-gradient {
+    background: linear-gradient(135deg, var(--gradient-from), var(--gradient-to));
+  }
+  .bg-brand-gradient-h {
+    background: linear-gradient(to right, var(--gradient-from), var(--gradient-to));
+  }
+  .bg-brand-gradient:hover,
+  .hover\:bg-brand-gradient-dark:hover {
+    background: linear-gradient(135deg, #e5841a, #d13d78);
+  }
+  .text-brand-gradient {
+    background: linear-gradient(135deg, var(--gradient-from), var(--gradient-to));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .border-brand-gradient {
+    border-color: var(--gradient-mid);
+  }
+  .ring-brand {
+    --tw-ring-color: rgba(240, 106, 78, 0.3);
+  }
 }
 
 /* Mobile bottom navigation spacing */
@@ -222,3 +243,65 @@ header, nav, [class*="fixed"] {
     padding-bottom: 70px;
   }
 }
+
+/* ========================================
+   ダークモード: ハードコード色の一括オーバーライド
+   Tailwindユーティリティクラスを .dark 配下で上書き
+   ======================================== */
+
+/* 背景色 */
+.dark .bg-white { background-color: oklch(0.18 0.005 106.423) !important; }
+.dark .bg-gray-50 { background-color: oklch(0.22 0.005 106.423) !important; }
+.dark .bg-gray-100 { background-color: oklch(0.25 0.005 106.423) !important; }
+.dark .bg-gray-200 { background-color: oklch(0.30 0.005 106.423) !important; }
+.dark .bg-gray-800 { background-color: oklch(0.70 0.005 106.423) !important; }
+.dark .bg-gray-900 { background-color: oklch(0.80 0.005 106.423) !important; }
+
+/* テキスト色 */
+.dark .text-gray-900 { color: oklch(0.95 0.005 106.423) !important; }
+.dark .text-gray-800 { color: oklch(0.90 0.005 106.423) !important; }
+.dark .text-gray-700 { color: oklch(0.85 0.005 106.423) !important; }
+.dark .text-gray-600 { color: oklch(0.75 0.005 106.423) !important; }
+.dark .text-gray-500 { color: oklch(0.65 0.005 106.423) !important; }
+.dark .text-gray-400 { color: oklch(0.55 0.005 106.423) !important; }
+.dark .text-gray-300 { color: oklch(0.50 0.005 106.423) !important; }
+.dark .text-white { color: #ffffff !important; }
+.dark .text-black { color: oklch(0.95 0.005 106.423) !important; }
+
+/* ボーダー色 */
+.dark .border-gray-100 { border-color: oklch(0.25 0.005 106.423) !important; }
+.dark .border-gray-200 { border-color: oklch(0.30 0.005 106.423) !important; }
+.dark .border-gray-300 { border-color: oklch(0.35 0.005 106.423) !important; }
+
+/* ホバー時 */
+.dark .hover\:bg-gray-50:hover { background-color: oklch(0.25 0.005 106.423) !important; }
+.dark .hover\:bg-gray-100:hover { background-color: oklch(0.28 0.005 106.423) !important; }
+.dark .hover\:bg-gray-200:hover { background-color: oklch(0.32 0.005 106.423) !important; }
+.dark .hover\:text-gray-700:hover { color: oklch(0.85 0.005 106.423) !important; }
+.dark .hover\:text-gray-900:hover { color: oklch(0.95 0.005 106.423) !important; }
+
+/* プレースホルダー */
+.dark .placeholder-gray-400::placeholder { color: oklch(0.50 0.005 106.423) !important; }
+.dark .placeholder-gray-500::placeholder { color: oklch(0.55 0.005 106.423) !important; }
+
+/* リング / シャドウ */
+.dark .shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3) !important; }
+.dark .shadow { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4) !important; }
+.dark .shadow-md { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4) !important; }
+
+/* フォームinput */
+.dark input, .dark textarea, .dark select {
+  background-color: oklch(0.22 0.005 106.423) !important;
+  color: oklch(0.95 0.005 106.423) !important;
+  border-color: oklch(0.35 0.005 106.423) !important;
+}
+.dark input::placeholder, .dark textarea::placeholder {
+  color: oklch(0.55 0.005 106.423) !important;
+}
+.dark input:focus, .dark textarea:focus, .dark select:focus {
+  background-color: oklch(0.20 0.005 106.423) !important;
+}
+
+/* ダークモード時のdivide色 */
+.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: oklch(0.25 0.005 106.423) !important; }
+.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) { border-color: oklch(0.30 0.005 106.423) !important; }

@@ -63,6 +63,9 @@ export type DbTournament = {
   regionBlock?: string | null
   prefecture?: string | null
   district?: string | null
+  tournamentType?: string | null
+  area?: string | null
+  subArea?: string | null
   description?: string | null
   ownerEmail: string
   coAdminEmails?: string[] | null

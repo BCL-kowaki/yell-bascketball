@@ -33,6 +33,9 @@ type Tournament @model @auth(rules: [{allow: public}]) {
   regionBlock: String
   prefecture: String
   district: String
+  tournamentType: String
+  area: String
+  subArea: String
   description: String
   ownerEmail: String!
   coAdminEmails: [String]

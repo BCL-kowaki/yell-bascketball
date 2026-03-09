@@ -42,10 +42,21 @@ export function Layout({ children, isLoggedIn: propIsLoggedIn = false, currentUs
         // DynamoDBからユーザー情報を取得
         const userData = await getUserByEmail(email)
         if (userData) {
+          // アバターURLをS3署名付きURLに変換（動的インポート）
+          let avatarUrl = userData.avatar || undefined
+          if (avatarUrl) {
+            try {
+              const { refreshS3Url } = await import('@/lib/storage')
+              const refreshed = await refreshS3Url(avatarUrl, true)
+              if (refreshed) avatarUrl = refreshed
+            } catch (e) {
+              console.warn('Avatar URL refresh failed:', e)
+            }
+          }
           setIsLoggedIn(true)
           setCurrentUser({
             name: `${userData.lastName} ${userData.firstName}`,
-            avatar: userData.avatar || undefined,
+            avatar: avatarUrl,
           })
         } else {
           setIsLoggedIn(false)
@@ -69,12 +80,12 @@ export function Layout({ children, isLoggedIn: propIsLoggedIn = false, currentUs
     : currentUser
 
   return (
-    <div className="min-h-screen bg-[#F0F2F5] overflow-x-hidden w-full max-w-full">
+    <div className="min-h-screen bg-background overflow-x-hidden w-full max-w-full">
       {/* Header */}
       <HeaderNavigation isLoggedIn={isLoggedIn} currentUser={displayUser} />
 
-      {/* Main Content - ヘッダー2段分(44px + 44px = 88px)のスペース確保 */}
-      <div className={isLoggedIn ? "pt-[88px]" : "pt-11"}>
+      {/* Main Content - ヘッダー2段分(44px + 44px = 88px)のスペース確保（ゲストも2段目ナビ表示） */}
+      <div className="pt-[88px]">
         <main className="min-h-screen w-full max-w-full overflow-x-hidden">
           {children}
         </main>

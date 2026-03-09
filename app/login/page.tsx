@@ -123,9 +123,8 @@ export default function LoginPage() {
           )
           
           if (hasAccessToken) {
-            console.log('JWT token exists, redirecting to home...')
-            // JWTトークンが存在する場合のみリダイレクト
-            window.location.href = '/'
+            console.log('JWT token exists, redirecting to tournaments...')
+            window.location.href = '/tournaments'
             return
           } else {
             console.log('JWT token missing, setting session token...')
@@ -157,7 +156,7 @@ export default function LoginPage() {
                 
                 if (sessionResponse.ok) {
                   console.log('Session token set successfully, redirecting...')
-                  window.location.href = '/'
+                  window.location.href = '/tournaments'
                   return
                 } else {
                   console.error('Failed to set session token:', await sessionResponse.text())
@@ -345,11 +344,23 @@ export default function LoginPage() {
       const encodedPassword = btoa(password)
       document.cookie = `savedPassword=${encodeURIComponent(encodedPassword)}; expires=${expiresString}; path=/; SameSite=Lax`
 
-      // 5) リダイレクト実行
-      console.log('Redirecting to home page...')
-      // window.location.hrefを使用してページ全体をリロード
-      // これにより、CognitoセッションとJWT Cookieが完全に確立された状態でトップページが読み込まれる
-      window.location.href = '/'
+      // 5) リダイレクト実行 - GPSで最寄りの都道府県ページへ
+      console.log('Redirecting based on GPS...')
+      try {
+        const { getCurrentPosition, getNearestPrefecture } = await import('@/lib/geolocation')
+        const { REGION_NAME_TO_SLUG, PREFECTURE_NAME_TO_SLUG } = await import('@/lib/regionMapping')
+        const pos = await getCurrentPosition()
+        const { prefecture, region } = getNearestPrefecture(pos.lat, pos.lng)
+        const regionSlug = REGION_NAME_TO_SLUG[region]
+        const prefectureSlug = PREFECTURE_NAME_TO_SLUG[prefecture]
+        if (regionSlug && prefectureSlug) {
+          window.location.href = `/tournaments/${regionSlug}/${prefectureSlug}`
+          return
+        }
+      } catch (geoError) {
+        console.warn('GPS detection failed, redirecting to tournaments:', geoError)
+      }
+      window.location.href = '/tournaments'
 
     } catch (error: any) {
       console.error("=== Login Error Details ===")
@@ -362,7 +373,7 @@ export default function LoginPage() {
       // 既にサインイン済みの場合
       if (error?.name === 'UserAlreadyAuthenticatedException') {
         console.log('User already authenticated, redirecting...')
-        router.replace('/')
+        router.replace('/tournaments')
         return
       }
       
@@ -417,7 +428,7 @@ export default function LoginPage() {
       {/* Login Card */}
       <Card className="w-full max-w-md shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] border-0">
         <CardHeader className="pb-4">
-          <CardTitle className="text-center text-2xl font-bold text-[#DC0000]">
+          <CardTitle className="text-center text-2xl font-bold text-[#e84b8a]">
             ログイン
           </CardTitle>
         </CardHeader>
@@ -461,7 +472,7 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              className="w-full h-12 text-base font-medium bg-[#DC0000] hover:bg-[#B80000] text-white rounded-lg"
+              className="w-full h-12 text-base font-medium bg-brand-gradient hover:opacity-90 text-white rounded-lg"
               disabled={isLoading}
             >
               {isLoading ? "ログイン中..." : "ログイン"}
@@ -471,7 +482,7 @@ export default function LoginPage() {
           <div className="text-center mt-4">
             <a 
               href="/forgot-password" 
-              className="text-[#2563EB] hover:underline text-sm cursor-pointer"
+              className="text-[#1e1e1e] hover:underline text-sm cursor-pointer"
               onClick={(e) => {
                 e.preventDefault()
                 window.location.href = "/forgot-password"
@@ -485,7 +496,7 @@ export default function LoginPage() {
             <Link href="/register">
               <Button
                 type="button"
-                className="w-full h-12 text-base font-medium bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-lg"
+                className="w-full h-12 text-base font-medium bg-[#1e1e1e] hover:bg-[#333333] text-white rounded-lg"
               >
                 新規アカウント作成
               </Button>

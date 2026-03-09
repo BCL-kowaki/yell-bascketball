@@ -658,7 +658,7 @@ export default function UserPage() {
                       onClick={handleFollow}
                       disabled={isLoadingFollow}
                       variant={isFollowing ? "outline" : "default"}
-                  className={isFollowing ? "flex-1 md:flex-initial" : "flex-1 md:flex-initial bg-gradient-to-r from-orange-500 to-red-500 text-white"}
+                  className={isFollowing ? "flex-1 md:flex-initial" : "flex-1 md:flex-initial bg-brand-gradient text-white"}
                     >
                       <UserPlus className="w-4 h-4 mr-2" />
                       {isFollowing ? "フォロー解除" : "フォローする"}

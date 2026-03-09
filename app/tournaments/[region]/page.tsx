@@ -143,30 +143,19 @@ export default function RegionTournamentsPage() {
             大会トップ
           </Link>
           <ChevronRight className="w-4 h-4 text-gray-400" />
-          <span className="text-red-600 font-medium">{regionName}エリア</span>
-        </div>
-
-        {/* Statistics */}
-        <div className="mb-2">
-          <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg p-4">
-            <div className="flex items-center gap-3 mb-2">
-              <Trophy className="w-6 h-6 text-red-600" />
-              <h3 className="text-lg font-bold text-gray-900">{regionName}エリアの大会</h3>
-            </div>
-            <p className="text-3xl font-bold text-red-600">{tournaments.length}件</p>
-          </div>
+          <span className="font-medium" style={{ color: "#f06a4e" }}>{regionName}エリア</span>
         </div>
 
         {/* All Prefectures - Unified Layout */}
         <div className="mb-12">
           <div className="flex items-center gap-2 mb-2">
-            <MapPin className="w-5 h-5 text-red-600" />
-            <h2 className="text-xl font-bold text-gray-900">都道府県から探す</h2>
+            <MapPin className="w-5 h-5" style={{ color: "#f06a4e" }} />
+            <h2 className="text-xl font-bold" style={{ color: "#1e1e1e" }}>都道府県から探す</h2>
           </div>
 
           {isLoading ? (
             <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto" style={{ borderBottomColor: "#f06a4e" }}></div>
               <p className="mt-4 text-gray-500">読み込み中...</p>
             </div>
           ) : (
@@ -179,7 +168,7 @@ export default function RegionTournamentsPage() {
                     <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group h-full">
                       <CardHeader className="pt-3 pb-3">
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-xl font-bold">
+                          <CardTitle className="text-xl font-bold" style={{ color: "#1e1e1e" }}>
                             {prefectureName}
                           </CardTitle>
                           <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -188,9 +177,9 @@ export default function RegionTournamentsPage() {
                       <CardContent className="space-y-4 flex-1">
                         <div className="pt-3 border-t border-gray-100">
                           <div className="flex items-center gap-2 text-gray-600">
-                            <Clock className="w-4 h-4 text-red-500" />
+                            <Clock className="w-4 h-4" style={{ color: "#f06a4e" }} />
                             <span className="text-sm font-medium">登録大会数:</span>
-                            <span className="text-lg font-bold text-red-600">{count}件</span>
+                            <span className="text-lg font-bold" style={{ color: "#f06a4e" }}>{count}件</span>
                           </div>
                         </div>
                       </CardContent>

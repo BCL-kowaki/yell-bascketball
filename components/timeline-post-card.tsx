@@ -109,7 +109,7 @@ function AvatarWithRefresh({ avatarUrl, fallbackText, className }: { avatarUrl: 
   return (
     <Avatar className={className}>
       <AvatarImage src={refreshedUrl || undefined} />
-      <AvatarFallback className="bg-purple-600 text-white font-semibold">
+      <AvatarFallback className="bg-brand-gradient text-white font-semibold">
         {fallbackText}
       </AvatarFallback>
     </Avatar>
@@ -170,7 +170,7 @@ function PdfViewer({ pdfUrl, pdfName }: { pdfUrl: string; pdfName?: string | nul
             <a
               href={refreshedUrl}
               download={pdfName || "document.pdf"}
-              className="text-blue-600 hover:underline mt-2 inline-block"
+              className="text-[#e84b8a] hover:underline mt-2 inline-block"
             >
               ダウンロードする
             </a>
@@ -402,7 +402,7 @@ export function TimelinePostCard({
                   href={post.pdfUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline font-medium block truncate"
+                  className="text-[#e84b8a] hover:underline font-medium block truncate"
                 >
                   {post.pdfName || "PDFファイル"}
                 </a>
@@ -475,7 +475,7 @@ export function TimelinePostCard({
                     onClick={() => onCommentSubmit?.(post.id)}
                     disabled={!newCommentValue?.trim()}
                     size="sm"
-                    className="px-4 bg-[#dc0000] hover:bg-[#B80000] text-white"
+                    className="px-4 bg-brand-gradient hover:opacity-90 text-white"
                   >
                     投稿
                   </Button>

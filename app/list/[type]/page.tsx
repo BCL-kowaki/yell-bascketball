@@ -384,7 +384,7 @@ export default function ListPage() {
                             >
                               <Avatar className="w-12 h-12">
                                 <AvatarImage src={user.avatar || undefined} />
-                                <AvatarFallback className="bg-blue-500 text-white">
+                                <AvatarFallback className="bg-brand-gradient text-white">
                                   {user.firstName?.[0] || user.email[0].toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
@@ -508,8 +508,8 @@ export default function ListPage() {
                             >
                               <Avatar className="w-12 h-12">
                                 <AvatarImage src={tournament.iconUrl || undefined} />
-                                <AvatarFallback className="bg-orange-100">
-                                  <Trophy className="w-6 h-6 text-orange-600" />
+                                <AvatarFallback className="bg-[#fcf4e7]">
+                                  <Trophy className="w-6 h-6 text-[#e84b8a]" />
                                 </AvatarFallback>
                               </Avatar>
                               <div className="flex-1 min-w-0">

@@ -118,3 +118,23 @@ export const DISTRICTS_BY_PREFECTURE: Record<string, string[]> = {
 // デフォルト地区（都道府県が設定されていない場合）
 export const DEFAULT_DISTRICTS = ["その他"]
 
+// トーナメントタイプの定数
+export const TOURNAMENT_TYPES = [
+  { value: "official", label: "オフィシャル" },
+  { value: "cup", label: "カップ" },
+] as const
+
+export type TournamentType = "official" | "cup"
+
+// オフィシャル大会のエリア階層データ（都道府県ごと）
+// 他県のデータは後から追加可能
+export const OFFICIAL_AREAS_BY_PREFECTURE: Record<string, { [area: string]: string[] }> = {
+  福岡県: {
+    北部: ["北九州"],
+    東部: ["嘉飯桂", "直鞍遠中", "田川"],
+    中部: ["宗像", "粕谷", "筑紫", "糸島"],
+    福岡市: ["東区", "博多区", "南区", "中城", "早良区", "西区"],
+    南部: ["久留米", "三井", "浮羽", "八女", "筑後"],
+  },
+}
+

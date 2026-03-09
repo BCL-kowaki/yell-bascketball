@@ -183,7 +183,7 @@ export default function ForgotPasswordPage() {
       <div className="flex items-center justify-center p-4 min-h-[calc(100vh-80px)] pt-24">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-[#DC0000] tracking-wide">
+            <h1 className="text-3xl md:text-4xl font-bold text-[#e84b8a] tracking-wide">
               Yell Basketball
             </h1>
             <p className="text-gray-600 mt-2">パスワードをリセット</p>
@@ -193,7 +193,7 @@ export default function ForgotPasswordPage() {
             {step === "email" && (
               <>
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-center text-2xl font-bold text-[#DC0000]">
+                  <CardTitle className="text-center text-2xl font-bold text-[#e84b8a]">
                     パスワードを忘れた場合
                   </CardTitle>
                   <CardDescription className="text-center">
@@ -229,7 +229,7 @@ export default function ForgotPasswordPage() {
 
                     <Button
                       type="submit"
-                      className="w-full h-12 text-base font-medium bg-[#DC0000] hover:bg-[#B80000] text-white rounded-lg"
+                      className="w-full h-12 text-base font-medium bg-brand-gradient hover:opacity-90 text-white rounded-lg"
                       disabled={isLoading}
                     >
                       {isLoading ? "送信中..." : "確認コードを送信"}
@@ -237,7 +237,7 @@ export default function ForgotPasswordPage() {
                   </form>
 
                   <div className="text-center mt-6">
-                    <Link href="/login" className="text-[#2563EB] hover:underline text-sm inline-flex items-center gap-1">
+                    <Link href="/login" className="text-[#1e1e1e] hover:underline text-sm inline-flex items-center gap-1">
                       <ArrowLeft className="w-4 h-4" />
                       ログインに戻る
                     </Link>
@@ -249,7 +249,7 @@ export default function ForgotPasswordPage() {
             {step === "code" && (
               <>
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-center text-2xl font-bold text-[#DC0000]">
+                  <CardTitle className="text-center text-2xl font-bold text-[#e84b8a]">
                     新しいパスワードを設定
                   </CardTitle>
                   <CardDescription className="text-center">
@@ -334,7 +334,7 @@ export default function ForgotPasswordPage() {
 
                     <Button
                       type="submit"
-                      className="w-full h-12 text-base font-medium bg-[#DC0000] hover:bg-[#B80000] text-white rounded-lg"
+                      className="w-full h-12 text-base font-medium bg-brand-gradient hover:opacity-90 text-white rounded-lg"
                       disabled={isLoading}
                     >
                       {isLoading ? "設定中..." : "パスワードをリセット"}
@@ -345,7 +345,7 @@ export default function ForgotPasswordPage() {
                     <button
                       onClick={handleResendCode}
                       disabled={isLoading}
-                      className="text-[#2563EB] hover:underline text-sm"
+                      className="text-[#1e1e1e] hover:underline text-sm"
                     >
                       確認コードを再送信
                     </button>
@@ -379,7 +379,7 @@ export default function ForgotPasswordPage() {
                 <CardContent className="px-6 pb-6">
                   <Link href="/login">
                     <Button
-                      className="w-full h-12 text-base font-medium bg-[#DC0000] hover:bg-[#B80000] text-white rounded-lg"
+                      className="w-full h-12 text-base font-medium bg-brand-gradient hover:opacity-90 text-white rounded-lg"
                     >
                       ログインページへ
                     </Button>

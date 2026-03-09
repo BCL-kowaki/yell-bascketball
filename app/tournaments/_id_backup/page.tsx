@@ -35,7 +35,8 @@ import {
   Video,
   Share2,
   Search,
-  Plus
+  Plus,
+  Flag
 } from "lucide-react"
 import {
   getTournament,
@@ -71,7 +72,8 @@ import {
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
 import { useToast } from "@/hooks/use-toast"
 import { uploadImageToS3, uploadPdfToS3, refreshS3Url } from "@/lib/storage"
-import { CATEGORIES, REGION_BLOCKS, PREFECTURES_BY_REGION, DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS } from "@/lib/regionData"
+import { CATEGORIES, REGION_BLOCKS, PREFECTURES_BY_REGION, DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS, OFFICIAL_AREAS_BY_PREFECTURE, TOURNAMENT_TYPES } from "@/lib/regionData"
+import { LoginPromptModal } from "@/components/login-prompt"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -196,7 +198,7 @@ function PdfViewer({ pdfUrl, pdfName }: { pdfUrl: string; pdfName?: string }) {
             <a
               href={refreshedUrl}
               download={pdfName || "document.pdf"}
-              className="text-blue-600 hover:underline mt-2 inline-block"
+              className="text-[#e84b8a] hover:underline mt-2 inline-block"
             >
               ダウンロードする
             </a>
@@ -245,13 +247,17 @@ export default function TournamentDetailPage() {
     regionBlock: "",
     prefecture: "",
     district: "",
-    instagramUrl: ""
+    instagramUrl: "",
+    tournamentType: "",
+    area: "",
+    subArea: "",
   })
 
   // お気に入り関連
   const [isFavorite, setIsFavorite] = useState(false)
   const [favoritesCount, setFavoritesCount] = useState(0)
   const [isFavoriteLoading, setIsFavoriteLoading] = useState(false)
+  const [showLoginModal, setShowLoginModal] = useState(false)
 
   // タイムライン関連
   const [posts, setPosts] = useState<DbPost[]>([])
@@ -374,7 +380,10 @@ export default function TournamentDetailPage() {
           regionBlock: tournament.regionBlock || "",
           prefecture: tournament.prefecture || "",
           district: tournament.district || "",
-          instagramUrl: tournament.instagramUrl || ""
+          instagramUrl: tournament.instagramUrl || "",
+          tournamentType: tournament.tournamentType || "cup",
+          area: tournament.area || "",
+          subArea: tournament.subArea || "",
         })
         // 画像プレビューを設定
         if (tournament.iconUrl) {
@@ -478,7 +487,10 @@ export default function TournamentDetailPage() {
         regionBlock: tournamentData.regionBlock || "",
         prefecture: tournamentData.prefecture || "",
         district: tournamentData.district || "",
-        instagramUrl: tournamentData.instagramUrl || ""
+        instagramUrl: tournamentData.instagramUrl || "",
+        tournamentType: tournamentData.tournamentType || "cup",
+        area: tournamentData.area || "",
+        subArea: tournamentData.subArea || "",
       })
 
       // 大会管理者の情報を取得
@@ -927,6 +939,10 @@ export default function TournamentDetailPage() {
         category: editForm.category,
         regionBlock: editForm.regionBlock,
         prefecture: editForm.prefecture,
+        // TODO: amplify push 後に有効化 - tournamentType, area, subArea
+        // tournamentType: editForm.tournamentType || "cup",
+        // area: editForm.tournamentType === "official" ? (editForm.area || null) : null,
+        // subArea: editForm.tournamentType === "official" ? (editForm.subArea || null) : null,
         district: editForm.district,
         instagramUrl: editForm.instagramUrl || null,
         coAdminEmails: coAdminEmails.length > 0 ? coAdminEmails : null,
@@ -1251,6 +1267,16 @@ export default function TournamentDetailPage() {
       console.log('Loading participating teams for tournament:', tournamentId)
       const teams = await getTournamentTeams(tournamentId)
       console.log('Loaded participating teams:', teams)
+      // チームのlogoUrlをS3署名付きURLに変換
+      const { refreshS3Url } = await import('@/lib/storage')
+      for (const t of teams) {
+        if (t.team?.logoUrl) {
+          try {
+            const refreshed = await refreshS3Url(t.team.logoUrl, true)
+            if (refreshed) t.team.logoUrl = refreshed
+          } catch (e) { /* 無視 */ }
+        }
+      }
       setParticipatingTeams(teams)
     } catch (error) {
       console.error('Failed to load participating teams:', error)
@@ -1269,6 +1295,16 @@ export default function TournamentDetailPage() {
     setIsSearchingTeams(true)
     try {
       const results = await searchTeams(searchTerm)
+      // チームのlogoUrlをS3署名付きURLに変換
+      const { refreshS3Url } = await import('@/lib/storage')
+      for (const team of results) {
+        if (team.logoUrl) {
+          try {
+            const refreshed = await refreshS3Url(team.logoUrl, true)
+            if (refreshed) team.logoUrl = refreshed
+          } catch (e) { /* 無視 */ }
+        }
+      }
       setTeamSearchResults(results)
     } catch (error) {
       console.error('Failed to search teams:', error)
@@ -1405,17 +1441,17 @@ export default function TournamentDetailPage() {
       // 新しいフィールドが存在し、空文字列でない場合のみ追加
       // AWSDateTime型は有効なISO 8601形式の日付文字列またはnullを期待するため、空文字列は送信しない
       if (resultForm.startDate && resultForm.startDate.trim() !== "") {
-        // 日付が有効かチェック
-        const startDateObj = new Date(resultForm.startDate)
+        // 日付が有効かチェック → AWSDateTime形式（ISO 8601）に変換
+        const startDateObj = new Date(resultForm.startDate + "T00:00:00.000Z")
         if (!isNaN(startDateObj.getTime())) {
-          resultData.startDate = resultForm.startDate
+          resultData.startDate = startDateObj.toISOString()
         }
       }
       if (resultForm.endDate && resultForm.endDate.trim() !== "") {
-        // 日付が有効かチェック
-        const endDateObj = new Date(resultForm.endDate)
+        // 日付が有効かチェック → AWSDateTime形式（ISO 8601）に変換
+        const endDateObj = new Date(resultForm.endDate + "T00:00:00.000Z")
         if (!isNaN(endDateObj.getTime())) {
-          resultData.endDate = resultForm.endDate
+          resultData.endDate = endDateObj.toISOString()
         }
       }
       if (imageUrl && imageUrl.trim() !== "") {
@@ -1659,11 +1695,19 @@ export default function TournamentDetailPage() {
                     </SelectContent>
                   </Select>
                 ) : (
-                  tournament.category && (
-                    <Badge variant="secondary" className="text-sm">
-                      {tournament.category}
-                    </Badge>
-                  )
+                  <>
+                    {tournament.category && (
+                      <Badge variant="secondary" className="text-sm">
+                        {tournament.category}
+                      </Badge>
+                    )}
+                    {tournament.tournamentType && (
+                      <Badge variant="outline" className="text-sm">
+                        <Flag className="w-3 h-3 mr-1" />
+                        {tournament.tournamentType === "official" ? "オフィシャル" : "カップ"}
+                      </Badge>
+                    )}
+                  </>
                 )}
                 {tournament.regionBlock && (
                   <Badge variant="outline" className="text-sm">
@@ -1741,6 +1785,30 @@ export default function TournamentDetailPage() {
               {/* 編集時の追加フィールド */}
               {isEditing && (
                 <div className="space-y-4 mb-4">
+                  {/* 大会タイプ */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">大会タイプ</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { value: "official", label: "オフィシャル" },
+                        { value: "cup", label: "カップ" },
+                      ].map((type) => (
+                        <button
+                          key={type.value}
+                          type="button"
+                          onClick={() => setEditForm({ ...editForm, tournamentType: type.value, area: "", subArea: "", district: "" })}
+                          className={`p-3 rounded-lg border-2 text-center font-medium text-sm transition-all ${
+                            editForm.tournamentType === type.value
+                              ? "border-[#f06a4e] bg-[#fcf4e7] text-[#f06a4e]"
+                              : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                          }`}
+                        >
+                          {type.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div>
                     <Label htmlFor="regionBlock">地域ブロック</Label>
                     <Select
@@ -1777,7 +1845,38 @@ export default function TournamentDetailPage() {
                       </div>
                     )}
 
-                  {availableDistricts.length > 0 && (
+                  {editForm.tournamentType === "official" && editForm.prefecture && (() => {
+                    const areasData = OFFICIAL_AREAS_BY_PREFECTURE[editForm.prefecture]
+                    if (!areasData) return <p className="text-xs text-gray-500">この都道府県のエリアデータは準備中です</p>
+                    const areas = Object.keys(areasData)
+                    const subAreas = editForm.area ? (areasData[editForm.area] || []) : []
+                    return (
+                      <>
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">エリア</label>
+                          <Select value={editForm.area} onValueChange={(value) => setEditForm({ ...editForm, area: value, subArea: "" })}>
+                            <SelectTrigger><SelectValue placeholder="エリアを選択" /></SelectTrigger>
+                            <SelectContent>
+                              {areas.map((a) => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {subAreas.length > 0 && editForm.area && (
+                          <div>
+                            <label className="text-sm font-medium mb-2 block">サブエリア</label>
+                            <Select value={editForm.subArea} onValueChange={(value) => setEditForm({ ...editForm, subArea: value })}>
+                              <SelectTrigger><SelectValue placeholder="サブエリアを選択" /></SelectTrigger>
+                              <SelectContent>
+                                {subAreas.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                      </>
+                    )
+                  })()}
+
+                  {editForm.tournamentType !== "official" && availableDistricts.length > 0 && (
                     <div>
                       <Label htmlFor="district">エリア</Label>
                       <Select
@@ -2024,34 +2123,6 @@ export default function TournamentDetailPage() {
                 )}
               </div>
 
-              {/* 大会管理者 */}
-              <div className="mt-4 pt-4">
-                <p className="text-sm font-medium mb-2 text-gray-700">大会運営者:</p>
-                  <div className="space-y-2">
-                  {tournamentManagers.length > 0 ? (
-                    tournamentManagers.map((manager, index) => (
-                      <Link 
-                        key={index} 
-                        href={`/users/${encodeURIComponent(manager.email)}`} 
-                        className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-                      >
-                        <Avatar className="w-10 h-10">
-                          <AvatarImage src={manager.avatar || undefined} alt={manager.name} />
-                          <AvatarFallback>
-                            {manager.name.split(' ').map(n => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium text-sm">{manager.name}</p>
-                      </div>
-                      </Link>
-                    ))
-                  ) : (
-                    <p className="text-muted-foreground text-sm">大会管理者が登録されていません</p>
-                  )}
-                  </div>
-              </div>
-
                 {/* Instagram */}
                 {tournament.instagramUrl && (() => {
                   const getInstagramAccountId = (url: string): string => {
@@ -2090,7 +2161,7 @@ export default function TournamentDetailPage() {
             </div>
 
             <div className="flex gap-2 w-full md:w-auto">
-              {currentUserEmail && (
+              {currentUserEmail ? (
                 <Button
                   variant={isFavorite ? "default" : "outline"}
                   className={`flex-1 md:flex-initial gap-2 ${isFavorite ? "bg-red-500 hover:bg-red-600" : ""}`}
@@ -2099,6 +2170,15 @@ export default function TournamentDetailPage() {
                 >
                   <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
                   {isFavorite ? "お気に入り済み" : "お気に入り"}
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="flex-1 md:flex-initial gap-2"
+                  onClick={() => setShowLoginModal(true)}
+                >
+                  <Heart className="w-4 h-4" />
+                  お気に入り
                 </Button>
               )}
                 {canEdit && (
@@ -2171,7 +2251,7 @@ export default function TournamentDetailPage() {
                     <div className="flex items-center gap-2">
                       <Avatar className="w-10 h-10 shrink-0">
                         <AvatarImage src={currentUserData?.avatar || "/placeholder.svg"} alt={currentUserData?.name || 'ユーザー'} />
-                        <AvatarFallback className="bg-blue-600 text-white font-semibold">
+                        <AvatarFallback className="bg-brand-gradient text-white font-semibold">
                           {currentUserData?.name?.charAt(0) || "U"}
                         </AvatarFallback>
                       </Avatar>
@@ -2250,7 +2330,7 @@ export default function TournamentDetailPage() {
                           setIsPostFormOpen(false)
                         }}
                         disabled={isPosting || (!postContent.trim() && !selectedImage && !selectedPdf && !selectedVideo)}
-                        className="px-4 h-9 bg-[#DC0000] hover:bg-[#B80000] text-white font-medium text-sm rounded-lg disabled:bg-gray-300"
+                        className="px-4 h-9 bg-brand-gradient hover:opacity-90 text-white font-medium text-sm rounded-lg disabled:bg-gray-300"
                       >
                         {isPosting ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -2345,7 +2425,7 @@ export default function TournamentDetailPage() {
                               <Link href={`/users/${encodeURIComponent(post.authorEmail)}`}>
                                 <Avatar className="w-10 h-10 cursor-pointer">
                                   <AvatarImage src={post.authorAvatar || undefined} />
-                                  <AvatarFallback className="bg-purple-600 text-white font-semibold">
+                                  <AvatarFallback className="bg-brand-gradient text-white font-semibold">
                                     {post.authorName?.[0] || "?"}
                                   </AvatarFallback>
                                 </Avatar>
@@ -2353,7 +2433,7 @@ export default function TournamentDetailPage() {
                             ) : (
                               <Avatar className="w-10 h-10">
                                 <AvatarImage src={post.authorAvatar || undefined} />
-                                <AvatarFallback className="bg-purple-600 text-white font-semibold">
+                                <AvatarFallback className="bg-brand-gradient text-white font-semibold">
                                   {post.authorName?.[0] || "?"}
                                 </AvatarFallback>
                               </Avatar>
@@ -2610,7 +2690,7 @@ export default function TournamentDetailPage() {
                   <h3 className="font-bold text-base text-black">過去大会結果</h3>
                   {canEdit && (
                     <Button 
-                      className="bg-[#dc0000] hover:bg-[#B80000] text-white rounded-full px-4 h-9 text-sm"
+                      className="bg-brand-gradient hover:opacity-90 text-white rounded-full px-4 h-9 text-sm"
                       onClick={() => {
                         setEditingResult(null)
                         setResultForm({ title: "", content: "", ranking: [""], startDate: "", endDate: "", imageUrl: "", pdfUrl: "", pdfName: "" })
@@ -2646,8 +2726,8 @@ export default function TournamentDetailPage() {
                       <CardHeader className="px-3 py-3 sm:px-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
-                              <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-orange-500" />
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#fcf4e7] flex items-center justify-center flex-shrink-0">
+                              <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-[#e84b8a]" />
                             </div>
                             <div className="min-w-0">
                               <div className="font-bold text-sm sm:text-[15px] text-black mb-0.5 truncate">
@@ -2713,7 +2793,7 @@ export default function TournamentDetailPage() {
                                   href={result.pdfUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-blue-600 hover:underline font-medium block truncate"
+                                  className="text-[#e84b8a] hover:underline font-medium block truncate"
                                 >
                                   {result.pdfName || "PDFファイル"}
                                 </a>
@@ -3084,6 +3164,13 @@ export default function TournamentDetailPage() {
           isLoadingComments={isLoadingModalComments}
         />
       )}
+
+      {/* ログイン促進モーダル */}
+      <LoginPromptModal
+        open={showLoginModal}
+        onOpenChange={setShowLoginModal}
+        action="お気に入り登録"
+      />
     </Layout>
   )
 }

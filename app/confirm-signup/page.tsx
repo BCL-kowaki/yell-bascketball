@@ -4,11 +4,6 @@ import { useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
 import { confirmSignUp, resendSignUpCode, signIn } from "aws-amplify/auth"
-import { generateClient } from 'aws-amplify/api'
-import { createUser } from '@/src/graphql/mutations'
-import { HeaderNavigation } from "@/components/header-navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
 import { useToast } from "@/hooks/use-toast"
 
@@ -17,8 +12,6 @@ function ConfirmSignUpForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const email = searchParams.get("email") || ""
-  const firstName = searchParams.get("firstName") || ""
-  const lastName = searchParams.get("lastName") || ""
 
   const [confirmationCode, setConfirmationCode] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -29,8 +22,8 @@ function ConfirmSignUpForm() {
     e.preventDefault()
     setIsLoading(true)
     setError("")
-    if (!email || !firstName || !lastName) {
-      setError("ユーザー情報が見つかりません。登録をやり直してください。")
+    if (!email) {
+      setError("メールアドレスが見つかりません。登録をやり直してください。")
       setIsLoading(false)
       return
     }
@@ -42,18 +35,6 @@ function ConfirmSignUpForm() {
       })
 
       if (isSignUpComplete || nextStep.signUpStep === 'DONE') {
-        const client = generateClient()
-        await client.graphql({
-          query: createUser,
-          variables: {
-            input: {
-              email: email,
-              firstName: firstName,
-              lastName: lastName,
-            }
-          }
-        })
-
         // セッションストレージからパスワードを取得して自動ログイン
         const pendingPassword = sessionStorage.getItem('pendingPassword')
         if (pendingPassword) {
@@ -62,18 +43,14 @@ function ConfirmSignUpForm() {
               username: email,
               password: pendingPassword,
             })
-            // パスワードをセッションストレージから削除
             sessionStorage.removeItem('pendingPassword')
           } catch (signInError) {
             console.error("Auto sign-in error:", signInError)
-            // ログインに失敗してもプロフィール設定画面に遷移（ユーザーが手動でログインできる）
           }
         }
 
         // プロフィール詳細入力画面に遷移
-        const params = new URLSearchParams({
-          email: email,
-        })
+        const params = new URLSearchParams({ email })
         router.push(`/setup-profile?${params.toString()}`)
       }
     } catch (error: any) {
@@ -98,50 +75,156 @@ function ConfirmSignUpForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50">
-      <HeaderNavigation isLoggedIn={false} />
-      <div className="flex items-center justify-center p-4 min-h-[calc(100vh-80px)]">
-        <div className="w-full max-w-md">
-          <Card>
-            <CardHeader className="text-center">
-              <CardTitle>アカウントの確認</CardTitle>
-              <CardDescription>
-                {email} に送信された6桁の確認コードを入力してください。
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="flex justify-center">
-                  <InputOTP maxLength={6} value={confirmationCode} onChange={setConfirmationCode}>
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} />
-                      <InputOTPSlot index={1} />
-                      <InputOTPSlot index={2} />
-                      <InputOTPSlot index={3} />
-                      <InputOTPSlot index={4} />
-                      <InputOTPSlot index={5} />
-                    </InputOTPGroup>
-                  </InputOTP>
-                </div>
+    <div
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100vw",
+        height: "100vh",
+        overflow: "auto",
+        margin: 0,
+        padding: 0,
+        border: "none",
+        outline: "none",
+        background: "linear-gradient(135deg, rgba(247, 147, 30, 0.9) 0%, rgba(240, 106, 78, 0.9) 40%, rgba(232, 75, 138, 0.9) 100%)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "100%",
+          padding: "24px 16px",
+          border: "none",
+          outline: "none",
+        }}
+      >
+        {/* Logo */}
+        <div style={{ marginBottom: "24px", border: "none", outline: "none" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/images/logo.png"
+            alt="YeLL Basketball"
+            style={{
+              width: "160px",
+              height: "auto",
+              filter: "brightness(0) invert(1)",
+              border: "none",
+              outline: "none",
+            }}
+          />
+        </div>
 
-                {error && (
-                  <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md text-center">
-                    {error}
-                  </div>
-                )}
+        {/* Form Card */}
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "400px",
+            backgroundColor: "rgba(255,255,255,0.95)",
+            borderRadius: "16px",
+            padding: "28px 24px",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
+            border: "none",
+            outline: "none",
+            textAlign: "center",
+          }}
+        >
+          <h2
+            style={{
+              fontSize: "20px",
+              fontWeight: 700,
+              color: "#1e1e1e",
+              marginBottom: "8px",
+              border: "none",
+              outline: "none",
+            }}
+          >
+            アカウントの確認
+          </h2>
+          <p
+            style={{
+              fontSize: "13px",
+              color: "#666",
+              marginBottom: "24px",
+              lineHeight: 1.5,
+              border: "none",
+              outline: "none",
+            }}
+          >
+            {email} に送信された<br />6桁の確認コードを入力してください
+          </p>
 
-                <Button type="submit" variant="secondary" className="w-full h-12 text-lg" disabled={isLoading || confirmationCode.length < 6}>
-                  {isLoading ? "確認中..." : "確認して登録"}
-                </Button>
-              </form>
+          <form onSubmit={handleSubmit}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px", border: "none", outline: "none" }}>
+              <InputOTP maxLength={6} value={confirmationCode} onChange={setConfirmationCode}>
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
 
-              <div className="text-center mt-6">
-                <Button variant="link" onClick={handleResendCode} className="text-sm">
-                  確認コードが届かない場合
-                </Button>
+            {error && (
+              <div
+                style={{
+                  padding: "12px",
+                  fontSize: "14px",
+                  color: "#dc2626",
+                  backgroundColor: "#fef2f2",
+                  borderRadius: "8px",
+                  marginBottom: "16px",
+                  border: "1px solid #fecaca",
+                  outline: "none",
+                  textAlign: "center",
+                }}
+              >
+                {error}
               </div>
-            </CardContent>
-          </Card>
+            )}
+
+            <button
+              type="submit"
+              disabled={isLoading || confirmationCode.length < 6}
+              style={{
+                width: "100%",
+                height: "48px",
+                borderRadius: "10px",
+                background: "linear-gradient(135deg, #f7931e 0%, #f06a4e 50%, #e84b8a 100%)",
+                color: "#fff",
+                fontSize: "16px",
+                fontWeight: 700,
+                cursor: isLoading || confirmationCode.length < 6 ? "not-allowed" : "pointer",
+                opacity: isLoading || confirmationCode.length < 6 ? 0.7 : 1,
+                border: "none",
+                outline: "none",
+                letterSpacing: "0.05em",
+              }}
+            >
+              {isLoading ? "確認中..." : "確認して登録"}
+            </button>
+          </form>
+
+          <div style={{ marginTop: "20px", border: "none", outline: "none" }}>
+            <span
+              onClick={handleResendCode}
+              style={{
+                color: "#f06a4e",
+                fontSize: "14px",
+                cursor: "pointer",
+                border: "none",
+                outline: "none",
+              }}
+            >
+              確認コードが届かない場合
+            </span>
+          </div>
         </div>
       </div>
     </div>

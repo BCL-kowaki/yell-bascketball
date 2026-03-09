@@ -121,9 +121,9 @@ export default function FavoriteTeamsPage() {
       case "U12":
         return <Crown className="w-4 h-4 text-yellow-600" />
       case "U15":
-        return <Shield className="w-4 h-4 text-orange-600" />
+        return <Shield className="w-4 h-4 text-[#e84b8a]" />
       case "U18":
-        return <Target className="w-4 h-4 text-purple-600" />
+        return <Target className="w-4 h-4 text-[#888]" />
       default:
         return <Users className="w-4 h-4 text-gray-600" />
     }
@@ -138,7 +138,7 @@ export default function FavoriteTeamsPage() {
             <p className="text-lg">ログインが必要です</p>
             <p className="text-sm mb-4">お気に入りチームを表示するにはログインしてください</p>
             <Link href="/login">
-              <Button className="bg-gradient-to-r from-orange-500 to-red-500 text-white">
+              <Button className="bg-brand-gradient text-white">
                 ログイン
               </Button>
             </Link>
@@ -160,7 +160,7 @@ export default function FavoriteTeamsPage() {
             <p className="text-xs text-gray-500">あなたがお気に入りに登録したチーム一覧</p>
           </div>
           <Link href="/teams">
-            <Button variant="outline" size="sm" className="border-orange-500 text-orange-500 hover:bg-orange-50 text-xs px-2.5 py-1.5 h-auto">
+            <Button variant="outline" size="sm" className="border-[#f06a4e] text-[#e84b8a] hover:bg-[#fcf4e7] text-xs px-2.5 py-1.5 h-auto">
               <Users className="w-3.5 h-3.5 mr-1.5" />
               チームを探す
             </Button>
@@ -177,7 +177,7 @@ export default function FavoriteTeamsPage() {
                 placeholder="チーム名、地域で検索..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 text-xs border-gray-200 rounded-lg focus:ring-orange-500 focus:border-orange-500 bg-white"
+                className="w-full pl-8 pr-3 py-1.5 text-xs border-gray-200 rounded-lg focus:ring-[#f06a4e]/30 focus:border-[#f06a4e] bg-white"
               />
             </div>
           </div>
@@ -242,7 +242,7 @@ export default function FavoriteTeamsPage() {
         {/* Teams Grid */}
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+            <Loader2 className="w-8 h-8 animate-spin text-[#e84b8a]" />
             <span className="ml-3 text-gray-600">お気に入りチームを読み込み中...</span>
           </div>
         ) : filteredTeams.length === 0 ? (
@@ -251,7 +251,7 @@ export default function FavoriteTeamsPage() {
             <p className="text-lg">お気に入りチームがありません</p>
             <p className="text-sm mb-4">チームをお気に入りに追加してみましょう</p>
             <Link href="/teams">
-              <Button className="bg-gradient-to-r from-orange-500 to-red-500 text-white">
+              <Button className="bg-brand-gradient text-white">
                 チームを探す
               </Button>
             </Link>

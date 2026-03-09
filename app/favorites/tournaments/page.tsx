@@ -147,7 +147,7 @@ export default function FavoriteTournamentsPage() {
             <p className="text-lg">ログインが必要です</p>
             <p className="text-sm mb-4">お気に入り大会を表示するにはログインしてください</p>
             <Link href="/login">
-              <Button className="bg-gradient-to-r from-orange-500 to-red-500 text-white">
+              <Button className="bg-brand-gradient text-white">
                 ログイン
               </Button>
             </Link>
@@ -169,7 +169,7 @@ export default function FavoriteTournamentsPage() {
             <p className="text-xs text-gray-500">あなたがお気に入りに登録した大会一覧</p>
           </div>
           <Link href="/tournaments">
-            <Button variant="outline" size="sm" className="border-orange-500 text-orange-500 hover:bg-orange-50 text-xs px-2.5 py-1.5 h-auto">
+            <Button variant="outline" size="sm" className="border-[#f06a4e] text-[#e84b8a] hover:bg-[#fcf4e7] text-xs px-2.5 py-1.5 h-auto">
               <Trophy className="w-3.5 h-3.5 mr-1.5" />
               大会を探す
             </Button>
@@ -186,7 +186,7 @@ export default function FavoriteTournamentsPage() {
                 placeholder="大会名、地域で検索..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 text-xs border-gray-200 rounded-lg focus:ring-orange-500 focus:border-orange-500 bg-white"
+                className="w-full pl-8 pr-3 py-1.5 text-xs border-gray-200 rounded-lg focus:ring-[#f06a4e]/30 focus:border-[#f06a4e] bg-white"
               />
             </div>
           </div>
@@ -256,7 +256,7 @@ export default function FavoriteTournamentsPage() {
         {/* Tournaments Grid */}
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+            <Loader2 className="w-8 h-8 animate-spin text-[#e84b8a]" />
             <span className="ml-3 text-gray-600">お気に入り大会を読み込み中...</span>
           </div>
         ) : filteredTournaments.length === 0 ? (
@@ -265,7 +265,7 @@ export default function FavoriteTournamentsPage() {
             <p className="text-lg">お気に入り大会がありません</p>
             <p className="text-sm mb-4">大会をお気に入りに追加してみましょう</p>
             <Link href="/tournaments">
-              <Button className="bg-gradient-to-r from-orange-500 to-red-500 text-white">
+              <Button className="bg-brand-gradient text-white">
                 大会を探す
               </Button>
             </Link>
@@ -279,8 +279,8 @@ export default function FavoriteTournamentsPage() {
                     <div className="flex items-center gap-3">
                       <Avatar className="w-12 h-12">
                         <AvatarImage src={tournament.iconUrl || undefined} />
-                        <AvatarFallback className="bg-orange-100">
-                          <Trophy className="w-6 h-6 text-orange-600" />
+                        <AvatarFallback className="bg-[#fcf4e7]">
+                          <Trophy className="w-6 h-6 text-[#e84b8a]" />
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">

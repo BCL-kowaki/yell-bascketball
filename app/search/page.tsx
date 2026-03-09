@@ -105,7 +105,7 @@ export default function SearchPage() {
   const getResultIcon = (type: string) => {
     switch (type) {
       case "user":
-        return <Users className="h-4 w-4 text-blue-500" />
+        return <Users className="h-4 w-4 text-[#e84b8a]" />
       case "post":
         return <MessageCircle className="h-4 w-4 text-green-500" />
       case "hashtag":
@@ -113,7 +113,7 @@ export default function SearchPage() {
       case "place":
         return <MapPin className="h-4 w-4 text-red-500" />
       case "event":
-        return <Calendar className="h-4 w-4 text-orange-500" />
+        return <Calendar className="h-4 w-4 text-[#e84b8a]" />
       default:
         return <Search className="h-4 w-4 text-gray-500" />
     }

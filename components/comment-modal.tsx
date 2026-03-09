@@ -103,7 +103,7 @@ export function CommentModal({
               <Link href={`/users/${encodeURIComponent(post.user.email)}`}>
                 <Avatar className="w-10 h-10 cursor-pointer">
                   <AvatarImage src={post.user.avatar || "/placeholder.svg"} alt={post.user.name} />
-                  <AvatarFallback className="bg-blue-600 text-white">
+                  <AvatarFallback className="bg-brand-gradient text-white">
                     {post.user.name
                       .split(" ")
                       .map((n: string) => n[0])
@@ -114,7 +114,7 @@ export function CommentModal({
             ) : (
               <Avatar className="w-10 h-10">
                 <AvatarImage src={post.user.avatar || "/placeholder.svg"} alt={post.user.name} />
-                <AvatarFallback className="bg-blue-600 text-white">
+                <AvatarFallback className="bg-brand-gradient text-white">
                   {post.user.name
                     .split(" ")
                     .map((n: string) => n[0])
@@ -176,7 +176,7 @@ export function CommentModal({
                 href={post.pdf}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-blue-600 hover:underline"
+                className="flex items-center gap-2 text-[#e84b8a] hover:underline"
               >
                 <FileText className="w-5 h-5" />
                 <span>PDFファイルを開く</span>
@@ -234,7 +234,7 @@ export function CommentModal({
                       <Link href={`/users/${encodeURIComponent(comment.user.email)}`}>
                         <Avatar className="w-8 h-8 cursor-pointer flex-shrink-0">
                           <AvatarImage src={comment.user.avatar || "/placeholder.svg"} alt={comment.user.name} />
-                          <AvatarFallback className="bg-blue-600 text-white text-xs">
+                          <AvatarFallback className="bg-brand-gradient text-white text-xs">
                             {comment.user.name
                               .split(" ")
                               .map((n: string) => n[0])
@@ -245,7 +245,7 @@ export function CommentModal({
                     ) : (
                       <Avatar className="w-8 h-8 flex-shrink-0">
                         <AvatarImage src={comment.user.avatar || "/placeholder.svg"} alt={comment.user.name} />
-                        <AvatarFallback className="bg-blue-600 text-white text-xs">
+                        <AvatarFallback className="bg-brand-gradient text-white text-xs">
                           {comment.user.name
                             .split(" ")
                             .map((n: string) => n[0])
@@ -280,7 +280,7 @@ export function CommentModal({
               <div className="flex items-start gap-3">
                 <Avatar className="w-8 h-8 flex-shrink-0">
                   <AvatarImage src={currentUser.avatar || "/placeholder.svg"} alt={currentUser.name} />
-                  <AvatarFallback className="bg-blue-600 text-white text-xs">
+                  <AvatarFallback className="bg-brand-gradient text-white text-xs">
                     {currentUser.name
                       .split(" ")
                       .map((n: string) => n[0])
@@ -301,7 +301,7 @@ export function CommentModal({
                       onClick={onCommentSubmit}
                       disabled={!newComment.trim() || isLoading}
                       size="sm"
-                      className="px-4 bg-[#dc0000] hover:bg-[#B80000] text-white disabled:bg-gray-300"
+                      className="px-4 bg-brand-gradient hover:opacity-90 text-white disabled:bg-gray-300"
                     >
                       {isLoading ? "投稿中..." : "投稿"}
                     </Button>

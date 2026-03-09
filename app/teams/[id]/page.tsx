@@ -128,7 +128,7 @@ function PdfViewer({ pdfUrl, pdfName }: { pdfUrl: string; pdfName?: string }) {
             href={refreshedUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-600 hover:underline inline-flex items-center gap-2 font-medium"
+            className="text-[#e84b8a] hover:underline inline-flex items-center gap-2 font-medium"
           >
             <FileText className="w-4 h-4" />
             {pdfName || "PDFファイル"}を新しいタブで開く
@@ -140,6 +140,7 @@ function PdfViewer({ pdfUrl, pdfName }: { pdfUrl: string; pdfName?: string }) {
 }
 import { useToast } from "@/hooks/use-toast"
 import { CATEGORIES, REGION_BLOCKS, PREFECTURES_BY_REGION, DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS } from "@/lib/regionData"
+import { LoginPromptModal } from "@/components/login-prompt"
 
 export default function TeamDetailPage() {
   const params = useParams()
@@ -167,6 +168,7 @@ export default function TeamDetailPage() {
   const [isUploadingFiles, setIsUploadingFiles] = useState(false)
   const [postUsers, setPostUsers] = useState<Map<string, { name: string; avatar: string }>>(new Map())
   const [deletePostId, setDeletePostId] = useState<string | null>(null)
+  const [showLoginModal, setShowLoginModal] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [showComments, setShowComments] = useState<{ [key: string]: boolean }>({})
   const [newComment, setNewComment] = useState<{ [key: string]: string }>({})
@@ -1133,7 +1135,7 @@ export default function TeamDetailPage() {
       <Layout>
         <div className="max-w-5xl mx-auto px-4 py-8">
           <div className="flex justify-center items-center min-h-[400px]">
-            <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+            <Loader2 className="w-8 h-8 animate-spin text-[#e84b8a]" />
           </div>
         </div>
       </Layout>
@@ -1181,7 +1183,7 @@ export default function TeamDetailPage() {
             <div className="relative">
               <Avatar className="w-24 h-24 md:w-32 md:h-32 border-4 border-card">
                 <AvatarImage src={team.logoUrl || undefined} alt={team.name} className="object-cover object-center" />
-                <AvatarFallback className="text-2xl bg-gradient-to-br from-orange-500 to-red-500 text-white font-bold">
+                <AvatarFallback className="text-2xl bg-brand-gradient text-white font-bold">
                   {(team.shortName || team.name).slice(0, 2)}
                 </AvatarFallback>
               </Avatar>
@@ -1290,7 +1292,7 @@ export default function TeamDetailPage() {
             </div>
 
             <div className="flex gap-2 w-full md:w-auto">
-              {currentUserEmail && (
+              {currentUserEmail ? (
                 <Button
                   variant={isFavorite ? "default" : "outline"}
                   className={`flex-1 md:flex-initial gap-2 ${isFavorite ? "bg-red-500 hover:bg-red-600" : ""}`}
@@ -1298,6 +1300,15 @@ export default function TeamDetailPage() {
                 >
                   <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
                   {isFavorite ? "お気に入り済み" : "お気に入り"}
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="flex-1 md:flex-initial gap-2"
+                  onClick={() => setShowLoginModal(true)}
+                >
+                  <Heart className="w-4 h-4" />
+                  お気に入り
                 </Button>
               )}
           </div>
@@ -1347,7 +1358,7 @@ export default function TeamDetailPage() {
                     <div className="flex items-center gap-2">
                       <Avatar className="w-10 h-10 shrink-0">
                         <AvatarImage src={currentUserData?.avatar || "/placeholder.svg"} alt={currentUserData?.name || 'ユーザー'} />
-                        <AvatarFallback className="bg-blue-600 text-white font-semibold">
+                        <AvatarFallback className="bg-brand-gradient text-white font-semibold">
                           {currentUserData?.name?.charAt(0) || "U"}
                         </AvatarFallback>
                       </Avatar>
@@ -1426,7 +1437,7 @@ export default function TeamDetailPage() {
                           setIsPostFormOpen(false)
                         }}
                         disabled={isSubmittingPost || isUploadingFiles || !newPostContent.trim()}
-                        className="px-4 h-9 bg-[#DC0000] hover:bg-[#B80000] text-white font-medium text-sm rounded-lg disabled:bg-gray-300"
+                        className="px-4 h-9 bg-brand-gradient hover:opacity-90 text-white font-medium text-sm rounded-lg disabled:bg-gray-300"
                       >
                         {isSubmittingPost || isUploadingFiles ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -1500,7 +1511,7 @@ export default function TeamDetailPage() {
               {/* 投稿一覧 */}
               {isLoadingPosts ? (
                 <div className="text-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-orange-500 mx-auto" />
+                  <Loader2 className="w-8 h-8 animate-spin text-[#e84b8a] mx-auto" />
                   <p className="text-muted-foreground mt-4">読み込み中...</p>
                 </div>
               ) : posts.length === 0 ? (
@@ -1545,7 +1556,7 @@ export default function TeamDetailPage() {
                                   <Link href={`/users/${encodeURIComponent(post.authorEmail)}`}>
                                     <Avatar className="w-10 h-10 sm:w-12 sm:h-12 cursor-pointer">
                                       <AvatarImage src={userAvatar} alt={userName} />
-                                      <AvatarFallback className="bg-purple-600 text-white font-semibold">
+                                      <AvatarFallback className="bg-brand-gradient text-white font-semibold">
                                         {userName
                                           .split(" ")
                                           .map((n: string) => n[0])
@@ -1556,7 +1567,7 @@ export default function TeamDetailPage() {
                                 ) : (
                                   <Avatar className="w-10 h-10 sm:w-12 sm:h-12">
                                     <AvatarImage src={userAvatar} alt={userName} />
-                                    <AvatarFallback className="bg-purple-600 text-white font-semibold">
+                                    <AvatarFallback className="bg-brand-gradient text-white font-semibold">
                                       {userName
                                         .split(" ")
                                         .map((n: string) => n[0])
@@ -2204,7 +2215,7 @@ export default function TeamDetailPage() {
               <Card className="w-full border-0 shadow-sm bg-white rounded-none sm:rounded-xl">
                   <CardContent className="py-12">
                     <div className="text-center">
-                      <Loader2 className="w-8 h-8 animate-spin text-orange-500 mx-auto mb-4" />
+                      <Loader2 className="w-8 h-8 animate-spin text-[#e84b8a] mx-auto mb-4" />
                       <p className="text-muted-foreground">参加大会を読み込み中...</p>
                     </div>
                   </CardContent>
@@ -2250,7 +2261,7 @@ export default function TeamDetailPage() {
 
                           <CardHeader className="pt-3 pb-3">
                             <div className="flex items-center justify-between">
-                              <h3 className="text-lg font-bold text-gray-900 group-hover:text-orange-600 transition-colors line-clamp-2">
+                              <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#e84b8a] transition-colors line-clamp-2">
                                 {tournament.name}
                               </h3>
                               <ChevronRight className="w-5 h-5 text-gray-400 group-hover:translate-x-1 transition-transform flex-shrink-0" />
@@ -2397,6 +2408,13 @@ export default function TeamDetailPage() {
           isLoadingComments={isLoadingModalComments}
         />
       )}
+
+      {/* ログイン促進モーダル */}
+      <LoginPromptModal
+        open={showLoginModal}
+        onOpenChange={setShowLoginModal}
+        action="お気に入り登録"
+      />
     </Layout>
   )
 }

@@ -7,13 +7,14 @@ import { Button } from "@/components/ui/button"
 import {
   ChevronRight,
   Plus,
-  Trophy,
   Filter,
   MapPin,
-  Clock
+  Clock,
+  Navigation2
 } from "lucide-react"
 import { Layout } from "@/components/layout"
-import { listTournaments, DbTournament } from "@/lib/api"
+import { listTournaments, DbTournament, getCurrentUserEmail } from "@/lib/api"
+import { LoginPromptModal } from "@/components/login-prompt"
 import {
   Select,
   SelectContent,
@@ -21,8 +22,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { CATEGORIES } from "@/lib/regionData"
-import { REGION_SLUG_TO_NAME } from "@/lib/regionMapping"
+import { CATEGORIES, PREFECTURES_BY_REGION } from "@/lib/regionData"
+import { REGION_SLUG_TO_NAME, REGION_NAME_TO_SLUG, PREFECTURE_NAME_TO_SLUG } from "@/lib/regionMapping"
+import { getCurrentPosition, getNearestPrefecture } from "@/lib/geolocation"
 
 // ハードコードされた地域リスト（Regionテーブルが空の場合に使用）
 const REGIONS = [
@@ -43,9 +45,36 @@ export default function TournamentsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [regionCounts, setRegionCounts] = useState<Record<string, number>>({})
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [showLoginModal, setShowLoginModal] = useState(false)
+  const [currentLocation, setCurrentLocation] = useState<{ prefecture: string; region: string } | null>(null)
+  const [locationLoading, setLocationLoading] = useState(true)
 
   useEffect(() => {
     loadTournaments()
+    // ログイン状態を確認
+    const checkAuth = async () => {
+      try {
+        const email = await getCurrentUserEmail()
+        setIsLoggedIn(!!email)
+      } catch {
+        setIsLoggedIn(false)
+      }
+    }
+    checkAuth()
+    // GPS位置情報から現在地を取得
+    const detectLocation = async () => {
+      try {
+        const pos = await getCurrentPosition()
+        const loc = getNearestPrefecture(pos.lat, pos.lng)
+        setCurrentLocation(loc)
+      } catch {
+        // 位置情報の取得に失敗（拒否・非対応）→そのまま通常表示
+      } finally {
+        setLocationLoading(false)
+      }
+    }
+    detectLocation()
   }, [])
 
   useEffect(() => {
@@ -97,9 +126,21 @@ export default function TournamentsPage() {
     setRegionCounts(counts)
   }
 
-  const totalTournaments = selectedCategory === "all"
-    ? tournaments.length
-    : tournaments.filter(t => t.category === selectedCategory).length
+  // 現在地の地域をトップに並べ替え
+  const sortedRegions = currentLocation
+    ? [
+        ...REGIONS.filter(r => r.name === currentLocation.region),
+        ...REGIONS.filter(r => r.name !== currentLocation.region),
+      ]
+    : REGIONS
+
+  // 現在地の都道府県のslug
+  const currentPrefectureSlug = currentLocation
+    ? PREFECTURE_NAME_TO_SLUG[currentLocation.prefecture]
+    : null
+  const currentRegionSlug = currentLocation
+    ? REGION_NAME_TO_SLUG[currentLocation.region]
+    : null
 
   return (
     <Layout>
@@ -125,6 +166,10 @@ export default function TournamentsPage() {
           </div>
           <Button
             onClick={async () => {
+              if (!isLoggedIn) {
+                setShowLoginModal(true)
+                return
+              }
               try {
                 await router.push('/tournaments/create')
               } catch (error) {
@@ -138,50 +183,67 @@ export default function TournamentsPage() {
           </Button>
         </div>
 
-        {/* Statistics */}
-        <div className="mb-2">
-          <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <Trophy className="w-6 h-6 text-red-600" />
-              <h3 className="text-lg font-bold text-gray-900">全国の大会</h3>
-            </div>
-            <p className="text-3xl font-bold text-red-600">{totalTournaments}件</p>
+        {/* 現在地バナー */}
+        {currentLocation && currentRegionSlug && currentPrefectureSlug && (
+          <div className="mb-4">
+            <Link href={`/tournaments/${currentRegionSlug}/${currentPrefectureSlug}`}>
+              <div className="rounded-lg p-4 border border-[#e8d6c0] hover:shadow-md transition-all cursor-pointer" style={{ backgroundColor: "#fcf4e7" }}>
+                <div className="flex items-center gap-2 mb-1">
+                  <Navigation2 className="w-4 h-4" style={{ color: "#f06a4e" }} />
+                  <span className="text-xs font-medium" style={{ color: "#888" }}>現在地付近</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-lg font-bold" style={{ color: "#1e1e1e" }}>{currentLocation.prefecture}の大会を見る</p>
+                    <p className="text-sm" style={{ color: "#888" }}>{currentLocation.region}エリア</p>
+                  </div>
+                  <ChevronRight className="w-5 h-5" style={{ color: "#f06a4e" }} />
+                </div>
+              </div>
+            </Link>
           </div>
-        </div>
+        )}
 
         {/* Regions Section */}
         <div className="mb-12">
           <div className="flex items-center gap-2 mb-2">
-            <MapPin className="w-5 h-5 text-red-600" />
-            <h2 className="text-xl font-bold text-gray-900">地域から探す</h2>
+            <MapPin className="w-5 h-5" style={{ color: "#f06a4e" }} />
+            <h2 className="text-xl font-bold" style={{ color: "#1e1e1e" }}>地域から探す</h2>
           </div>
 
           {isLoading ? (
             <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto" style={{ borderBottomColor: "#f06a4e" }}></div>
               <p className="mt-4 text-gray-500">読み込み中...</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-              {REGIONS.map((region) => {
+              {sortedRegions.map((region) => {
                 const count = regionCounts[region.slug] || 0
+                const isCurrentRegion = currentLocation?.region === region.name
                 return (
                   <Link key={region.id} href={`/tournaments/${region.slug}`}>
-                    <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group h-full">
+                    <Card
+                      className={`hover:shadow-md transition-all duration-300 cursor-pointer group h-full ${isCurrentRegion ? "border-[#f06a4e]/30" : ""}`}
+                      style={isCurrentRegion ? { backgroundColor: "#fcf4e7" } : {}}
+                    >
                       <CardHeader className="pt-3 pb-3">
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-xl font-bold">
-                            {region.name}
-                          </CardTitle>
+                          <div className="flex items-center gap-2">
+                            {isCurrentRegion && <Navigation2 className="w-4 h-4" style={{ color: "#f06a4e" }} />}
+                            <CardTitle className="text-xl font-bold" style={{ color: "#1e1e1e" }}>
+                              {region.name}
+                            </CardTitle>
+                          </div>
                           <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-4 flex-1">
                         <div className="pt-3 border-t border-gray-100">
                           <div className="flex items-center gap-2 text-gray-600">
-                            <Clock className="w-4 h-4 text-red-500" />
+                            <Clock className="w-4 h-4" style={{ color: "#f06a4e" }} />
                             <span className="text-sm font-medium">登録大会数:</span>
-                            <span className="text-lg font-bold text-red-600">{count}件</span>
+                            <span className="text-lg font-bold" style={{ color: "#f06a4e" }}>{count}件</span>
                           </div>
                         </div>
                       </CardContent>
@@ -193,6 +255,13 @@ export default function TournamentsPage() {
           )}
         </div>
       </div>
+
+      {/* ログイン促進モーダル */}
+      <LoginPromptModal
+        open={showLoginModal}
+        onOpenChange={setShowLoginModal}
+        action="大会を登録"
+      />
     </Layout>
   )
 }

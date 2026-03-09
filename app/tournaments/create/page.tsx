@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
 import { getUserByEmail, createTournament, searchUsers, createTournamentInvitation, getCurrentUserEmail, type DbUser } from "@/lib/api"
 import { uploadImageToS3 } from "@/lib/storage"
-import { CATEGORIES, REGION_BLOCKS, PREFECTURES_BY_REGION, DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS } from "@/lib/regionData"
+import { CATEGORIES, REGION_BLOCKS, PREFECTURES_BY_REGION, DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS, OFFICIAL_AREAS_BY_PREFECTURE, TOURNAMENT_TYPES } from "@/lib/regionData"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Layout } from "@/components/layout"
 import { useToast } from "@/hooks/use-toast"
-import { Camera, X, Search, UserPlus } from "lucide-react"
+import { Camera, X, Search, UserPlus, Trophy, Flag } from "lucide-react"
 
 export default function CreateTournamentPage() {
   ensureAmplifyConfigured()
@@ -26,16 +26,21 @@ export default function CreateTournamentPage() {
   const [isSaving, setIsSaving] = useState(false)
 
   const [formData, setFormData] = useState({
+    tournamentType: "" as string,
     name: "",
     category: "",
     regionBlock: "",
     prefecture: "",
     district: "",
+    area: "",
+    subArea: "",
     description: "",
   })
 
   const [availablePrefectures, setAvailablePrefectures] = useState<string[]>([])
   const [availableDistricts, setAvailableDistricts] = useState<string[]>([])
+  const [availableAreas, setAvailableAreas] = useState<string[]>([])
+  const [availableSubAreas, setAvailableSubAreas] = useState<string[]>([])
 
   // 壁紙画像関連
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
@@ -67,10 +72,54 @@ export default function CreateTournamentPage() {
     if (formData.prefecture) {
       setAvailableDistricts(DISTRICTS_BY_PREFECTURE[formData.prefecture] || DEFAULT_DISTRICTS)
       setFormData(prev => ({ ...prev, district: "" }))
+
+      // オフィシャルの場合、エリアリストも更新
+      if (formData.tournamentType === "official") {
+        const areasData = OFFICIAL_AREAS_BY_PREFECTURE[formData.prefecture]
+        if (areasData) {
+          setAvailableAreas(Object.keys(areasData))
+        } else {
+          setAvailableAreas([])
+        }
+        setFormData(prev => ({ ...prev, area: "", subArea: "" }))
+        setAvailableSubAreas([])
+      }
     } else {
       setAvailableDistricts([])
+      setAvailableAreas([])
+      setAvailableSubAreas([])
     }
   }, [formData.prefecture])
+
+  // トーナメントタイプが変更されたら、area/subArea/districtをリセット
+  useEffect(() => {
+    setFormData(prev => ({ ...prev, area: "", subArea: "", district: "" }))
+    setAvailableAreas([])
+    setAvailableSubAreas([])
+
+    // オフィシャルに切り替え時、既に都道府県が選択されていればエリアリストを設定
+    if (formData.tournamentType === "official" && formData.prefecture) {
+      const areasData = OFFICIAL_AREAS_BY_PREFECTURE[formData.prefecture]
+      if (areasData) {
+        setAvailableAreas(Object.keys(areasData))
+      }
+    }
+  }, [formData.tournamentType])
+
+  // エリアが変更されたら、サブエリアリストを更新
+  useEffect(() => {
+    if (formData.area && formData.prefecture && formData.tournamentType === "official") {
+      const areasData = OFFICIAL_AREAS_BY_PREFECTURE[formData.prefecture]
+      if (areasData && areasData[formData.area]) {
+        setAvailableSubAreas(areasData[formData.area])
+      } else {
+        setAvailableSubAreas([])
+      }
+      setFormData(prev => ({ ...prev, subArea: "" }))
+    } else {
+      setAvailableSubAreas([])
+    }
+  }, [formData.area])
 
   const loadCurrentUser = async () => {
     try {
@@ -178,6 +227,15 @@ export default function CreateTournamentPage() {
       return
     }
 
+    if (!formData.tournamentType) {
+      toast({
+        title: "エラー",
+        description: "大会タイプを選択してください",
+        variant: "destructive",
+      })
+      return
+    }
+
     if (!formData.name.trim()) {
       toast({
         title: "エラー",
@@ -214,7 +272,11 @@ export default function CreateTournamentPage() {
         category: formData.category || null,
         regionBlock: formData.regionBlock || null,
         prefecture: formData.prefecture || null,
-        district: formData.district || null,
+        district: formData.tournamentType === "official" ? null : (formData.district || null),
+        // TODO: amplify push 後に有効化 - tournamentType, area, subArea
+        // tournamentType: formData.tournamentType || "cup",
+        // area: formData.tournamentType === "official" ? (formData.area || null) : null,
+        // subArea: formData.tournamentType === "official" ? (formData.subArea || null) : null,
         description: formData.description || null,
         ownerEmail: currentUser.email,
         coAdminEmails: selectedCoAdmins.map(admin => admin.email),
@@ -288,6 +350,45 @@ export default function CreateTournamentPage() {
               <CardTitle>基本情報</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* 大会タイプ */}
+              <div>
+                <label className="text-sm font-medium mb-3 block">
+                  大会タイプ <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {TOURNAMENT_TYPES.map((type) => (
+                    <button
+                      key={type.value}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, tournamentType: type.value })}
+                      className={`p-4 rounded-lg border-2 text-center transition-all ${
+                        formData.tournamentType === type.value
+                          ? "border-[#f06a4e] bg-[#fcf4e7]"
+                          : "border-gray-200 bg-white hover:border-gray-300"
+                      }`}
+                    >
+                      <div className="flex flex-col items-center gap-2">
+                        {type.value === "official" ? (
+                          <Trophy className={`w-6 h-6 ${formData.tournamentType === type.value ? "text-[#f06a4e]" : "text-gray-400"}`} />
+                        ) : (
+                          <Flag className={`w-6 h-6 ${formData.tournamentType === type.value ? "text-[#f06a4e]" : "text-gray-400"}`} />
+                        )}
+                        <span className={`font-bold ${formData.tournamentType === type.value ? "text-[#f06a4e]" : "text-gray-600"}`}>
+                          {type.label}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  {formData.tournamentType === "official"
+                    ? "協会・連盟主催の公式大会"
+                    : formData.tournamentType === "cup"
+                      ? "チーム・個人主催のカップ戦"
+                      : "大会のタイプを選択してください"}
+                </p>
+              </div>
+
               {/* 壁紙画像 */}
               <div>
                 <label className="text-sm font-medium mb-2 block">大会壁紙画像（任意）</label>
@@ -388,8 +489,51 @@ export default function CreateTournamentPage() {
                 </div>
               )}
 
-              {/* 地区 */}
-              {availableDistricts.length > 0 && (
+              {/* オフィシャル: エリア → サブエリア */}
+              {formData.tournamentType === "official" && formData.prefecture && (
+                <>
+                  {availableAreas.length > 0 ? (
+                    <>
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">エリア</label>
+                        <Select value={formData.area} onValueChange={(value) => setFormData({ ...formData, area: value })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="エリアを選択" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableAreas.map((area) => (
+                              <SelectItem key={area} value={area}>{area}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {availableSubAreas.length > 0 && formData.area && (
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">サブエリア</label>
+                          <Select value={formData.subArea} onValueChange={(value) => setFormData({ ...formData, subArea: value })}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="サブエリアを選択" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableSubAreas.map((sub) => (
+                                <SelectItem key={sub} value={sub}>{sub}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
+                      この都道府県のエリアデータは現在準備中です。エリア未指定で登録できます。
+                    </p>
+                  )}
+                </>
+              )}
+
+              {/* カップ: 従来の地区選択 */}
+              {formData.tournamentType !== "official" && availableDistricts.length > 0 && (
                 <div>
                   <label className="text-sm font-medium mb-2 block">地区</label>
                   <Select value={formData.district} onValueChange={(value) => setFormData({ ...formData, district: value })}>

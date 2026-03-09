@@ -130,13 +130,13 @@ export default function HomePage() {
   const getActivityIcon = (type: string) => {
     switch (type) {
       case "post":
-        return <Plus className="w-4 h-4 text-orange-600" />
+        return <Plus className="w-4 h-4 text-[#e84b8a]" />
       case "like":
         return <Heart className="w-4 h-4 text-red-500" />
       case "comment":
         return <MessageCircle className="w-4 h-4 text-green-600" />
       case "follow":
-        return <Users className="w-4 h-4 text-purple-600" />
+        return <Users className="w-4 h-4 text-[#888]" />
       default:
         return <Activity className="w-4 h-4 text-gray-600" />
     }
@@ -148,7 +148,7 @@ export default function HomePage() {
         <div className="flex items-center justify-center min-h-[80vh] p-4">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
-            <h1 className="font-serif text-4xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent mb-2">
+            <h1 className="font-serif text-4xl font-bold text-[#e84b8a] mb-2">
               SocialConnect
             </h1>
             <p className="text-gray-600 text-lg">友達や世界中の人々とつながろう</p>
@@ -156,7 +156,7 @@ export default function HomePage() {
 
           <div className="space-y-4">
             <Link href="/login" className="block">
-              <Button className="w-full h-12 text-lg bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold rounded-lg shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] hover:shadow-xl transition-all duration-200">
+              <Button className="w-full h-12 text-lg bg-brand-gradient hover:opacity-90 text-white font-semibold rounded-lg shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] hover:shadow-xl transition-all duration-200">
                 ログイン
               </Button>
             </Link>
@@ -169,7 +169,7 @@ export default function HomePage() {
           </div>
 
           <div className="text-center">
-            <Link href="/timeline" className="text-orange-600 hover:text-blue-700 hover:underline">
+            <Link href="/timeline" className="text-[#e84b8a] hover:text-[#d13d78] hover:underline">
               ゲストとしてタイムラインを見る
             </Link>
           </div>
@@ -213,17 +213,17 @@ export default function HomePage() {
                 <div className="text-center mb-6">
                   <Avatar className="w-20 h-20 mx-auto mb-4 ring-4 ring-blue-100">
                     <AvatarImage src={mockUser.avatar} alt={mockUser.name} />
-                    <AvatarFallback className="bg-gradient-to-br from-orange-500 to-red-500 text-white text-xl font-semibold">
+                    <AvatarFallback className="bg-brand-gradient text-white text-xl font-semibold">
                       {mockUser.name.split(" ").map((n: string) => n[0]).join("")}
                     </AvatarFallback>
                   </Avatar>
                   <h2 className="text-xl font-bold text-gray-900 mb-1">{mockUser.name}</h2>
                   <div className="flex items-center justify-center gap-2 mb-3">
-                    <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white">
+                    <Badge className="bg-brand-gradient text-white">
                       <Star className="w-3 h-3 mr-1" />
                       {mockUser.rank}
                     </Badge>
-                    <Badge variant="outline" className="border-orange-200 text-orange-600">
+                    <Badge variant="outline" className="border-[#d9d9d9] text-[#e84b8a]">
                       Lv.{mockUser.level}
                     </Badge>
                   </div>
@@ -236,7 +236,7 @@ export default function HomePage() {
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div 
-                        className="bg-gradient-to-r from-orange-500 to-red-500 h-2 rounded-full transition-all duration-300"
+                        className="bg-brand-gradient h-2 rounded-full transition-all duration-300"
                         style={{ width: `${getProgressPercentage()}%` }}
                       ></div>
                     </div>
@@ -269,7 +269,7 @@ export default function HomePage() {
             <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-orange-600" />
+                  <TrendingUp className="w-5 h-5 text-[#e84b8a]" />
                   今週の統計
                 </CardTitle>
               </CardHeader>
@@ -278,7 +278,7 @@ export default function HomePage() {
                   <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-white rounded-lg">
-                        <stat.icon className="w-4 h-4 text-orange-600" />
+                        <stat.icon className="w-4 h-4 text-[#e84b8a]" />
                       </div>
                       <div>
                         <p className="text-sm text-gray-600">{stat.title}</p>
@@ -301,7 +301,7 @@ export default function HomePage() {
             <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-orange-600" />
+                  <Activity className="w-5 h-5 text-[#e84b8a]" />
                   最近のアクティビティ
                 </CardTitle>
               </CardHeader>
@@ -344,7 +344,7 @@ export default function HomePage() {
                   <Button variant="ghost" className="w-full justify-start text-left h-auto p-4 hover:bg-gray-50">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-blue-100 rounded-lg">
-                        <Plus className="w-4 h-4 text-orange-600" />
+                        <Plus className="w-4 h-4 text-[#e84b8a]" />
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">新しい投稿を作成</p>
@@ -357,7 +357,7 @@ export default function HomePage() {
                   <Button variant="ghost" className="w-full justify-start text-left h-auto p-4 hover:bg-gray-50">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-purple-100 rounded-lg">
-                        <Trophy className="w-4 h-4 text-purple-600" />
+                        <Trophy className="w-4 h-4 text-[#888]" />
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">大会に参加</p>
@@ -389,7 +389,7 @@ export default function HomePage() {
             <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-orange-600" />
+                  <Calendar className="w-5 h-5 text-[#e84b8a]" />
                   今後のイベント
                 </CardTitle>
               </CardHeader>
@@ -425,20 +425,20 @@ export default function HomePage() {
             <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <Bell className="w-5 h-5 text-orange-600" />
+                  <Bell className="w-5 h-5 text-[#e84b8a]" />
                   通知
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="p-3 bg-blue-50 border border-orange-200 rounded-lg">
+                <div className="p-3 bg-[#fcf4e7] border border-[#d9d9d9] rounded-lg">
                   <div className="flex items-start gap-3">
                     <div className="p-1 bg-blue-100 rounded-full">
-                      <Trophy className="w-3 h-3 text-orange-600" />
+                      <Trophy className="w-3 h-3 text-[#e84b8a]" />
                     </div>
                     <div>
                       <p className="text-sm font-medium text-blue-900">大会の結果</p>
                       <p className="text-xs text-blue-700">春のフレンドリーカップで3位になりました！</p>
-                      <p className="text-xs text-orange-600 mt-1">1時間前</p>
+                      <p className="text-xs text-[#e84b8a] mt-1">1時間前</p>
                     </div>
                   </div>
                 </div>
@@ -457,12 +457,12 @@ export default function HomePage() {
                 <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
                   <div className="flex items-start gap-3">
                     <div className="p-1 bg-purple-100 rounded-full">
-                      <Heart className="w-3 h-3 text-purple-600" />
+                      <Heart className="w-3 h-3 text-[#888]" />
                     </div>
                     <div>
                       <p className="text-sm font-medium text-purple-900">いいね</p>
                       <p className="text-xs text-purple-700">佐藤花子さんがあなたの投稿にいいねしました</p>
-                      <p className="text-xs text-purple-600 mt-1">5時間前</p>
+                      <p className="text-xs text-[#888] mt-1">5時間前</p>
                     </div>
                   </div>
                 </div>
