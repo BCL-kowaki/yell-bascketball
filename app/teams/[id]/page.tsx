@@ -1473,9 +1473,9 @@ export default function TeamDetailPage() {
       </div>
 
       <div className="w-full max-w-6xl mx-auto pb-20 px-0">
-        <div className="w-full max-w-[1040px] mx-auto px-0 lg:px-4">
-        <div className="flex justify-center gap-6">
-        <div className="w-full max-w-[680px] px-0 overflow-hidden box-border">
+        <div className="w-full max-w-[1080px] mx-auto px-0 lg:px-4">
+        <div className="flex justify-center gap-3">
+        <div className="w-full max-w-[720px] px-0 overflow-hidden box-border">
 
             {/* タイムラインタブ */}
             <TabsContent value="timeline" className="mt-2 space-y-2 w-full overflow-hidden box-border">
@@ -1676,7 +1676,7 @@ export default function TeamDetailPage() {
                         : ''
 
                       return (
-                        <Card key={post.id} className="w-full max-w-[680px] mx-auto lg:mx-0 border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-2">
+                        <Card key={post.id} className="w-full max-w-[720px] mx-auto lg:mx-0 border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-2">
                           <CardHeader className="px-3 sm:px-4">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
@@ -1851,6 +1851,18 @@ export default function TeamDetailPage() {
                     })}
                 </div>
               )}
+
+              {/* スポンサーバナー（モバイルのみ・タイムラインタブ下部） */}
+              <div className="lg:hidden mt-2">
+                <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-3 px-4">
+                  <SponsorBannerDisplay
+                    sponsors={parseSponsors(team?.sponsors)}
+                    title="スポンサー"
+                    showPlaceholder={true}
+                    layout="horizontal"
+                  />
+                </Card>
+              </div>
             </TabsContent>
 
             {/* 基本データタブ */}
@@ -2323,15 +2335,6 @@ export default function TeamDetailPage() {
                         </p>
                       </div>
 
-                      {/* スポンサーバナー表示（モバイルのみ） */}
-                      <div className="pt-4 border-t lg:hidden">
-                        <SponsorBannerDisplay
-                          sponsors={parseSponsors(team.sponsors)}
-                          title="スポンサー"
-                          showPlaceholder={true}
-                          layout="horizontal"
-                        />
-                      </div>
                     </>
                   )}
                 </CardContent>

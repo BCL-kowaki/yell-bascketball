@@ -2215,17 +2215,6 @@ export default function TournamentDetailPage() {
                 })()}
               </div>
 
-              {/* スポンサーバナー表示（モバイルのみ） */}
-              {!isEditing && (
-                <div className="mt-4 pt-4 border-t lg:hidden">
-                  <SponsorBannerDisplay
-                    sponsors={parseSponsors(tournament.sponsors)}
-                    title="スポンサー"
-                    showPlaceholder={true}
-                    layout="horizontal"
-                  />
-                </div>
-              )}
             </div>
 
             <div className="flex gap-2 w-full md:w-auto">
@@ -2309,9 +2298,9 @@ export default function TournamentDetailPage() {
               </div>
 
         <div className="pb-20 px-0">
-          <div className="w-full max-w-[1040px] mx-auto px-0 lg:px-4">
-          <div className="flex justify-center gap-6">
-          <div className="w-full max-w-[680px] px-0 overflow-hidden box-border">
+          <div className="w-full max-w-[1080px] mx-auto px-0 lg:px-4">
+          <div className="flex justify-center gap-3">
+          <div className="w-full max-w-[720px] px-0 overflow-hidden box-border">
             {/* タイムラインタブ */}
             <TabsContent value="timeline" className="mt-2 space-y-2 w-full overflow-hidden box-border">
               {/* 投稿作成カード - トップページと同じUI */}
@@ -2487,7 +2476,7 @@ export default function TournamentDetailPage() {
               ) : (
                 <div className="space-y-2">
                   {posts.map((post: any) => (
-                    <Card key={post.id} className="w-full max-w-[680px] mx-auto lg:mx-0 border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-2">
+                    <Card key={post.id} className="w-full max-w-[720px] mx-auto lg:mx-0 border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-2">
                       <CardHeader className="px-3 py-3">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
@@ -2610,6 +2599,18 @@ export default function TournamentDetailPage() {
                   ))}
                 </div>
               )}
+
+              {/* スポンサーバナー（モバイルのみ・タイムラインタブ下部） */}
+              <div className="lg:hidden mt-2">
+                <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-3 px-4">
+                  <SponsorBannerDisplay
+                    sponsors={parseSponsors(tournament?.sponsors)}
+                    title="スポンサー"
+                    showPlaceholder={true}
+                    layout="horizontal"
+                  />
+                </Card>
+              </div>
             </TabsContent>
 
             {/* 参加チームタブ */}
@@ -2760,7 +2761,7 @@ export default function TournamentDetailPage() {
 
               {/* チーム追加ダイアログ */}
               <Dialog open={showAddTeamDialog} onOpenChange={setShowAddTeamDialog}>
-                <DialogContent className="!fixed !top-[50%] !left-[50%] !translate-x-[-50%] !translate-y-[-50%] w-[calc(100%-2rem)] md:w-[680px] max-w-[680px] max-h-[90vh] overflow-y-auto bg-white">
+                <DialogContent className="!fixed !top-[50%] !left-[50%] !translate-x-[-50%] !translate-y-[-50%] w-[calc(100%-2rem)] md:w-[680px] max-w-[720px] max-h-[90vh] overflow-y-auto bg-white">
                   <DialogHeader>
                     <DialogTitle>参加チームを追加</DialogTitle>
                   </DialogHeader>
@@ -2960,7 +2961,7 @@ export default function TournamentDetailPage() {
 
               {/* 大会結果追加/編集ダイアログ */}
               <Dialog open={showAddResultDialog} onOpenChange={setShowAddResultDialog}>
-                <DialogContent className="!fixed !top-[50%] !left-[50%] !translate-x-[-50%] !translate-y-[-50%] w-[calc(100%-2rem)] md:w-[680px] max-w-[680px] max-h-[90vh] overflow-y-auto bg-white">
+                <DialogContent className="!fixed !top-[50%] !left-[50%] !translate-x-[-50%] !translate-y-[-50%] w-[calc(100%-2rem)] md:w-[680px] max-w-[720px] max-h-[90vh] overflow-y-auto bg-white">
                   <DialogHeader>
                     <DialogTitle>{editingResult ? "大会結果を編集" : "大会結果を追加"}</DialogTitle>
                   </DialogHeader>
