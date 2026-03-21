@@ -11,6 +11,7 @@ import Link from "next/link"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
 import { listPosts, getTimelinePosts, createPost as createDbPost, toggleLike as toggleDbLike, addComment as addDbComment, updatePostCounts, getCurrentUserEmail, getUserByEmail, updatePost, deletePost, getCommentsByPost, getSiteSponsors, type SponsorBanner } from "@/lib/api"
 import SponsorBannerDisplay from "@/components/sponsor-banner-display"
+import SponsorSidebar from "@/components/sponsor-sidebar"
 import { uploadImageToS3, uploadPdfToS3, uploadVideoToS3, refreshS3Url } from "@/lib/storage"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input as DialogInput } from "@/components/ui/input"
@@ -1296,8 +1297,10 @@ export default function TimelinePage() {
   return (
     <Layout>
       <div className="min-h-screen bg-[#F0F2F5] overflow-x-hidden w-full max-w-full">
-        <div className="w-full max-w-[680px] mx-auto px-0 overflow-hidden box-border">
-          {/* Main Content */}
+        <div className="w-full max-w-[1040px] mx-auto px-0 lg:px-4">
+          <div className="flex justify-center gap-6">
+          {/* メインコンテンツ */}
+          <div className="w-full max-w-[680px] px-0 overflow-hidden box-border">
           <div className="space-y-2 pb-4 w-full overflow-hidden box-border">
             {/* Create Post */}
             <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-2">
@@ -1706,15 +1709,21 @@ export default function TimelinePage() {
           ))
         )}
 
-        {/* YeLL全体スポンサーバナー */}
-        <Card className="w-full max-w-[680px] mx-auto lg:mx-0 border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-3 px-4">
-          <SponsorBannerDisplay
-            sponsors={siteSponsors}
-            title="YeLL スポンサー"
-            showPlaceholder={true}
-            layout="horizontal"
-          />
-        </Card>
+        {/* YeLL全体スポンサーバナー（モバイルのみ表示） */}
+        <div className="lg:hidden">
+          <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-3 px-4">
+            <SponsorBannerDisplay
+              sponsors={siteSponsors}
+              title="YeLL スポンサー"
+              showPlaceholder={true}
+              layout="horizontal"
+            />
+          </Card>
+        </div>
+          </div>
+          </div>
+          {/* スポンサーサイドバー（デスクトップのみ） */}
+          <SponsorSidebar sponsors={siteSponsors} title="YeLL スポンサー" />
           </div>
         </div>
       </div>

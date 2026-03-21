@@ -75,6 +75,7 @@ import {
 } from "@/lib/api"
 import SponsorBannerEditor from "@/components/sponsor-banner-editor"
 import SponsorBannerDisplay from "@/components/sponsor-banner-display"
+import SponsorSidebar from "@/components/sponsor-sidebar"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
 import { useToast } from "@/hooks/use-toast"
 import { uploadImageToS3, uploadPdfToS3, refreshS3Url } from "@/lib/storage"
@@ -2214,9 +2215,9 @@ export default function TournamentDetailPage() {
                 })()}
               </div>
 
-              {/* スポンサーバナー表示 */}
+              {/* スポンサーバナー表示（モバイルのみ） */}
               {!isEditing && (
-                <div className="mt-4 pt-4 border-t">
+                <div className="mt-4 pt-4 border-t lg:hidden">
                   <SponsorBannerDisplay
                     sponsors={parseSponsors(tournament.sponsors)}
                     title="スポンサー"
@@ -2308,7 +2309,9 @@ export default function TournamentDetailPage() {
               </div>
 
         <div className="pb-20 px-0">
-          <div className="w-full max-w-[680px] mx-auto px-0 overflow-hidden box-border">
+          <div className="w-full max-w-[1040px] mx-auto px-0 lg:px-4">
+          <div className="flex justify-center gap-6">
+          <div className="w-full max-w-[680px] px-0 overflow-hidden box-border">
             {/* タイムラインタブ */}
             <TabsContent value="timeline" className="mt-2 space-y-2 w-full overflow-hidden box-border">
               {/* 投稿作成カード - トップページと同じUI */}
@@ -3239,8 +3242,12 @@ export default function TournamentDetailPage() {
               </Dialog>
             </TabsContent>
 
-            
+
         </div>
+        {/* スポンサーサイドバー（デスクトップのみ） */}
+        <SponsorSidebar sponsors={parseSponsors(tournament?.sponsors)} title="スポンサー" />
+        </div>
+      </div>
       </div>
       </Tabs>
 

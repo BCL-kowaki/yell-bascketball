@@ -59,6 +59,7 @@ import {
 import { getTeam, getCurrentUserEmail, updateTeam, type DbTeam, getPostsByTeam, createPost, type DbPost, toggleFavoriteTeam, checkFavoriteTeam, getUserByEmail, deletePost, toggleLike as toggleDbLike, addComment as addDbComment, getCommentsByPost, updatePostCounts, checkLikeStatus, searchUsers, getTeamTournaments, type DbUser, type DbTournamentTeam, type DbTournament, createChatThread, checkTournamentAdminPermission, listTournaments, parseSponsors, stringifySponsors, type SponsorBanner } from "@/lib/api"
 import SponsorBannerEditor from "@/components/sponsor-banner-editor"
 import SponsorBannerDisplay from "@/components/sponsor-banner-display"
+import SponsorSidebar from "@/components/sponsor-sidebar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { uploadImageToS3, uploadPdfToS3, uploadVideoToS3, refreshS3Url } from "@/lib/storage"
 
@@ -1472,7 +1473,9 @@ export default function TeamDetailPage() {
       </div>
 
       <div className="w-full max-w-6xl mx-auto pb-20 px-0">
-        <div className="w-full max-w-[680px] mx-auto px-0 overflow-hidden box-border">
+        <div className="w-full max-w-[1040px] mx-auto px-0 lg:px-4">
+        <div className="flex justify-center gap-6">
+        <div className="w-full max-w-[680px] px-0 overflow-hidden box-border">
 
             {/* タイムラインタブ */}
             <TabsContent value="timeline" className="mt-2 space-y-2 w-full overflow-hidden box-border">
@@ -2320,8 +2323,8 @@ export default function TeamDetailPage() {
                         </p>
                       </div>
 
-                      {/* スポンサーバナー表示 */}
-                      <div className="pt-4 border-t">
+                      {/* スポンサーバナー表示（モバイルのみ） */}
+                      <div className="pt-4 border-t lg:hidden">
                         <SponsorBannerDisplay
                           sponsors={parseSponsors(team.sponsors)}
                           title="スポンサー"
@@ -2449,6 +2452,10 @@ export default function TeamDetailPage() {
               )}
             </TabsContent>
         </div>
+        {/* スポンサーサイドバー（デスクトップのみ） */}
+        <SponsorSidebar sponsors={parseSponsors(team?.sponsors)} title="スポンサー" />
+        </div>
+      </div>
       </div>
       </Tabs>
 
