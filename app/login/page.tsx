@@ -64,6 +64,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [statusMsg, setStatusMsg] = useState("")
@@ -156,7 +157,7 @@ export default function LoginPage() {
       const sessionRes = await fetch('/api/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: userEmail, userId: userEmail }),
+        body: JSON.stringify({ email: userEmail, userId: userEmail, rememberMe }),
       })
 
       if (!sessionRes.ok) {
@@ -362,6 +363,34 @@ export default function LoginPage() {
               >
                 {showPassword ? <EyeOffIcon /> : <EyeIcon />}
               </button>
+            </div>
+
+            {/* ログインを維持 */}
+            <div style={{ marginBottom: "16px" }}>
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  color: "#555",
+                  userSelect: "none",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  style={{
+                    width: "18px",
+                    height: "18px",
+                    accentColor: "#e84b8a",
+                    cursor: "pointer",
+                  }}
+                />
+                ログインを維持
+              </label>
             </div>
 
             {/* エラーメッセージ */}

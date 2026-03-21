@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, userId } = body
+    const { email, userId, rememberMe } = body
 
     if (!email) {
       console.error('[/api/session POST] emailが未指定')
@@ -45,23 +45,26 @@ export async function POST(request: NextRequest) {
     }
 
     const alg = 'HS256'
+    // ログイン維持: 30日、通常: 2時間
+    const expiration = rememberMe ? '30d' : '2h'
+    const cookieMaxAge = rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 2
 
     const jwt = await new jose.SignJWT({ sub: userId || email, email })
       .setProtectedHeader({ alg })
       .setIssuedAt()
       .setIssuer('urn:example:issuer')
       .setAudience('urn:example:audience')
-      .setExpirationTime('2h')
+      .setExpirationTime(expiration)
       .sign(JWT_SECRET)
 
-    console.log('[/api/session POST] セッション発行成功:', email)
+    console.log('[/api/session POST] セッション発行成功:', email, rememberMe ? '(30日間維持)' : '(2時間)')
 
     const response = NextResponse.json({ message: 'session issued' }, { status: 200 })
     response.cookies.set('accessToken', jwt, {
       httpOnly: true,
       secure: process.env.NODE_ENV !== 'development',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 2,
+      maxAge: cookieMaxAge,
       path: '/',
     })
     return response
