@@ -18,9 +18,9 @@ export default function SponsorSidebar({
   title = 'スポンサー'
 }: SponsorSidebarProps) {
   return (
-    <aside className="hidden lg:block w-[280px] shrink-0">
+    <aside className="hidden lg:block w-[300px] shrink-0">
       <div className="sticky top-[100px] space-y-4">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 mt-2">
           <SponsorBannerDisplay
             sponsors={sponsors}
             title={title}

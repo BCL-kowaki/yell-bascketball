@@ -1297,10 +1297,10 @@ export default function TimelinePage() {
   return (
     <Layout>
       <div className="min-h-screen bg-[#F0F2F5] overflow-x-hidden w-full max-w-full">
-        <div className="w-full max-w-[1040px] mx-auto px-0 lg:px-4">
-          <div className="flex justify-center gap-6">
+        <div className="w-full max-w-[1080px] mx-auto px-0 lg:px-4">
+          <div className="flex justify-center gap-3">
           {/* メインコンテンツ */}
-          <div className="w-full max-w-[680px] px-0 overflow-hidden box-border">
+          <div className="w-full max-w-[720px] px-0 overflow-hidden box-border">
           <div className="space-y-2 pb-4 w-full overflow-hidden box-border">
             {/* Create Post */}
             <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-2">
@@ -1471,7 +1471,7 @@ export default function TimelinePage() {
 
         {/* Timeline Posts */}
         {posts.length === 0 ? (
-          <Card className="w-full max-w-[680px] mx-auto lg:mx-0 border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-2">
+          <Card className="w-full max-w-[720px] mx-auto lg:mx-0 border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-2">
             <CardContent className="py-8 sm:py-12 text-center">
               <p className="text-gray-500 text-base sm:text-lg">まだ投稿がありません</p>
               <p className="text-gray-400 text-xs sm:text-sm mt-2">最初の投稿を作成してみましょう！</p>
@@ -1479,7 +1479,7 @@ export default function TimelinePage() {
           </Card>
         ) : (
           posts.map((post) => (
-          <Card key={post.id} className="w-full max-w-[680px] mx-auto lg:mx-0 border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-2">
+          <Card key={post.id} className="w-full max-w-[720px] mx-auto lg:mx-0 border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-2">
             <CardHeader className="px-3 sm:px-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 sm:gap-4">

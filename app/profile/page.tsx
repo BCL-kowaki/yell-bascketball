@@ -1136,7 +1136,7 @@ export default function ProfilePage() {
         </div>
 
       <div className="w-full max-w-6xl mx-auto pb-20 px-0">
-        <div className="w-full max-w-[680px] mx-auto px-0 overflow-hidden box-border">
+        <div className="w-full max-w-[720px] mx-auto px-0 overflow-hidden box-border">
           <TabsContent value="timeline" className="mt-2 space-y-2 w-full overflow-hidden box-border">
               {isLoadingPosts ? (
                 <div className="text-center py-12">
@@ -1649,7 +1649,7 @@ export default function ProfilePage() {
 
       {/* プロフィール編集モーダル */}
       <Dialog open={isEditing} onOpenChange={setIsEditing}>
-        <DialogContent className="w-[calc(100%-2rem)] max-w-[680px] sm:max-w-[680px] md:w-[680px] bg-white !fixed !top-[50%] !left-[50%] !translate-x-[-50%] !translate-y-[-50%] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[calc(100%-2rem)] max-w-[720px] sm:max-w-[720px] md:w-[720px] bg-white !fixed !top-[50%] !left-[50%] !translate-x-[-50%] !translate-y-[-50%] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>プロフィールを編集</DialogTitle>
           </DialogHeader>
