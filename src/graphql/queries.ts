@@ -83,6 +83,7 @@ export const getTournament = /* GraphQL */ `
       endDate
       favoritesCount
       instagramUrl
+      sponsors
       createdAt
       updatedAt
       teams {
@@ -135,6 +136,7 @@ export const listTournaments = /* GraphQL */ `
         endDate
         favoritesCount
         instagramUrl
+        sponsors
         createdAt
         updatedAt
         __typename
@@ -163,6 +165,7 @@ export const getTeam = /* GraphQL */ `
       ownerEmail
       editorEmails
       isApproved
+      sponsors
       createdAt
       updatedAt
       tournamentTeams {
@@ -205,6 +208,7 @@ export const listTeams = /* GraphQL */ `
         ownerEmail
         editorEmails
         isApproved
+        sponsors
         createdAt
         updatedAt
         __typename
@@ -260,6 +264,7 @@ export const getPost = /* GraphQL */ `
         endDate
         favoritesCount
         instagramUrl
+        sponsors
         createdAt
         updatedAt
         __typename
@@ -281,6 +286,7 @@ export const getPost = /* GraphQL */ `
         ownerEmail
         editorEmails
         isApproved
+        sponsors
         createdAt
         updatedAt
         __typename
@@ -441,6 +447,7 @@ export const getFavorite = /* GraphQL */ `
         endDate
         favoritesCount
         instagramUrl
+        sponsors
         createdAt
         updatedAt
         __typename
@@ -462,6 +469,7 @@ export const getFavorite = /* GraphQL */ `
         ownerEmail
         editorEmails
         isApproved
+        sponsors
         createdAt
         updatedAt
         __typename
@@ -552,6 +560,7 @@ export const getTournamentTeam = /* GraphQL */ `
         endDate
         favoritesCount
         instagramUrl
+        sponsors
         createdAt
         updatedAt
         __typename
@@ -573,6 +582,7 @@ export const getTournamentTeam = /* GraphQL */ `
         ownerEmail
         editorEmails
         isApproved
+        sponsors
         createdAt
         updatedAt
         __typename
@@ -639,6 +649,7 @@ export const getTournamentResult = /* GraphQL */ `
         endDate
         favoritesCount
         instagramUrl
+        sponsors
         createdAt
         updatedAt
         __typename
@@ -710,6 +721,7 @@ export const getTournamentInvitation = /* GraphQL */ `
         endDate
         favoritesCount
         instagramUrl
+        sponsors
         createdAt
         updatedAt
         __typename
@@ -1005,6 +1017,40 @@ export const listDistricts = /* GraphQL */ `
         name
         prefectureId
         sortOrder
+        createdAt
+        updatedAt
+        __typename
+      }
+      nextToken
+      __typename
+    }
+  }
+`;
+export const getSiteConfig = /* GraphQL */ `
+  query GetSiteConfig($id: ID!) {
+    getSiteConfig(id: $id) {
+      id
+      configKey
+      configValue
+      updatedBy
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const listSiteConfigs = /* GraphQL */ `
+  query ListSiteConfigs(
+    $filter: ModelSiteConfigFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    listSiteConfigs(filter: $filter, limit: $limit, nextToken: $nextToken) {
+      items {
+        id
+        configKey
+        configValue
+        updatedBy
         createdAt
         updatedAt
         __typename
@@ -1728,6 +1774,35 @@ export const districtsByPrefectureIdAndSortOrder = /* GraphQL */ `
         name
         prefectureId
         sortOrder
+        createdAt
+        updatedAt
+        __typename
+      }
+      nextToken
+      __typename
+    }
+  }
+`;
+export const siteConfigByKey = /* GraphQL */ `
+  query SiteConfigByKey(
+    $configKey: String!
+    $sortDirection: ModelSortDirection
+    $filter: ModelSiteConfigFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    siteConfigByKey(
+      configKey: $configKey
+      sortDirection: $sortDirection
+      filter: $filter
+      limit: $limit
+      nextToken: $nextToken
+    ) {
+      items {
+        id
+        configKey
+        configValue
+        updatedBy
         createdAt
         updatedAt
         __typename

@@ -397,7 +397,7 @@ export async function searchTeams(searchTerm: string): Promise<DbTeam[]> {
     query ListTeams($filter: ModelTeamFilterInput, $limit: Int) {
       listTeams(filter: $filter, limit: $limit) {
         items {
-          id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website instagramUrl ownerEmail editorEmails isApproved createdAt updatedAt
+          id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website instagramUrl ownerEmail editorEmails isApproved sponsors createdAt updatedAt
         }
       }
     }
@@ -776,7 +776,7 @@ export async function createTournament(input: Partial<DbTournament>): Promise<Db
       createTournament(input: $input) {
         id name iconUrl coverImage category regionBlock prefecture district
         tournamentType area subArea
-        description ownerEmail coAdminEmails startDate endDate favoritesCount instagramUrl createdAt updatedAt
+        description ownerEmail coAdminEmails startDate endDate favoritesCount instagramUrl sponsors createdAt updatedAt
       }
     }
   `
@@ -807,7 +807,7 @@ export async function listTournaments(limit = 200): Promise<DbTournament[]> {
         items {
           id name iconUrl coverImage category regionBlock prefecture district
           tournamentType area subArea
-          description ownerEmail coAdminEmails startDate endDate favoritesCount instagramUrl createdAt updatedAt
+          description ownerEmail coAdminEmails startDate endDate favoritesCount instagramUrl sponsors createdAt updatedAt
         }
         nextToken
       }
@@ -853,7 +853,7 @@ export async function getTournament(id: string): Promise<DbTournament | null> {
       getTournament(id: $id) {
         id name iconUrl coverImage category regionBlock prefecture district
         tournamentType area subArea
-        description ownerEmail coAdminEmails startDate endDate favoritesCount instagramUrl createdAt updatedAt
+        description ownerEmail coAdminEmails startDate endDate favoritesCount instagramUrl sponsors createdAt updatedAt
       }
     }
   `
@@ -915,18 +915,18 @@ export async function updateTournament(id: string, input: Partial<DbTournament>)
       updateTournament(input: $input) {
         id name iconUrl coverImage category regionBlock prefecture district
         tournamentType area subArea
-        description ownerEmail coAdminEmails startDate endDate favoritesCount instagramUrl createdAt updatedAt
+        description ownerEmail coAdminEmails startDate endDate favoritesCount instagramUrl sponsors createdAt updatedAt
       }
     }
   `
 
   try {
-    // スキーマに存在するフィールドのみを送信（sponsors はデプロイ後に追加）
+    // スキーマに存在するフィールドのみを送信
     const sanitizedInput: any = { id }
     const allowedFields = [
       'name', 'iconUrl', 'coverImage', 'category', 'regionBlock', 'prefecture',
       'district', 'tournamentType', 'area', 'subArea', 'description', 'ownerEmail',
-      'coAdminEmails', 'startDate', 'endDate', 'favoritesCount', 'instagramUrl'
+      'coAdminEmails', 'startDate', 'endDate', 'favoritesCount', 'instagramUrl', 'sponsors'
     ]
     for (const field of allowedFields) {
       if ((input as any)[field] !== undefined) {
@@ -991,7 +991,7 @@ export async function createTeam(input: Partial<DbTeam>): Promise<DbTeam> {
   const mutation = /* GraphQL */ `
     mutation CreateTeam($input: CreateTeamInput!) {
       createTeam(input: $input) {
-        id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website instagramUrl ownerEmail editorEmails isApproved createdAt updatedAt
+        id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website instagramUrl ownerEmail editorEmails isApproved sponsors createdAt updatedAt
       }
     }
   `
@@ -1038,7 +1038,7 @@ export async function listTeams(limit = 50, filter?: { isApproved?: boolean }): 
     query ListTeams($filter: ModelTeamFilterInput, $limit: Int) {
       listTeams(filter: $filter, limit: $limit) {
         items {
-          id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website instagramUrl ownerEmail editorEmails isApproved createdAt updatedAt
+          id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website instagramUrl ownerEmail editorEmails isApproved sponsors createdAt updatedAt
         }
       }
     }
@@ -1076,7 +1076,7 @@ export async function getTeam(id: string): Promise<DbTeam | null> {
   const query = /* GraphQL */ `
     query GetTeam($id: ID!) {
       getTeam(id: $id) {
-        id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website instagramUrl ownerEmail editorEmails isApproved createdAt updatedAt
+        id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website instagramUrl ownerEmail editorEmails isApproved sponsors createdAt updatedAt
       }
     }
   `
@@ -1104,7 +1104,7 @@ export async function updateTeam(id: string, input: Partial<DbTeam>): Promise<Db
   const mutation = /* GraphQL */ `
     mutation UpdateTeam($input: UpdateTeamInput!) {
       updateTeam(input: $input) {
-        id name shortName category region prefecture description website instagramUrl logoUrl coverImageUrl editorEmails isApproved createdAt
+        id name shortName category region prefecture description website instagramUrl logoUrl coverImageUrl editorEmails isApproved sponsors createdAt
       }
     }
   `
@@ -2352,7 +2352,7 @@ export async function searchTournaments(searchTerm: string): Promise<DbTournamen
         items {
           id name iconUrl coverImage category regionBlock prefecture district
           tournamentType area subArea
-          description ownerEmail coAdminEmails startDate endDate favoritesCount instagramUrl createdAt updatedAt
+          description ownerEmail coAdminEmails startDate endDate favoritesCount instagramUrl sponsors createdAt updatedAt
         }
       }
     }
@@ -2739,7 +2739,7 @@ export async function getMyTeams(email: string): Promise<DbTeam[]> {
     query ListTeams($filter: ModelTeamFilterInput, $limit: Int) {
       listTeams(filter: $filter, limit: $limit) {
         items {
-          id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website instagramUrl ownerEmail editorEmails isApproved createdAt updatedAt
+          id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website instagramUrl ownerEmail editorEmails isApproved sponsors createdAt updatedAt
         }
       }
     }
