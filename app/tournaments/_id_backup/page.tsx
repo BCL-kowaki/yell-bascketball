@@ -68,8 +68,13 @@ import {
   type DbComment,
   type DbTournamentTeam,
   type DbTournamentResult,
-  type DbTeam
+  type DbTeam,
+  parseSponsors,
+  stringifySponsors,
+  type SponsorBanner
 } from "@/lib/api"
+import SponsorBannerEditor from "@/components/sponsor-banner-editor"
+import SponsorBannerDisplay from "@/components/sponsor-banner-display"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
 import { useToast } from "@/hooks/use-toast"
 import { uploadImageToS3, uploadPdfToS3, refreshS3Url } from "@/lib/storage"
@@ -309,6 +314,9 @@ export default function TournamentDetailPage() {
   const [rankingSearchResults, setRankingSearchResults] = useState<Record<number, DbTeam[]>>({})
   const [selectedRankingTeams, setSelectedRankingTeams] = useState<Record<number, DbTeam | null>>({})
 
+  // スポンサーバナー関連
+  const [editSponsors, setEditSponsors] = useState<SponsorBanner[]>([])
+
   // オファー送信関連
   const [showOfferDialog, setShowOfferDialog] = useState(false)
   const [offerTargetTeam, setOfferTargetTeam] = useState<DbTeam | null>(null)
@@ -389,6 +397,8 @@ export default function TournamentDetailPage() {
           area: tournament.area || "",
           subArea: tournament.subArea || "",
         })
+        // スポンサーデータを初期化
+        setEditSponsors(parseSponsors(tournament.sponsors))
         // 画像プレビューを設定
         if (tournament.iconUrl) {
           setIconPreview(tournament.iconUrl)
@@ -951,6 +961,7 @@ export default function TournamentDetailPage() {
         coAdminEmails: coAdminEmails.length > 0 ? coAdminEmails : null,
         iconUrl: iconUrl || null,
         coverImage: coverImage || null,
+        sponsors: editSponsors.length > 0 ? stringifySponsors(editSponsors) : null,
       })
 
       setTournament(updated)
@@ -2129,6 +2140,15 @@ export default function TournamentDetailPage() {
               </div>
             </div>
           </div>
+
+                  {/* スポンサーバナー編集 */}
+                  <div className="pt-2 border-t">
+                    <SponsorBannerEditor
+                      sponsors={editSponsors}
+                      onChange={setEditSponsors}
+                      maxCount={5}
+                    />
+                  </div>
         </div>
               )}
 
@@ -2193,6 +2213,18 @@ export default function TournamentDetailPage() {
                   )
                 })()}
               </div>
+
+              {/* スポンサーバナー表示 */}
+              {!isEditing && (
+                <div className="mt-4 pt-4 border-t">
+                  <SponsorBannerDisplay
+                    sponsors={parseSponsors(tournament.sponsors)}
+                    title="スポンサー"
+                    showPlaceholder={true}
+                    layout="horizontal"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex gap-2 w-full md:w-auto">

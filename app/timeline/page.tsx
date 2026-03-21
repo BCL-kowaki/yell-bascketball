@@ -9,7 +9,8 @@ import { Layout } from "@/components/layout"
 import { Navigation } from "@/components/navigation"
 import Link from "next/link"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
-import { listPosts, getTimelinePosts, createPost as createDbPost, toggleLike as toggleDbLike, addComment as addDbComment, updatePostCounts, getCurrentUserEmail, getUserByEmail, updatePost, deletePost, getCommentsByPost } from "@/lib/api"
+import { listPosts, getTimelinePosts, createPost as createDbPost, toggleLike as toggleDbLike, addComment as addDbComment, updatePostCounts, getCurrentUserEmail, getUserByEmail, updatePost, deletePost, getCommentsByPost, getSiteSponsors, type SponsorBanner } from "@/lib/api"
+import SponsorBannerDisplay from "@/components/sponsor-banner-display"
 import { uploadImageToS3, uploadPdfToS3, uploadVideoToS3, refreshS3Url } from "@/lib/storage"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input as DialogInput } from "@/components/ui/input"
@@ -337,6 +338,9 @@ export default function TimelinePage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isPostFormOpen, setIsPostFormOpen] = useState(false)
 
+  // YeLL全体スポンサー
+  const [siteSponsors, setSiteSponsors] = useState<SponsorBanner[]>([])
+
   // ログインユーザー情報を取得
   useEffect(() => {
     const loadCurrentUser = async () => {
@@ -371,6 +375,13 @@ export default function TimelinePage() {
     }
 
     loadCurrentUser()
+
+    // YeLL全体スポンサーを読み込み
+    getSiteSponsors().then(sponsors => {
+      setSiteSponsors(sponsors)
+    }).catch(err => {
+      console.error('YeLL全体スポンサー取得エラー:', err)
+    })
   }, [])
 
   // 初期ロードでDBから投稿を取得
@@ -1694,6 +1705,16 @@ export default function TimelinePage() {
           </Card>
           ))
         )}
+
+        {/* YeLL全体スポンサーバナー */}
+        <Card className="w-full max-w-[680px] mx-auto lg:mx-0 border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-3 px-4">
+          <SponsorBannerDisplay
+            sponsors={siteSponsors}
+            title="YeLL スポンサー"
+            showPlaceholder={true}
+            layout="horizontal"
+          />
+        </Card>
           </div>
         </div>
       </div>

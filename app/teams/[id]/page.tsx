@@ -56,7 +56,9 @@ import {
   Instagram,
   Send
 } from "lucide-react"
-import { getTeam, getCurrentUserEmail, updateTeam, type DbTeam, getPostsByTeam, createPost, type DbPost, toggleFavoriteTeam, checkFavoriteTeam, getUserByEmail, deletePost, toggleLike as toggleDbLike, addComment as addDbComment, getCommentsByPost, updatePostCounts, checkLikeStatus, searchUsers, getTeamTournaments, type DbUser, type DbTournamentTeam, type DbTournament, createChatThread, checkTournamentAdminPermission, listTournaments } from "@/lib/api"
+import { getTeam, getCurrentUserEmail, updateTeam, type DbTeam, getPostsByTeam, createPost, type DbPost, toggleFavoriteTeam, checkFavoriteTeam, getUserByEmail, deletePost, toggleLike as toggleDbLike, addComment as addDbComment, getCommentsByPost, updatePostCounts, checkLikeStatus, searchUsers, getTeamTournaments, type DbUser, type DbTournamentTeam, type DbTournament, createChatThread, checkTournamentAdminPermission, listTournaments, parseSponsors, stringifySponsors, type SponsorBanner } from "@/lib/api"
+import SponsorBannerEditor from "@/components/sponsor-banner-editor"
+import SponsorBannerDisplay from "@/components/sponsor-banner-display"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { uploadImageToS3, uploadPdfToS3, uploadVideoToS3, refreshS3Url } from "@/lib/storage"
 
@@ -211,6 +213,9 @@ export default function TeamDetailPage() {
   const [myTournaments, setMyTournaments] = useState<DbTournament[]>([])
   const [selectedTournamentId, setSelectedTournamentId] = useState("")
   const [isLoadingMyTournaments, setIsLoadingMyTournaments] = useState(false)
+
+  // スポンサーバナー関連
+  const [editSponsors, setEditSponsors] = useState<SponsorBanner[]>([])
 
   // File input refs
   const imageInputRef = useRef<HTMLInputElement>(null)
@@ -468,6 +473,8 @@ export default function TeamDetailPage() {
     } else {
       setAvailableDistricts(DEFAULT_DISTRICTS)
     }
+    // スポンサーデータを初期化
+    setEditSponsors(parseSponsors(team?.sponsors))
     // 編集用の管理者リストを初期化（オーナーを除く）
     if (team?.editorEmails && team.editorEmails.length > 0) {
       const editorUsers: DbUser[] = []
@@ -640,7 +647,8 @@ export default function TeamDetailPage() {
         instagramUrl: editedTeam.instagramUrl,
         logoUrl: logoUrl || undefined,
         coverImageUrl: coverImageUrl || undefined,
-        editorEmails: editorEmails.length > 0 ? editorEmails : null
+        editorEmails: editorEmails.length > 0 ? editorEmails : null,
+        sponsors: editSponsors.length > 0 ? stringifySponsors(editSponsors) : null
       }
 
       await updateTeam(params.id, updatedData)
@@ -2175,6 +2183,15 @@ export default function TeamDetailPage() {
                           </div>
                         </div>
                       </div>
+
+                      {/* スポンサーバナー編集 */}
+                      <div className="pt-2 border-t">
+                        <SponsorBannerEditor
+                          sponsors={editSponsors}
+                          onChange={setEditSponsors}
+                          maxCount={5}
+                        />
+                      </div>
                     </>
                   ) : (
                     <>
@@ -2301,6 +2318,16 @@ export default function TeamDetailPage() {
                               })
                             : "不明"}
                         </p>
+                      </div>
+
+                      {/* スポンサーバナー表示 */}
+                      <div className="pt-4 border-t">
+                        <SponsorBannerDisplay
+                          sponsors={parseSponsors(team.sponsors)}
+                          title="スポンサー"
+                          showPlaceholder={true}
+                          layout="horizontal"
+                        />
                       </div>
                     </>
                   )}

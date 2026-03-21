@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
-  Users, Trophy, Shield, MessageCircle, BarChart3,
+  Users, Trophy, Shield, MessageCircle, BarChart3, Megaphone,
   Loader2, ShieldAlert, ChevronRight, Lock, LogOut
 } from "lucide-react"
 import {
@@ -191,6 +191,14 @@ export default function AdminDashboardPage() {
       count: stats.chats,
       color: "from-purple-500 to-purple-600",
       desc: "全オファー・チャットの確認",
+    },
+    {
+      href: "/admin/sponsors",
+      icon: Megaphone,
+      label: "スポンサー管理",
+      count: null,
+      color: "from-orange-500 to-orange-600",
+      desc: "YeLL全体スポンサーバナーの設定",
     },
     {
       href: "/admin/stats",

@@ -43,9 +43,10 @@ type Tournament @model @auth(rules: [{allow: public}]) {
   endDate: AWSDateTime
   favoritesCount: Int
   instagramUrl: String
+  sponsors: String
   createdAt: AWSDateTime
   updatedAt: AWSDateTime
-  
+
   # リレーションシップ
   teams: [TournamentTeam] @hasMany(indexName: "byTournament", fields: ["id"])
   results: [TournamentResult] @hasMany(indexName: "byTournament", fields: ["id"])
@@ -72,9 +73,10 @@ type Team @model @auth(rules: [{allow: public}]) {
   ownerEmail: String!
   editorEmails: [String]
   isApproved: Boolean!
+  sponsors: String
   createdAt: AWSDateTime
   updatedAt: AWSDateTime
-  
+
   # リレーションシップ
   tournamentTeams: [TournamentTeam] @hasMany(indexName: "byTeam", fields: ["id"])
   posts: [Post] @hasMany(indexName: "byTeam", fields: ["id"])
@@ -305,4 +307,15 @@ type District @model @auth(rules: [{allow: public}]) {
   
   # リレーションシップ
   prefecture: Prefecture @belongsTo(fields: ["prefectureId"])
+}
+
+# ==================== SiteConfig ====================
+# YeLL全体の設定（スポンサーバナーなど）
+type SiteConfig @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  configKey: String! @index(name: "byConfigKey", queryField: "siteConfigByKey")
+  configValue: String!
+  updatedBy: String
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
 }
