@@ -102,6 +102,9 @@ export const createTournament = /* GraphQL */ `
       regionBlock
       prefecture
       district
+      tournamentType
+      area
+      subArea
       description
       ownerEmail
       coAdminEmails
@@ -149,6 +152,9 @@ export const updateTournament = /* GraphQL */ `
       regionBlock
       prefecture
       district
+      tournamentType
+      area
+      subArea
       description
       ownerEmail
       coAdminEmails
@@ -196,6 +202,9 @@ export const deleteTournament = /* GraphQL */ `
       regionBlock
       prefecture
       district
+      tournamentType
+      area
+      subArea
       description
       ownerEmail
       coAdminEmails
@@ -388,6 +397,9 @@ export const createPost = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -463,6 +475,9 @@ export const updatePost = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -538,6 +553,9 @@ export const deletePost = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -757,6 +775,9 @@ export const createFavorite = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -814,6 +835,9 @@ export const updateFavorite = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -871,6 +895,9 @@ export const deleteFavorite = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -974,6 +1001,9 @@ export const createTournamentTeam = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -1032,6 +1062,9 @@ export const updateTournamentTeam = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -1090,6 +1123,9 @@ export const deleteTournamentTeam = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -1155,6 +1191,9 @@ export const createTournamentResult = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -1199,6 +1238,9 @@ export const updateTournamentResult = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -1243,6 +1285,9 @@ export const deleteTournamentResult = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -1281,6 +1326,9 @@ export const createTournamentInvitation = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -1319,6 +1367,9 @@ export const updateTournamentInvitation = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -1357,6 +1408,9 @@ export const deleteTournamentInvitation = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -1368,6 +1422,204 @@ export const deleteTournamentInvitation = /* GraphQL */ `
         updatedAt
         __typename
       }
+      __typename
+    }
+  }
+`;
+export const createChatThread = /* GraphQL */ `
+  mutation CreateChatThread(
+    $input: CreateChatThreadInput!
+    $condition: ModelChatThreadConditionInput
+  ) {
+    createChatThread(input: $input, condition: $condition) {
+      id
+      senderEmail
+      senderName
+      teamId
+      teamName
+      tournamentId
+      tournamentName
+      threadType
+      status
+      lastMessage
+      lastMessageAt
+      teamUnreadCount
+      senderUnreadCount
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const updateChatThread = /* GraphQL */ `
+  mutation UpdateChatThread(
+    $input: UpdateChatThreadInput!
+    $condition: ModelChatThreadConditionInput
+  ) {
+    updateChatThread(input: $input, condition: $condition) {
+      id
+      senderEmail
+      senderName
+      teamId
+      teamName
+      tournamentId
+      tournamentName
+      threadType
+      status
+      lastMessage
+      lastMessageAt
+      teamUnreadCount
+      senderUnreadCount
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const deleteChatThread = /* GraphQL */ `
+  mutation DeleteChatThread(
+    $input: DeleteChatThreadInput!
+    $condition: ModelChatThreadConditionInput
+  ) {
+    deleteChatThread(input: $input, condition: $condition) {
+      id
+      senderEmail
+      senderName
+      teamId
+      teamName
+      tournamentId
+      tournamentName
+      threadType
+      status
+      lastMessage
+      lastMessageAt
+      teamUnreadCount
+      senderUnreadCount
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const createChatMessage = /* GraphQL */ `
+  mutation CreateChatMessage(
+    $input: CreateChatMessageInput!
+    $condition: ModelChatMessageConditionInput
+  ) {
+    createChatMessage(input: $input, condition: $condition) {
+      id
+      threadId
+      senderEmail
+      senderName
+      content
+      messageType
+      isRead
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const updateChatMessage = /* GraphQL */ `
+  mutation UpdateChatMessage(
+    $input: UpdateChatMessageInput!
+    $condition: ModelChatMessageConditionInput
+  ) {
+    updateChatMessage(input: $input, condition: $condition) {
+      id
+      threadId
+      senderEmail
+      senderName
+      content
+      messageType
+      isRead
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const deleteChatMessage = /* GraphQL */ `
+  mutation DeleteChatMessage(
+    $input: DeleteChatMessageInput!
+    $condition: ModelChatMessageConditionInput
+  ) {
+    deleteChatMessage(input: $input, condition: $condition) {
+      id
+      threadId
+      senderEmail
+      senderName
+      content
+      messageType
+      isRead
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const createNotification = /* GraphQL */ `
+  mutation CreateNotification(
+    $input: CreateNotificationInput!
+    $condition: ModelNotificationConditionInput
+  ) {
+    createNotification(input: $input, condition: $condition) {
+      id
+      recipientEmail
+      type
+      title
+      message
+      senderName
+      senderAvatar
+      relatedId
+      relatedType
+      isRead
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const updateNotification = /* GraphQL */ `
+  mutation UpdateNotification(
+    $input: UpdateNotificationInput!
+    $condition: ModelNotificationConditionInput
+  ) {
+    updateNotification(input: $input, condition: $condition) {
+      id
+      recipientEmail
+      type
+      title
+      message
+      senderName
+      senderAvatar
+      relatedId
+      relatedType
+      isRead
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const deleteNotification = /* GraphQL */ `
+  mutation DeleteNotification(
+    $input: DeleteNotificationInput!
+    $condition: ModelNotificationConditionInput
+  ) {
+    deleteNotification(input: $input, condition: $condition) {
+      id
+      recipientEmail
+      type
+      title
+      message
+      senderName
+      senderAvatar
+      relatedId
+      relatedType
+      isRead
+      createdAt
+      updatedAt
       __typename
     }
   }

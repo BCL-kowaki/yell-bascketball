@@ -5,7 +5,12 @@ import { getCurrentUser, fetchUserAttributes } from "aws-amplify/auth"
 import { ensureAmplifyConfigured } from "./amplifyClient"
 
 // GraphQLクライアントを初期化（API_KEY認証を使用）
-ensureAmplifyConfigured()
+// 安全に初期化（SSRやモジュール読み込み時のエラー防止）
+try {
+  ensureAmplifyConfigured()
+} catch (e) {
+  console.error('Amplify初期化エラー（モジュールレベル）:', e)
+}
 const client = generateClient({
   authMode: 'apiKey' // 明示的にAPI_KEY認証を指定
 })
@@ -172,6 +177,70 @@ export type DbFavorite = {
   updatedAt?: string | null
 }
 
+export type DbChatThread = {
+  id: string
+  senderEmail: string
+  senderName: string
+  teamId: string
+  teamName: string
+  tournamentId: string
+  tournamentName: string
+  threadType: string
+  status: string
+  lastMessage?: string | null
+  lastMessageAt?: string | null
+  teamUnreadCount?: number | null
+  senderUnreadCount?: number | null
+  createdAt?: string | null
+  updatedAt?: string | null
+}
+
+export type DbChatMessage = {
+  id: string
+  threadId: string
+  senderEmail: string
+  senderName: string
+  content: string
+  messageType: string
+  isRead?: boolean | null
+  createdAt?: string | null
+  updatedAt?: string | null
+}
+
+export type DbNotification = {
+  id: string
+  recipientEmail: string
+  type: string
+  title: string
+  message: string
+  senderName?: string | null
+  senderAvatar?: string | null
+  relatedId?: string | null
+  relatedType?: string | null
+  isRead: boolean
+  createdAt?: string | null
+  updatedAt?: string | null
+}
+
+/**
+ * 大会の運営者（ownerEmail または coAdminEmails）であるかチェックする
+ * @param tournamentId 大会ID
+ * @param userEmail 確認するユーザーのメールアドレス
+ * @returns 権限がある場合はtrue
+ */
+export async function checkTournamentAdminPermission(tournamentId: string, userEmail: string): Promise<boolean> {
+  try {
+    const tournament = await getTournament(tournamentId)
+    if (!tournament) return false
+    const isOwner = tournament.ownerEmail === userEmail
+    const isCoAdmin = tournament.coAdminEmails?.includes(userEmail) || false
+    return isOwner || isCoAdmin
+  } catch (error) {
+    console.error('checkTournamentAdminPermission error:', error?.message)
+    return false
+  }
+}
+
 /**
  * セッションからメールアドレスを取得（Cognito認証に依存しない）
  * @returns メールアドレス、またはundefined
@@ -185,7 +254,7 @@ export async function getEmailFromSession(): Promise<string | undefined> {
     }
     return undefined
   } catch (error) {
-    console.error('getEmailFromSession error:', error)
+    console.error('getEmailFromSession error:', error?.message)
     return undefined
   }
 }
@@ -205,7 +274,7 @@ export async function getCurrentUserEmail(): Promise<string | undefined> {
     const attributes = await fetchUserAttributes()
     return attributes.email || attributes.preferred_username || undefined
   } catch (error) {
-    console.error('getCurrentUserEmail error:', error)
+    console.error('getCurrentUserEmail error:', error?.message)
     return undefined
   }
 }
@@ -233,51 +302,15 @@ export async function getUserByEmail(email: string): Promise<DbUser | null> {
     }) as any
     return data?.listUsers?.items?.[0] ?? null
   } catch (error: any) {
-    // エラーの詳細をログ出力
-    const errorDetails = {
-      message: error?.message,
-      name: error?.name,
-      errors: error?.errors,
-      code: error?.code,
-      stack: error?.stack,
-      cause: error?.cause
-    }
-    console.error('getUserByEmail: Error details:', errorDetails)
-    
     // Identity Poolのエラーは無視（GraphQL APIはAPI_KEY認証を使用しているため）
-    if (error?.message?.includes('cognito-identity') || 
+    if (error?.message?.includes('cognito-identity') ||
         error?.message?.includes('IdentityPool') ||
         error?.name === 'NotAuthorizedException') {
-      console.warn('getUserByEmail: Identity Pool error ignored (using API_KEY auth):', error?.message)
       return null
     }
-    
-    // GraphQLエラーの場合
-    if (error?.errors && Array.isArray(error.errors)) {
-      const errorMessages = error.errors.map((e: any) => e.message || JSON.stringify(e)).join(', ')
-      console.error('getUserByEmail: GraphQL errors:', errorMessages)
-      console.error('getUserByEmail: GraphQL error details:', error.errors)
-      
-      // ネットワークエラーの場合
-      if (errorMessages.includes('network error') || errorMessages.includes('Network')) {
-        console.error('getUserByEmail: ⚠️ Network error detected!')
-        console.error('getUserByEmail: Possible causes:')
-        console.error('  1. API key is invalid or expired')
-        console.error('  2. GraphQL endpoint URL is incorrect')
-        console.error('  3. DNS resolution issue (ERR_NAME_NOT_RESOLVED)')
-        // 設定を再読み込み
-        const config = await import('../src/amplifyconfiguration.json').catch(() => null)
-        const endpoint = config?.default?.aws_appsync_graphqlEndpoint || config?.aws_appsync_graphqlEndpoint
-        console.error('getUserByEmail: Current endpoint:', endpoint || 'NOT FOUND')
-        console.error('getUserByEmail: Expected endpoint: https://helcik5ebvbyta6fjd4fhysy3u.appsync-api.ap-northeast-1.amazonaws.com/graphql')
-        console.error('getUserByEmail: Please check the API key in AWS AppSync Console for API ID: mcs2dydfpvf5lonf4yvahm4fk4')
-      }
-      return null
-    }
-    
-    // その他のエラー
-    console.error('getUserByEmail: Unknown error:', error)
-    return null // エラーが発生した場合はnullを返す（throwしない）
+
+    console.error('getUserByEmail error:', error?.message)
+    return null
   }
 }
 
@@ -294,8 +327,6 @@ export async function updateUser(id: string, input: Partial<DbUser>): Promise<Db
   `
   try {
     const variables = { input: { id, ...input } }
-    console.log('updateUser called with:', { id, input, variables })
-    console.log('updateUser variables (stringified):', JSON.stringify(variables, null, 2))
 
     // 明示的にauthModeを指定してIdentity Poolへのアクセスを回避
     const result = await client.graphql({
@@ -304,31 +335,17 @@ export async function updateUser(id: string, input: Partial<DbUser>): Promise<Db
       authMode: 'apiKey' // 明示的にAPI_KEY認証を指定
     }) as any
 
-    console.log('updateUser result (full):', JSON.stringify(result, null, 2))
-    console.log('updateUser result.data:', result.data)
-    console.log('updateUser result.errors:', result.errors)
-
     if (result.errors) {
-      console.error('GraphQL errors:', result.errors)
-      console.error('GraphQL errors (stringified):', JSON.stringify(result.errors, null, 2))
       throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
     }
 
     if (!result.data?.updateUser) {
-      console.error('No updateUser in result.data:', result.data)
       throw new Error('Update user returned no data')
     }
 
-    const updatedUser = result.data.updateUser
-    console.log('Updated user data:', JSON.stringify(updatedUser, null, 2))
-
-    return updatedUser
+    return result.data.updateUser
   } catch (error: any) {
-    console.error('updateUser error:', error)
-    console.error('Error message:', error?.message)
-    console.error('Error stack:', error?.stack)
-    console.error('Error errors:', error?.errors)
-    console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2))
+    console.error('updateUser error:', error?.message)
     throw error
   }
 }
@@ -361,8 +378,8 @@ export async function searchTeams(searchTerm: string): Promise<DbTeam[]> {
     }) as any
 
     return data?.listTeams?.items ?? []
-  } catch (error) {
-    console.error('Error searching teams:', error)
+  } catch (error: any) {
+    console.error('searchTeams error:', error?.message)
     return []
   }
 }
@@ -402,147 +419,22 @@ export async function listPosts(limit = 50, filter?: { authorEmail?: string; tou
   `
 
   try {
-    // 設定を直接読み込む
-    const config = await import('../src/amplifyconfiguration.json').catch(() => null)
-    const endpoint = config?.default?.aws_appsync_graphqlEndpoint || config?.aws_appsync_graphqlEndpoint
-    const apiKey = config?.default?.aws_appsync_apiKey || config?.aws_appsync_apiKey
-    
-    console.log('listPosts: Fetching posts from database...')
-    console.log('listPosts: GraphQL endpoint configured:', {
-      endpoint: endpoint || 'N/A',
-      apiKey: apiKey ? apiKey.substring(0, 10) + '...' : 'N/A',
-      authMode: 'apiKey'
-    })
-    
     // 明示的にauthModeを指定してIdentity Poolへのアクセスを回避
     const result = await client.graphql({
       query,
       variables: { filter: finalFilter, limit },
       authMode: 'apiKey' // 明示的にAPI_KEY認証を指定
     }) as any
-    
-    console.log('listPosts: GraphQL result:', {
-      hasData: !!result?.data,
-      hasItems: !!result?.data?.listPosts?.items,
-      itemsCount: result?.data?.listPosts?.items?.length || 0,
-      nextToken: result?.data?.listPosts?.nextToken,
-      fullResponse: result, // 完全なレスポンスをログ出力
-      firstItem: result?.data?.listPosts?.items?.[0] ? {
-        id: result.data.listPosts.items[0].id,
-        content: result.data.listPosts.items[0].content?.substring(0, 50),
-        authorEmail: result.data.listPosts.items[0].authorEmail,
-        hasAuthorEmail: !!result.data.listPosts.items[0].authorEmail,
-        fullItem: result.data.listPosts.items[0] // 完全なアイテムをログ出力
-      } : null,
-      hasErrors: !!result?.errors,
-      errorsCount: result?.errors?.length || 0
-    })
-    
-    // 完全なレスポンスをログ出力（デバッグ用）
-    console.log('listPosts: Full GraphQL response:', JSON.stringify(result, null, 2))
-    
+
     if (result.errors) {
-      console.error('listPosts: GraphQL errors:', result.errors)
-      console.error('listPosts: Error details:', result.errors.map((e: any) => ({
-        message: e.message,
-        errorType: e.errorType,
-        errorInfo: e.errorInfo,
-        path: e.path,
-        locations: e.locations,
-        extensions: e.extensions
-      })))
-      
-      // エラーの詳細を出力
       const errorMessage = result.errors[0]?.message || 'GraphQL error'
-      console.error('listPosts: Throwing error:', errorMessage)
       throw new Error(`GraphQL error: ${errorMessage}`)
     }
-    
+
     const items = result?.data?.listPosts?.items ?? []
-    console.log('listPosts: Returning items:', items.length)
-    console.log('listPosts: Items with authorEmail:', items.filter((p: any) => p.authorEmail).length)
-    console.log('listPosts: Items without authorEmail:', items.filter((p: any) => !p.authorEmail).length)
-    
-    if (items.length > 0) {
-      console.log('listPosts: Sample item:', {
-        id: items[0].id,
-        content: items[0].content?.substring(0, 30),
-        authorEmail: items[0].authorEmail,
-        createdAt: items[0].createdAt
-      })
-      // すべての投稿IDをログ出力（DynamoDBテーブルと照合するため）
-      console.log('listPosts: All post IDs:', items.map((p: any) => p.id))
-      // すべての投稿の詳細をログ出力
-      console.log('listPosts: All items details:', items.map((p: any) => ({
-        id: p.id,
-        content: p.content?.substring(0, 50),
-        authorEmail: p.authorEmail,
-        hasImage: !!p.imageUrl,
-        hasPdf: !!p.pdfUrl
-      })))
-    } else {
-      console.warn('listPosts: ⚠️ No items returned from GraphQL query!')
-      console.warn('listPosts: Result structure:', {
-        hasData: !!result?.data,
-        hasListPosts: !!result?.data?.listPosts,
-        listPostsType: typeof result?.data?.listPosts,
-        listPostsValue: result?.data?.listPosts
-      })
-    }
-    
     return items
   } catch (error: any) {
-    // エラーの詳細をログ出力
-    const errorDetails = {
-      message: error?.message,
-      name: error?.name,
-      errors: error?.errors,
-      code: error?.code,
-      stack: error?.stack,
-      // ネットワークエラーの場合、より詳細な情報を取得
-      cause: error?.cause,
-      response: error?.response,
-      request: error?.request
-    }
-    console.error('listPosts: Error occurred:', errorDetails)
-    
-    // GraphQLエラーの場合
-    if (error?.errors && Array.isArray(error.errors)) {
-      const errorMessages = error.errors.map((e: any) => e.message || JSON.stringify(e)).join(', ')
-      console.error('listPosts: GraphQL errors:', errorMessages)
-      console.error('listPosts: GraphQL error details:', error.errors)
-      
-      // ネットワークエラーの場合
-      if (errorMessages.includes('network error') || errorMessages.includes('Network')) {
-        console.error('listPosts: ⚠️ Network error detected!')
-        console.error('listPosts: Possible causes:')
-        console.error('  1. API key is invalid or expired')
-        console.error('  2. GraphQL endpoint URL is incorrect')
-        console.error('  3. CORS configuration issue')
-        console.error('  4. DNS resolution issue (ERR_NAME_NOT_RESOLVED)')
-        // 設定を再読み込み
-        const config = await import('../src/amplifyconfiguration.json').catch(() => null)
-        const endpoint = config?.default?.aws_appsync_graphqlEndpoint || config?.aws_appsync_graphqlEndpoint
-        console.error('listPosts: Current endpoint:', endpoint || 'NOT FOUND')
-        console.error('listPosts: Expected endpoint: https://helcik5ebvbyta6fjd4fhysy3u.appsync-api.ap-northeast-1.amazonaws.com/graphql')
-        console.error('listPosts: Please check the API key in AWS AppSync Console for API ID: mcs2dydfpvf5lonf4yvahm4fk4')
-      }
-    }
-    
-    // エラーの種類に応じて詳細を出力
-    if (error?.message?.includes('Network') || error?.code === 'NETWORK_ERROR' || error?.name === 'NetworkError') {
-      console.error('listPosts: Network error - GraphQL endpoint may be unreachable or API key is invalid')
-      console.error('listPosts: Please verify:')
-      console.error('  1. API endpoint is correct: https://helcik5ebvbyta6fjd4fhysy3u.appsync-api.ap-northeast-1.amazonaws.com/graphql')
-      console.error('  2. API key is valid for this API')
-    } else if (error?.message?.includes('Unauthorized') || error?.message?.includes('401') || error?.name === 'UnauthorizedException') {
-      console.error('listPosts: Authentication error - API key may be invalid')
-      console.error('listPosts: Please check the API key in amplifyconfiguration.json')
-    } else if (error?.message?.includes('Forbidden') || error?.message?.includes('403') || error?.name === 'ForbiddenException') {
-      console.error('listPosts: Authorization error - API key may not have permissions')
-    }
-    
-    // エラーが発生した場合は空配列を返す（エラーは呼び出し元で処理）
+    console.error('listPosts error:', error?.message)
     return []
   }
 }
@@ -552,10 +444,9 @@ export async function getPostsByTeam(teamId: string): Promise<DbPost[]> {
   try {
     const allPosts = await listPosts(1000)
     const teamPosts = allPosts.filter(post => post.teamId === teamId)
-    console.log(`getPostsByTeam: Found ${teamPosts.length} posts for team ${teamId}`)
     return teamPosts
   } catch (error: any) {
-    console.error('getPostsByTeam error:', error)
+    console.error('getPostsByTeam error:', error?.message)
     return []
   }
 }
@@ -565,10 +456,9 @@ export async function getPostsByTournament(tournamentId: string): Promise<DbPost
   try {
     const allPosts = await listPosts(1000)
     const tournamentPosts = allPosts.filter(post => post.tournamentId === tournamentId)
-    console.log(`getPostsByTournament: Found ${tournamentPosts.length} posts for tournament ${tournamentId}`)
     return tournamentPosts
   } catch (error: any) {
-    console.error('getPostsByTournament error:', error)
+    console.error('getPostsByTournament error:', error?.message)
     return []
   }
 }
@@ -599,104 +489,60 @@ export async function createPost(input: Partial<DbPost>): Promise<DbPost> {
       const imageSize = sanitizedInput.imageUrl.length
       const maxImageSize = 200 * 1024 * 1024 // 200MB（圧縮後）
       if (imageSize > maxImageSize) {
-        console.error(`Image Base64 data is too large (${(imageSize / 1024 / 1024).toFixed(2)}MB > ${(maxImageSize / 1024 / 1024).toFixed(2)}MB), cannot send via GraphQL`)
-        console.error('Please upload the image to S3 first. S3 upload may have failed.')
         throw new Error(`画像が大きすぎます（${(imageSize / 1024 / 1024).toFixed(2)}MB）。S3へのアップロードが必要です。S3の設定を確認してください。`)
       }
-      console.log(`Image Base64 data size: ${(imageSize / 1024 / 1024).toFixed(2)}MB`)
     }
-    
+
     // blob: URLが誤って保存されないようにチェック
     if (sanitizedInput.pdfUrl && sanitizedInput.pdfUrl.startsWith('blob:')) {
-      console.error('⚠️ blob: URL detected in pdfUrl! This is a temporary URL and cannot be saved.')
       throw new Error('PDFのURLが無効です。blob: URLは一時的なもので、保存できません。S3へのアップロードが必要です。')
     }
-    
+
     // PDFのBase64データサイズチェック（400KB制限 - DynamoDBの制限）
     if (sanitizedInput.pdfUrl && sanitizedInput.pdfUrl.startsWith('data:')) {
       const pdfSize = sanitizedInput.pdfUrl.length
       const maxPdfSize = 400 * 1024 // 400KB（DynamoDBの制限）
       if (pdfSize > maxPdfSize) {
-        console.error(`PDF Base64 data is too large (${(pdfSize / 1024).toFixed(2)}KB > ${(maxPdfSize / 1024).toFixed(2)}KB), cannot send via GraphQL`)
-        console.error('Please upload the PDF to S3 first. S3 upload may have failed.')
         throw new Error(`PDFが大きすぎます（${(pdfSize / 1024).toFixed(2)}KB）。DynamoDBの制限（400KB）を超えるため、S3へのアップロードが必要です。S3の設定を確認してください。`)
       }
-      console.log(`PDF Base64 data size: ${(pdfSize / 1024).toFixed(2)}KB`)
-    }
-    
-    console.log('createPost called with input (videoUrl/videoName excluded):', {
-      ...sanitizedInput,
-      pdfUrl: sanitizedInput.pdfUrl ? (sanitizedInput.pdfUrl.length > 100 ? sanitizedInput.pdfUrl.substring(0, 100) + '...' : sanitizedInput.pdfUrl) : null,
-      authorEmail: sanitizedInput.authorEmail,
-      hasAuthorEmail: !!sanitizedInput.authorEmail
-    })
-    
-    // authorEmailが必須であることを確認
-    if (!sanitizedInput.authorEmail) {
-      console.error('createPost: ⚠️ authorEmail is missing! This post will not be associated with any user.')
-      console.error('createPost: Input object:', JSON.stringify(sanitizedInput, null, 2))
     }
     
     // 明示的にauthModeを指定してIdentity Poolへのアクセスを回避
-    const result = await client.graphql({ 
-      query: mutation, 
+    const result = await client.graphql({
+      query: mutation,
       variables: { input: sanitizedInput },
       authMode: 'apiKey' // 明示的にAPI_KEY認証を指定
     }) as any
-    
-    console.log('createPost GraphQL result:', JSON.stringify(result, null, 2))
-    
+
     if (result.errors) {
-      console.error('GraphQL errors in createPost:', result.errors)
-      console.error('Full error object:', JSON.stringify(result.errors, null, 2))
-      console.error('Error details:', result.errors.map((e: any) => ({
-        message: e.message,
-        errorType: e.errorType,
-        errorInfo: e.errorInfo,
-        path: e.path,
-        locations: e.locations,
-        extensions: e.extensions,
-        // すべてのプロパティを表示
-        allProperties: Object.keys(e)
-      })))
-      
-      // エラーメッセージをより詳細に表示
       const errorMessages = result.errors.map((e: any) => {
         if (e.message) return e.message
         if (e.errorInfo) return JSON.stringify(e.errorInfo)
         if (e.extensions) return JSON.stringify(e.extensions)
         return JSON.stringify(e)
       }).join(', ')
-      
-      // エラーの種類に応じた詳細メッセージ
+
       const firstError = result.errors[0]
       let detailedMessage = errorMessages
-      
-      if (firstError?.extensions?.errorType === 'DataTooLargeException' || 
+
+      if (firstError?.extensions?.errorType === 'DataTooLargeException' ||
           firstError?.message?.includes('too large') ||
           firstError?.message?.includes('size')) {
         detailedMessage = `データが大きすぎます。画像をS3にアップロードしてください。エラー: ${errorMessages}`
       } else if (firstError?.extensions?.errorType === 'UnauthorizedException') {
         detailedMessage = `認証エラーが発生しました。APIキーを確認してください。エラー: ${errorMessages}`
       }
-      
+
       throw new Error(`GraphQL error: ${detailedMessage}`)
     }
-    
+
     if (!result.data?.createPost) {
-      console.error('No createPost in result.data:', result.data)
       throw new Error('Post creation returned no data')
     }
-    
-    console.log('Post created successfully:', result.data.createPost)
+
     return result.data.createPost
   } catch (error: any) {
-    console.error('createPost error:', error)
-    console.error('Error details:', {
-      message: error?.message,
-      errors: error?.errors,
-      stack: error?.stack
-    })
+    console.error('createPost error:', error?.message)
     throw error
   }
 }
@@ -814,8 +660,8 @@ export async function checkLikeStatus(postId: string, userEmail: string): Promis
       authMode: 'apiKey'
     }) as any
     return (data?.likesByPostAndUser?.items?.length || 0) > 0
-  } catch (error) {
-    console.error('Failed to check like status:', error)
+  } catch (error: any) {
+    console.error('checkLikeStatus error:', error?.message)
     return false
   }
 }
@@ -836,28 +682,24 @@ export async function updatePost(id: string, input: Partial<DbPost>): Promise<Db
   try {
     const { videoUrl, videoName, ...inputWithoutVideo } = input
     const sanitizedInput = { id, ...inputWithoutVideo }
-    
-    console.log('updatePost called with:', { id, input: sanitizedInput })
-    
-    const result = await client.graphql({ 
-      query: mutation, 
+
+    const result = await client.graphql({
+      query: mutation,
       variables: { input: sanitizedInput },
       authMode: 'apiKey'
     }) as any
-    
+
     if (result.errors) {
-      console.error('GraphQL errors in updatePost:', result.errors)
       throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
     }
-    
+
     if (!result.data?.updatePost) {
       throw new Error('Update post returned no data')
     }
-    
-    console.log('Post updated successfully:', result.data.updatePost)
+
     return result.data.updatePost
   } catch (error: any) {
-    console.error('updatePost error:', error)
+    console.error('updatePost error:', error?.message)
     throw error
   }
 }
@@ -870,8 +712,6 @@ export async function deletePost(id: string): Promise<void> {
   `
 
   try {
-    console.log('deletePost called with:', { id })
-
     const result = await client.graphql({
       query: mutation,
       variables: { input: { id } },
@@ -879,13 +719,10 @@ export async function deletePost(id: string): Promise<void> {
     }) as any
 
     if (result.errors) {
-      console.error('GraphQL errors in deletePost:', result.errors)
       throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
     }
-
-    console.log('Post deleted successfully')
   } catch (error: any) {
-    console.error('deletePost error:', error)
+    console.error('deletePost error:', error?.message)
     throw error
   }
 }
@@ -897,14 +734,13 @@ export async function createTournament(input: Partial<DbTournament>): Promise<Db
     mutation CreateTournament($input: CreateTournamentInput!) {
       createTournament(input: $input) {
         id name iconUrl coverImage category regionBlock prefecture district
+        tournamentType area subArea
         description ownerEmail coAdminEmails startDate endDate favoritesCount createdAt updatedAt
       }
     }
   `
 
   try {
-    console.log('createTournament called with:', input)
-
     const result = await client.graphql({
       query: mutation,
       variables: { input },
@@ -912,27 +748,24 @@ export async function createTournament(input: Partial<DbTournament>): Promise<Db
     }) as any
 
     if (result.errors) {
-      console.error('GraphQL errors in createTournament:', result.errors)
-      console.error('Full error details:', JSON.stringify(result.errors, null, 2))
       const errorMessage = result.errors[0]?.message || 'GraphQL error occurred'
-      console.error('Error message:', errorMessage)
       throw new Error(errorMessage)
     }
 
-    console.log('Tournament created successfully:', result.data.createTournament)
     return result.data.createTournament
   } catch (error: any) {
-    console.error('createTournament error:', error)
+    console.error('createTournament error:', error?.message)
     throw error
   }
 }
 
-export async function listTournaments(limit = 50): Promise<DbTournament[]> {
+export async function listTournaments(limit = 200): Promise<DbTournament[]> {
   const query = /* GraphQL */ `
     query ListTournaments($limit: Int, $nextToken: String) {
       listTournaments(limit: $limit, nextToken: $nextToken) {
         items {
           id name iconUrl coverImage category regionBlock prefecture district
+          tournamentType area subArea
           description ownerEmail coAdminEmails startDate endDate favoritesCount instagramUrl createdAt updatedAt
         }
         nextToken
@@ -941,37 +774,34 @@ export async function listTournaments(limit = 50): Promise<DbTournament[]> {
   `
 
   try {
-    console.log('listTournaments: Fetching tournaments with limit:', limit)
-    const result = await client.graphql({
-      query,
-      variables: { limit },
-      authMode: 'apiKey'
-    }) as any
+    let allItems: DbTournament[] = []
+    let nextToken: string | null = null
 
-    console.log('listTournaments: GraphQL result:', {
-      hasData: !!result?.data,
-      hasListTournaments: !!result?.data?.listTournaments,
-      hasItems: !!result?.data?.listTournaments?.items,
-      itemsCount: result?.data?.listTournaments?.items?.length || 0,
-      nextToken: result?.data?.listTournaments?.nextToken || null
-    })
+    // ページネーションで全大会を取得
+    do {
+      const result = await client.graphql({
+        query,
+        variables: { limit, nextToken },
+        authMode: 'apiKey'
+      }) as any
 
-    if (result.errors) {
-      console.error('GraphQL errors in listTournaments:', result.errors)
-      console.error('Full error details:', JSON.stringify(result.errors, null, 2))
-      throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
-    }
+      if (result.errors) {
+        throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
+      }
 
-    const items = result?.data?.listTournaments?.items ?? []
-    console.log('listTournaments: Returning', items.length, 'tournaments')
-    return items
+      const items = result?.data?.listTournaments?.items ?? []
+      allItems = [...allItems, ...items]
+      nextToken = result?.data?.listTournaments?.nextToken || null
+    } while (nextToken)
+
+    return allItems
   } catch (error: any) {
-    console.error('listTournaments error:', error)
-    console.error('Error details:', {
-      message: error?.message,
-      errors: error?.errors,
-      data: error?.data
-    })
+    console.error('listTournaments error:', error?.message)
+    // Amplify GraphQLはエラーとデータを同時に返すことがある
+    const fallbackItems = error?.data?.listTournaments?.items
+    if (fallbackItems && fallbackItems.length > 0) {
+      return fallbackItems
+    }
     return []
   }
 }
@@ -981,44 +811,26 @@ export async function getTournament(id: string): Promise<DbTournament | null> {
     query GetTournament($id: ID!) {
       getTournament(id: $id) {
         id name iconUrl coverImage category regionBlock prefecture district
+        tournamentType area subArea
         description ownerEmail coAdminEmails startDate endDate favoritesCount instagramUrl createdAt updatedAt
       }
     }
   `
 
   try {
-    console.log('📡 getTournament called with ID:', id)
     const result = await client.graphql({
       query,
       variables: { id },
       authMode: 'apiKey'
     }) as any
 
-    console.log('📡 getTournament GraphQL result:', result)
-    console.log('📡 getTournament data:', result?.data?.getTournament)
-
     if (result.errors) {
-      console.error('❌ GraphQL errors in getTournament:', result.errors)
       return null
     }
 
-    const tournament = result?.data?.getTournament ?? null
-
-    if (!tournament) {
-      console.warn('⚠️ getTournament returned null for ID:', id)
-      console.warn('⚠️ This might mean the tournament does not exist in DynamoDB')
-    } else {
-      console.log('✅ getTournament found tournament:', tournament.name)
-    }
-
-    return tournament
+    return result?.data?.getTournament ?? null
   } catch (error: any) {
-    console.error('❌ getTournament error:', error)
-    console.error('❌ Error details:', {
-      message: error?.message,
-      name: error?.name,
-      errors: error?.errors
-    })
+    console.error('getTournament error:', error?.message)
     return null
   }
 }
@@ -1046,13 +858,12 @@ export async function searchUsersByEmail(searchTerm: string): Promise<DbUser[]> 
     }) as any
 
     if (result.errors) {
-      console.error('GraphQL errors in searchUsersByEmail:', result.errors)
       return []
     }
 
     return result?.data?.listUsers?.items ?? []
   } catch (error: any) {
-    console.error('searchUsersByEmail error:', error)
+    console.error('searchUsersByEmail error:', error?.message)
     return []
   }
 }
@@ -1062,6 +873,7 @@ export async function updateTournament(id: string, input: Partial<DbTournament>)
     mutation UpdateTournament($input: UpdateTournamentInput!) {
       updateTournament(input: $input) {
         id name iconUrl coverImage category regionBlock prefecture district
+        tournamentType area subArea
         description ownerEmail coAdminEmails startDate endDate favoritesCount instagramUrl createdAt updatedAt
       }
     }
@@ -1069,7 +881,6 @@ export async function updateTournament(id: string, input: Partial<DbTournament>)
 
   try {
     const variables = { input: { id, ...input } }
-    console.log('updateTournament called with:', { id, input, variables })
 
     const result = await client.graphql({
       query: mutation,
@@ -1077,27 +888,17 @@ export async function updateTournament(id: string, input: Partial<DbTournament>)
       authMode: 'apiKey'
     }) as any
 
-    console.log('updateTournament result (full):', JSON.stringify(result, null, 2))
-    console.log('updateTournament result.data:', result.data)
-    console.log('updateTournament result.errors:', result.errors)
-
     if (result.errors) {
-      console.error('GraphQL errors in updateTournament:', result.errors)
       throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
     }
 
     if (!result.data?.updateTournament) {
-      console.error('No updateTournament in result.data:', result.data)
       throw new Error('Update tournament returned no data')
     }
 
-    const updatedTournament = result.data.updateTournament
-    console.log('Updated tournament data:', JSON.stringify(updatedTournament, null, 2))
-
-    return updatedTournament
+    return result.data.updateTournament
   } catch (error: any) {
-    console.error('updateTournament error:', error)
-    console.error('Error stack:', error?.stack)
+    console.error('updateTournament error:', error?.message)
     throw error
   }
 }
@@ -1119,13 +920,12 @@ export async function createTournamentInvitation(input: Partial<DbTournamentInvi
     }) as any
 
     if (result.errors) {
-      console.error('GraphQL errors in createTournamentInvitation:', result.errors)
       throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
     }
 
     return result.data.createTournamentInvitation
   } catch (error: any) {
-    console.error('createTournamentInvitation error:', error)
+    console.error('createTournamentInvitation error:', error?.message)
     throw error
   }
 }
@@ -1161,8 +961,6 @@ export async function createTeam(input: Partial<DbTeam>): Promise<DbTeam> {
     if ((input as any).editorEmails) sanitizedInput.editorEmails = (input as any).editorEmails
     if ((input as any).isApproved !== undefined) sanitizedInput.isApproved = (input as any).isApproved !== false
 
-    console.log('Creating team with input:', sanitizedInput)
-
     const result = await client.graphql({
       query: mutation,
       variables: { input: sanitizedInput },
@@ -1170,23 +968,13 @@ export async function createTeam(input: Partial<DbTeam>): Promise<DbTeam> {
     }) as any
 
     if (result.errors) {
-      console.error('GraphQL errors in createTeam:', result.errors)
       const errorMessage = result.errors[0]?.message || 'GraphQL error occurred'
-      console.error('Error message:', errorMessage)
       throw new Error(errorMessage)
     }
 
-    console.log('Team created successfully:', result.data.createTeam)
     return result.data.createTeam
   } catch (error: any) {
-    console.error('createTeam error:', error)
-    console.error('Error details:', JSON.stringify(error, null, 2))
-    if (error?.errors) {
-      console.error('GraphQL errors:', error.errors)
-    }
-    if (error?.stack) {
-      console.error('Error stack:', error.stack)
-    }
+    console.error('createTeam error:', error?.message)
     throw error
   }
 }
@@ -1209,37 +997,28 @@ export async function listTeams(limit = 50, filter?: { isApproved?: boolean }): 
       graphqlFilter.isApproved = { eq: filter.isApproved }
     }
 
-    console.log('listTeams called with filter:', filter)
-    console.log('GraphQL filter:', graphqlFilter)
-
     const result = await client.graphql({
       query,
-      variables: { 
-        filter: Object.keys(graphqlFilter).length > 0 ? graphqlFilter : undefined, 
-        limit 
+      variables: {
+        filter: Object.keys(graphqlFilter).length > 0 ? graphqlFilter : undefined,
+        limit
       },
       authMode: 'apiKey'
     }) as any
 
     if (result.errors) {
-      console.error('GraphQL errors in listTeams:', result.errors)
       throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
     }
 
     const teams = result.data.listTeams.items || []
-    console.log(`listTeams returned ${teams.length} teams`)
     return teams
   } catch (error: any) {
-    console.error('listTeams error:', error)
+    console.error('listTeams error:', error?.message)
     throw error
   }
 }
 
 export async function getTeam(id: string): Promise<DbTeam | null> {
-  console.log('[getTeam] Called with ID:', id)
-  console.log('[getTeam] ID type:', typeof id)
-  console.log('[getTeam] ID length:', id.length)
-
   const query = /* GraphQL */ `
     query GetTeam($id: ID!) {
       getTeam(id: $id) {
@@ -1249,37 +1028,19 @@ export async function getTeam(id: string): Promise<DbTeam | null> {
   `
 
   try {
-    console.log('[getTeam] Executing GraphQL query with variables:', { id })
     const result = await client.graphql({
       query,
       variables: { id },
       authMode: 'apiKey'
     }) as any
 
-    console.log('[getTeam] Raw GraphQL result:', JSON.stringify(result, null, 2))
-
     if (result.errors) {
-      console.error('[getTeam] GraphQL errors:', result.errors)
       throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
     }
 
-    const team = result.data?.getTeam
-    console.log('[getTeam] Team found:', team)
-    console.log('[getTeam] result.data:', result.data)
-
-    if (!team) {
-      console.warn('[getTeam] Team is null - this means the item does not exist in DynamoDB')
-      console.warn('[getTeam] Verify the ID exists in the Team table')
-    }
-
-    return team
+    return result.data?.getTeam ?? null
   } catch (error: any) {
-    console.error('[getTeam] Error occurred:', error)
-    console.error('[getTeam] Error details:', {
-      message: error?.message,
-      name: error?.name,
-      errors: error?.errors
-    })
+    console.error('getTeam error:', error?.message)
     throw error
   }
 }
@@ -1311,52 +1072,35 @@ export async function updateTeam(id: string, input: Partial<DbTeam>): Promise<Db
     if (input.editorEmails !== undefined) sanitizedInput.editorEmails = input.editorEmails
     if (input.headcount) sanitizedInput.headcount = input.headcount
 
-    console.log('updateTeam: Sending input:', JSON.stringify(sanitizedInput, null, 2))
-
     const result = await client.graphql({
       query: mutation,
       variables: { input: sanitizedInput },
       authMode: 'apiKey'
     }) as any
 
-    // レスポンス全体をログに記録（デバッグ用）
-    console.log('updateTeam: Full GraphQL response:', JSON.stringify(result, null, 2))
-
     // GraphQLエラーのチェック（errors配列が存在し、空でない場合）
     if (result.errors && Array.isArray(result.errors) && result.errors.length > 0) {
       const firstError = result.errors[0]
       const errorMessage = firstError?.message || 'GraphQL error occurred'
-      console.error('GraphQL errors in updateTeam:', JSON.stringify(result.errors, null, 2))
       throw new Error(`GraphQL error: ${errorMessage}`)
     }
 
     // データが存在しない場合のチェック
     if (!result.data || !result.data.updateTeam) {
-      // dataがnullまたはupdateTeamがnullの場合
-      const errorDetails = {
-        hasData: !!result.data,
-        hasUpdateTeam: !!(result.data?.updateTeam),
-        errors: result.errors,
-        fullResponse: result
-      }
-      console.error('updateTeam: No data returned. Details:', JSON.stringify(errorDetails, null, 2))
       throw new Error('Update team returned no data. The team may not exist or you may not have permission to update it.')
     }
 
-    console.log('Team updated successfully:', result.data.updateTeam)
     return result.data.updateTeam
   } catch (error: any) {
-    // エラーが既にErrorオブジェクトの場合はそのまま使用
     if (error instanceof Error) {
-      console.error('updateTeam error (Error instance):', error.message)
+      console.error('updateTeam error:', error.message)
       throw error
     }
-    
+
     // エラーがオブジェクトの場合
     if (typeof error === 'object' && error !== null) {
-      // エラーオブジェクトの詳細を取得
       let errorMessage = 'Unknown error'
-      
+
       if (error.message) {
         errorMessage = error.message
       } else if (error.toString && typeof error.toString === 'function') {
@@ -1365,7 +1109,7 @@ export async function updateTeam(id: string, input: Partial<DbTeam>): Promise<Db
           errorMessage = toStringResult
         }
       }
-      
+
       // JSON.stringifyを試みる（循環参照を避けるため）
       try {
         const jsonString = JSON.stringify(error, (key, value) => {
@@ -1379,13 +1123,10 @@ export async function updateTeam(id: string, input: Partial<DbTeam>): Promise<Db
         // JSON.stringifyが失敗した場合（循環参照など）
         errorMessage = `Error object: ${Object.keys(error).join(', ')}`
       }
-      
-      console.error('updateTeam error (object):', errorMessage)
+
       throw new Error(`Failed to update team: ${errorMessage}`)
     }
-    
-    // その他の場合
-    console.error('updateTeam error (other):', String(error))
+
     throw new Error(`Failed to update team: ${String(error)}`)
   }
 }
@@ -1417,19 +1158,16 @@ export async function toggleFavoriteTournament(tournamentId: string, userEmail: 
 
       if ((createResult as any).errors) {
         // エラーが発生した場合、既に存在する可能性がある
-        console.log("createFavorite returned errors, favorite may already exist")
-        // エラーメッセージから既存のIDを取得できないため、falseを返す
         return { isFavorite: false }
       }
 
       return { isFavorite: true }
     } catch (createError: any) {
       // createFavoriteが失敗した場合、既に存在する可能性がある
-      console.log("createFavorite failed, favorite may already exist:", createError)
       return { isFavorite: false }
     }
   } catch (error: any) {
-    console.error("Failed to toggle favorite tournament:", error)
+    console.error("toggleFavoriteTournament error:", error?.message)
     throw error
   }
 }
@@ -1463,42 +1201,16 @@ export async function toggleFavoriteTeam(teamId: string, userEmail: string): Pro
 
       if ((createResult as any).errors) {
         // エラーが発生した場合、既に存在する可能性がある
-        console.log("createFavorite returned errors, favorite may already exist")
-        // エラーメッセージから既存のIDを取得できないため、falseを返す
         return { isFavorite: false }
       }
 
       return { isFavorite: true }
     } catch (createError: any) {
       // createFavoriteが失敗した場合、既に存在する可能性がある
-      // この場合、削除を試みる（ただし、IDがわからないため削除できない）
-      console.log("createFavorite failed, favorite may already exist:", createError)
-      // エラーメッセージから既存のIDを取得できないため、falseを返す
-      // 実際には、お気に入りが存在する可能性が高いが、削除できない
       return { isFavorite: false }
     }
   } catch (error: any) {
-    console.error("Failed to toggle favorite team:", error)
-    
-    // GraphQLエラーの詳細を表示
-    if (error?.errors) {
-      console.error("GraphQL errors:", error.errors)
-      error.errors.forEach((err: any, index: number) => {
-        console.error(`Error ${index + 1}:`, {
-          message: err.message,
-          errorType: err.errorType,
-          errorInfo: err.errorInfo,
-          path: err.path,
-          locations: err.locations
-        })
-      })
-    }
-    
-    console.error("Error details:", {
-      message: error?.message,
-      errors: error?.errors,
-      data: error?.data
-    })
+    console.error("toggleFavoriteTeam error:", error?.message)
     throw error
   }
 }
@@ -1507,31 +1219,9 @@ export async function checkFavoriteTournament(tournamentId: string, userEmail: s
   try {
     // favoritesByUserが存在しない場合のフォールバック: 常にfalseを返す
     // お気に入り機能が完全にデプロイされるまでの一時的な対応
-    console.log("checkFavoriteTournament: Checking favorite status (favoritesByUser may not be available yet)")
     return false
   } catch (error: any) {
-    console.error("Failed to check favorite tournament:", error)
-    
-    // GraphQLエラーの詳細を表示
-    if (error?.errors) {
-      console.error("GraphQL errors in catch block:", error.errors)
-      error.errors.forEach((err: any, index: number) => {
-        console.error(`Catch Error ${index + 1}:`, {
-          message: err.message,
-          errorType: err.errorType,
-          errorInfo: err.errorInfo,
-          path: err.path,
-          locations: err.locations
-        })
-      })
-    }
-    
-    console.error("Error details:", {
-      message: error?.message,
-      errors: error?.errors,
-      data: error?.data
-    })
-    // エラーが発生した場合はfalseを返す
+    console.error("checkFavoriteTournament error:", error?.message)
     return false
   }
 }
@@ -1540,10 +1230,9 @@ export async function checkFavoriteTeam(teamId: string, userEmail: string): Prom
   try {
     // favoritesByUserが存在しない場合のフォールバック: 常にfalseを返す
     // お気に入り機能が完全にデプロイされるまでの一時的な対応
-    console.log("checkFavoriteTeam: Checking favorite status (favoritesByUser may not be available yet)")
     return false
   } catch (error: any) {
-    console.error("Failed to check favorite team:", error)
+    console.error("checkFavoriteTeam error:", error?.message)
     return false
   }
 }
@@ -1588,7 +1277,7 @@ export async function getUserFavorites(userEmail: string): Promise<{ tournaments
         }
       }
     } catch (gsiError) {
-      console.log("favoritesByUser GSI not available, falling back to listFavorites")
+      // favoritesByUser GSIが利用不可の場合、listFavoritesにフォールバック
     }
 
     // フォールバック: listFavoritesを使用してフィルタリング
@@ -1613,12 +1302,9 @@ export async function getUserFavorites(userEmail: string): Promise<{ tournaments
     }) as any
 
     const favorites = result.data?.listFavorites?.items || []
-    console.log(`getUserFavorites: Found ${favorites.length} favorites for user ${userEmail}`)
-    
+
     const tournamentIds = favorites.filter((f: any) => f.tournamentId).map((f: any) => f.tournamentId)
     const teamIds = favorites.filter((f: any) => f.teamId).map((f: any) => f.teamId)
-
-    console.log(`getUserFavorites: ${tournamentIds.length} tournament IDs, ${teamIds.length} team IDs`)
 
     const tournaments = await Promise.all(
       tournamentIds.map((id: string) => getTournament(id))
@@ -1631,8 +1317,8 @@ export async function getUserFavorites(userEmail: string): Promise<{ tournaments
       tournaments: tournaments.filter((t): t is DbTournament => t !== null),
       teams: teams.filter((t): t is DbTeam => t !== null)
     }
-  } catch (error) {
-    console.error("Failed to get user favorites:", error)
+  } catch (error: any) {
+    console.error("getUserFavorites error:", error?.message)
     return { tournaments: [], teams: [] }
   }
 }
@@ -1673,7 +1359,7 @@ export async function followUser(followerEmail: string, followingEmail: string):
 
     return result.data.createFollow
   } catch (error: any) {
-    console.error("Failed to follow user:", error)
+    console.error("followUser error:", error?.message)
     throw error
   }
 }
@@ -1725,7 +1411,7 @@ export async function unfollowUser(followerEmail: string, followingEmail: string
       authMode: 'apiKey'
     })
   } catch (error: any) {
-    console.error("Failed to unfollow user:", error)
+    console.error("unfollowUser error:", error?.message)
     throw error
   }
 }
@@ -1755,7 +1441,7 @@ export async function checkFollowStatus(followerEmail: string, followingEmail: s
     const follows = result.data?.followsByFollower?.items || []
     return follows.some((f: any) => f.followingEmail === followingEmail)
   } catch (error: any) {
-    console.error("Failed to check follow status:", error)
+    console.error("checkFollowStatus error:", error?.message)
     return false
   }
 }
@@ -1790,7 +1476,7 @@ export async function getFollowers(userEmail: string): Promise<DbUser[]> {
 
     return users.filter((u): u is DbUser => u !== null)
   } catch (error: any) {
-    console.error("Failed to get followers:", error)
+    console.error("getFollowers error:", error?.message)
     return []
   }
 }
@@ -1825,7 +1511,7 @@ export async function getFollowing(userEmail: string): Promise<DbUser[]> {
 
     return users.filter((u): u is DbUser => u !== null)
   } catch (error: any) {
-    console.error("Failed to get following:", error)
+    console.error("getFollowing error:", error?.message)
     return []
   }
 }
@@ -1873,7 +1559,7 @@ export async function getFollowCounts(userEmail: string): Promise<{ followers: n
       following: followingResult.data?.followsByFollower?.items?.length || 0
     }
   } catch (error: any) {
-    console.error("Failed to get follow counts:", error)
+    console.error("getFollowCounts error:", error?.message)
     return { followers: 0, following: 0 }
   }
 }
@@ -1898,14 +1584,13 @@ export async function listRegions(): Promise<DbRegion[]> {
     }) as any
 
     if (result.errors) {
-      console.error('GraphQL errors in listRegions:', result.errors)
       throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
     }
 
     const regions = result?.data?.listRegions?.items ?? []
     return regions.sort((a: DbRegion, b: DbRegion) => a.sortOrder - b.sortOrder)
   } catch (error: any) {
-    console.error('listRegions error:', error)
+    console.error('listRegions error:', error?.message)
     return []
   }
 }
@@ -1931,13 +1616,12 @@ export async function getRegionBySlug(slug: string): Promise<DbRegion | null> {
     }) as any
 
     if (result.errors) {
-      console.error('GraphQL errors in getRegionBySlug:', result.errors)
       return null
     }
 
     return result?.data?.listRegions?.items?.[0] || null
   } catch (error: any) {
-    console.error('getRegionBySlug error:', error)
+    console.error('getRegionBySlug error:', error?.message)
     return null
   }
 }
@@ -1979,7 +1663,6 @@ export async function listPrefectures(regionId?: string): Promise<DbPrefecture[]
     }) as any
 
     if (result.errors) {
-      console.error('GraphQL errors in listPrefectures:', result.errors)
       throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
     }
 
@@ -1987,7 +1670,7 @@ export async function listPrefectures(regionId?: string): Promise<DbPrefecture[]
 
     return prefectures.sort((a: DbPrefecture, b: DbPrefecture) => a.sortOrder - b.sortOrder)
   } catch (error: any) {
-    console.error('listPrefectures error:', error)
+    console.error('listPrefectures error:', error?.message)
     return []
   }
 }
@@ -2016,13 +1699,12 @@ export async function getPrefectureBySlug(slug: string, regionId?: string): Prom
     }) as any
 
     if (result.errors) {
-      console.error('GraphQL errors in getPrefectureBySlug:', result.errors)
       return null
     }
 
     return result?.data?.listPrefectures?.items?.[0] || null
   } catch (error: any) {
-    console.error('getPrefectureBySlug error:', error)
+    console.error('getPrefectureBySlug error:', error?.message)
     return null
   }
 }
@@ -2050,14 +1732,13 @@ export async function listDistricts(prefectureId: string): Promise<DbDistrict[]>
     }) as any
 
     if (result.errors) {
-      console.error('GraphQL errors in listDistricts:', result.errors)
       throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
     }
 
     const districts = result?.data?.listDistricts?.items ?? []
     return districts.sort((a: DbDistrict, b: DbDistrict) => a.sortOrder - b.sortOrder)
   } catch (error: any) {
-    console.error('listDistricts error:', error)
+    console.error('listDistricts error:', error?.message)
     return []
   }
 }
@@ -2076,7 +1757,6 @@ export async function getTournamentTeams(tournamentId: string): Promise<(DbTourn
   `
 
   try {
-    console.log('getTournamentTeams: Querying with tournamentId:', tournamentId)
     const result = await client.graphql({
       query,
       variables: { tournamentId },
@@ -2084,15 +1764,11 @@ export async function getTournamentTeams(tournamentId: string): Promise<(DbTourn
     }) as any
 
     if (result.errors) {
-      console.error('GraphQL errors in getTournamentTeams:', result.errors)
-      console.error('Error details:', JSON.stringify(result.errors, null, 2))
       return []
     }
 
-    console.log('getTournamentTeams: Raw result:', result)
     const tournamentTeams = result?.data?.tournamentTeamsByTournamentId?.items ?? []
-    console.log('getTournamentTeams: Tournament teams found:', tournamentTeams.length)
-    
+
     // チーム情報を取得
     const teamsWithData = await Promise.all(
       tournamentTeams.map(async (tt: DbTournamentTeam) => {
@@ -2100,7 +1776,6 @@ export async function getTournamentTeams(tournamentId: string): Promise<(DbTourn
           const team = await getTeam(tt.teamId)
           return { ...tt, team }
         } catch (error) {
-          console.error('Failed to load team:', tt.teamId, error)
           return { ...tt, team: null }
         }
       })
@@ -2108,16 +1783,22 @@ export async function getTournamentTeams(tournamentId: string): Promise<(DbTourn
 
     return teamsWithData
   } catch (error: any) {
-    console.error('getTournamentTeams error:', error)
-    console.error('Error message:', error?.message)
-    console.error('Error name:', error?.name)
-    console.error('Error stack:', error?.stack)
-    console.error('Error details:', JSON.stringify(error, null, 2))
+    console.error('getTournamentTeams error:', error?.message)
     return []
   }
 }
 
 export async function addTournamentTeam(tournamentId: string, teamId: string, teamName?: string, participationYear?: string): Promise<DbTournamentTeam> {
+  // 権限チェック: 大会運営者のみ追加可能
+  const currentEmail = await getCurrentUserEmail()
+  if (!currentEmail) {
+    throw new Error('参加チームの追加にはログインが必要です')
+  }
+  const hasPermission = await checkTournamentAdminPermission(tournamentId, currentEmail)
+  if (!hasPermission) {
+    throw new Error('参加チームの追加は大会運営者のみ実行できます')
+  }
+
   const mutation = /* GraphQL */ `
     mutation CreateTournamentTeam($input: CreateTournamentTeamInput!) {
       createTournamentTeam(input: $input) {
@@ -2141,13 +1822,12 @@ export async function addTournamentTeam(tournamentId: string, teamId: string, te
     }) as any
 
     if (result.errors) {
-      console.error('GraphQL errors in addTournamentTeam:', result.errors)
       throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
     }
 
     return result.data.createTournamentTeam
   } catch (error: any) {
-    console.error('addTournamentTeam error:', error)
+    console.error('addTournamentTeam error:', error?.message)
     throw error
   }
 }
@@ -2164,7 +1844,6 @@ export async function getTeamTournaments(teamId: string): Promise<(DbTournamentT
   `
 
   try {
-    console.log('getTeamTournaments: Querying with teamId:', teamId)
     const result = await client.graphql({
       query,
       variables: { teamId },
@@ -2172,13 +1851,11 @@ export async function getTeamTournaments(teamId: string): Promise<(DbTournamentT
     }) as any
 
     if (result.errors) {
-      console.error('GraphQL errors in getTeamTournaments:', result.errors)
       return []
     }
 
     const tournamentTeams = result?.data?.tournamentTeamsByTeamId?.items ?? []
-    console.log('getTeamTournaments: Tournament teams found:', tournamentTeams.length)
-    
+
     // 大会情報を取得
     const tournamentsWithData = await Promise.all(
       tournamentTeams.map(async (tt: DbTournamentTeam) => {
@@ -2186,7 +1863,6 @@ export async function getTeamTournaments(teamId: string): Promise<(DbTournamentT
           const tournament = await getTournament(tt.tournamentId)
           return { ...tt, tournament }
         } catch (error) {
-          console.error('Failed to load tournament:', tt.tournamentId, error)
           return { ...tt, tournament: null }
         }
       })
@@ -2194,12 +1870,45 @@ export async function getTeamTournaments(teamId: string): Promise<(DbTournamentT
 
     return tournamentsWithData
   } catch (error: any) {
-    console.error('getTeamTournaments error:', error)
+    console.error('getTeamTournaments error:', error?.message)
     return []
   }
 }
 
-export async function removeTournamentTeam(id: string): Promise<void> {
+export async function removeTournamentTeam(id: string, tournamentId?: string): Promise<void> {
+  // 権限チェック: 大会運営者のみ削除可能
+  const currentEmail = await getCurrentUserEmail()
+  if (!currentEmail) {
+    throw new Error('参加チームの削除にはログインが必要です')
+  }
+
+  // tournamentIdが渡されない場合はTournamentTeamレコードから取得
+  let tId = tournamentId
+  if (!tId) {
+    const getQuery = /* GraphQL */ `
+      query GetTournamentTeam($id: ID!) {
+        getTournamentTeam(id: $id) {
+          id tournamentId
+        }
+      }
+    `
+    const getResult = await client.graphql({
+      query: getQuery,
+      variables: { id },
+      authMode: 'apiKey'
+    }) as any
+    tId = getResult?.data?.getTournamentTeam?.tournamentId
+  }
+
+  if (!tId) {
+    throw new Error('大会チーム情報が見つかりません')
+  }
+
+  const hasPermission = await checkTournamentAdminPermission(tId, currentEmail)
+  if (!hasPermission) {
+    throw new Error('参加チームの削除は大会運営者のみ実行できます')
+  }
+
   const mutation = /* GraphQL */ `
     mutation DeleteTournamentTeam($input: DeleteTournamentTeamInput!) {
       deleteTournamentTeam(input: $input) {
@@ -2216,16 +1925,37 @@ export async function removeTournamentTeam(id: string): Promise<void> {
     }) as any
 
     if (result.errors) {
-      console.error('GraphQL errors in removeTournamentTeam:', result.errors)
       throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
     }
   } catch (error: any) {
-    console.error('removeTournamentTeam error:', error)
+    console.error('removeTournamentTeam error:', error?.message)
     throw error
   }
 }
 
 // ==================== Tournament Result Functions ====================
+
+// 個別の大会結果を取得（権限チェック用ヘルパー）
+async function getTournamentResultById(id: string): Promise<DbTournamentResult | null> {
+  const query = /* GraphQL */ `
+    query GetTournamentResult($id: ID!) {
+      getTournamentResult(id: $id) {
+        id tournamentId year title content ranking startDate endDate imageUrl pdfUrl pdfName createdBy createdAt updatedAt
+      }
+    }
+  `
+  try {
+    const result = await client.graphql({
+      query,
+      variables: { id },
+      authMode: 'apiKey'
+    }) as any
+    return result?.data?.getTournamentResult ?? null
+  } catch (error: any) {
+    console.error('getTournamentResultById error:', error?.message)
+    return null
+  }
+}
 
 export async function getTournamentResults(tournamentId: string): Promise<DbTournamentResult[]> {
   const query = /* GraphQL */ `
@@ -2246,20 +1976,30 @@ export async function getTournamentResults(tournamentId: string): Promise<DbTour
     }) as any
 
     if (result.errors) {
-      console.error('GraphQL errors in getTournamentResults:', result.errors)
       return []
     }
 
     return result?.data?.tournamentResultsByTournamentId?.items ?? []
   } catch (error: any) {
-    console.error('getTournamentResults error:', error)
-    console.error('Error message:', error?.message)
-    console.error('Error details:', JSON.stringify(error, null, 2))
+    console.error('getTournamentResults error:', error?.message)
     return []
   }
 }
 
 export async function createTournamentResult(input: Partial<DbTournamentResult>): Promise<DbTournamentResult> {
+  // 権限チェック: 大会運営者のみ作成可能
+  const currentEmail = await getCurrentUserEmail()
+  if (!currentEmail) {
+    throw new Error('大会結果の追加にはログインが必要です')
+  }
+  if (!input.tournamentId) {
+    throw new Error('大会IDが指定されていません')
+  }
+  const hasPermission = await checkTournamentAdminPermission(input.tournamentId, currentEmail)
+  if (!hasPermission) {
+    throw new Error('大会結果の追加は大会運営者のみ実行できます')
+  }
+
   const mutation = /* GraphQL */ `
     mutation CreateTournamentResult($input: CreateTournamentResultInput!) {
       createTournamentResult(input: $input) {
@@ -2276,25 +2016,38 @@ export async function createTournamentResult(input: Partial<DbTournamentResult>)
     }) as any
 
     if (result.errors) {
-      console.error('GraphQL errors in createTournamentResult:', result.errors)
       throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
     }
 
     return result.data.createTournamentResult
   } catch (error: any) {
-    console.error('createTournamentResult error:', error)
-    console.error('Error message:', error?.message)
-    console.error('Error name:', error?.name)
-    console.error('Error stack:', error?.stack)
-    console.error('Error details:', JSON.stringify(error, null, 2))
-    if (error?.errors) {
-      console.error('GraphQL errors:', error.errors)
-    }
+    console.error('createTournamentResult error:', error?.message)
     throw error
   }
 }
 
 export async function updateTournamentResult(id: string, input: Partial<DbTournamentResult>): Promise<DbTournamentResult> {
+  // 権限チェック: 大会運営者のみ更新可能
+  const currentEmail = await getCurrentUserEmail()
+  if (!currentEmail) {
+    throw new Error('大会結果の更新にはログインが必要です')
+  }
+
+  // tournamentIdをinputまたは既存レコードから取得
+  let tournamentId = input.tournamentId
+  if (!tournamentId) {
+    const existingResults = await getTournamentResultById(id)
+    tournamentId = existingResults?.tournamentId
+  }
+  if (!tournamentId) {
+    throw new Error('大会IDが取得できません')
+  }
+
+  const hasPermission = await checkTournamentAdminPermission(tournamentId, currentEmail)
+  if (!hasPermission) {
+    throw new Error('大会結果の更新は大会運営者のみ実行できます')
+  }
+
   const mutation = /* GraphQL */ `
     mutation UpdateTournamentResult($input: UpdateTournamentResultInput!) {
       updateTournamentResult(input: $input) {
@@ -2311,18 +2064,33 @@ export async function updateTournamentResult(id: string, input: Partial<DbTourna
     }) as any
 
     if (result.errors) {
-      console.error('GraphQL errors in updateTournamentResult:', result.errors)
       throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
     }
 
     return result.data.updateTournamentResult
   } catch (error: any) {
-    console.error('updateTournamentResult error:', error)
+    console.error('updateTournamentResult error:', error?.message)
     throw error
   }
 }
 
 export async function deleteTournamentResult(id: string): Promise<void> {
+  // 権限チェック: 大会運営者のみ削除可能
+  const currentEmail = await getCurrentUserEmail()
+  if (!currentEmail) {
+    throw new Error('大会結果の削除にはログインが必要です')
+  }
+
+  const existingResult = await getTournamentResultById(id)
+  if (!existingResult?.tournamentId) {
+    throw new Error('大会結果が見つかりません')
+  }
+
+  const hasPermission = await checkTournamentAdminPermission(existingResult.tournamentId, currentEmail)
+  if (!hasPermission) {
+    throw new Error('大会結果の削除は大会運営者のみ実行できます')
+  }
+
   const mutation = /* GraphQL */ `
     mutation DeleteTournamentResult($input: DeleteTournamentResultInput!) {
       deleteTournamentResult(input: $input) {
@@ -2339,11 +2107,10 @@ export async function deleteTournamentResult(id: string): Promise<void> {
     }) as any
 
     if (result.errors) {
-      console.error('GraphQL errors in deleteTournamentResult:', result.errors)
       throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
     }
   } catch (error: any) {
-    console.error('deleteTournamentResult error:', error)
+    console.error('deleteTournamentResult error:', error?.message)
     throw error
   }
 }
@@ -2359,8 +2126,6 @@ export async function deleteTournamentResult(id: string): Promise<void> {
  */
 export async function getTimelinePosts(userEmail: string, limit = 50): Promise<DbPost[]> {
   try {
-    console.log('getTimelinePosts: Starting for user:', userEmail)
-    
     // 1. フォローしているユーザーのメールアドレスを取得
     let followingEmails: string[] = []
     try {
@@ -2380,9 +2145,8 @@ export async function getTimelinePosts(userEmail: string, limit = 50): Promise<D
       
       followingEmails = (followingResult.data?.followsByFollower?.items || [])
         .map((f: any) => f.followingEmail)
-      console.log('getTimelinePosts: Following', followingEmails.length, 'users')
     } catch (followError) {
-      console.log('getTimelinePosts: Could not get following list, using fallback')
+      // フォローリスト取得失敗時はフォールバック
     }
     
     // 2. お気に入りのチームIDと大会IDを取得
@@ -2410,14 +2174,12 @@ export async function getTimelinePosts(userEmail: string, limit = 50): Promise<D
       const favorites = favResult.data?.listFavorites?.items || []
       favoriteTeamIds = favorites.filter((f: any) => f.teamId).map((f: any) => f.teamId)
       favoriteTournamentIds = favorites.filter((f: any) => f.tournamentId).map((f: any) => f.tournamentId)
-      console.log('getTimelinePosts: Favorite teams:', favoriteTeamIds.length, ', tournaments:', favoriteTournamentIds.length)
     } catch (favError) {
-      console.log('getTimelinePosts: Could not get favorites, using fallback')
+      // お気に入り取得失敗時はフォールバック
     }
     
     // 3. すべての投稿を取得
     const allPosts = await listPosts(1000)
-    console.log('getTimelinePosts: Total posts in database:', allPosts.length)
     
     // 4. フィルタリング
     // - 自分の投稿
@@ -2441,9 +2203,7 @@ export async function getTimelinePosts(userEmail: string, limit = 50): Promise<D
       }
       return false
     })
-    
-    console.log('getTimelinePosts: Filtered posts:', filteredPosts.length)
-    
+
     // 5. 新しい順にソートして返す
     const sortedPosts = filteredPosts.sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0
@@ -2452,8 +2212,8 @@ export async function getTimelinePosts(userEmail: string, limit = 50): Promise<D
     })
     
     return sortedPosts.slice(0, limit)
-  } catch (error) {
-    console.error('getTimelinePosts error:', error)
+  } catch (error: any) {
+    console.error('getTimelinePosts error:', error?.message)
     // フォールバック: 全投稿を返す
     return listPosts(limit)
   }
@@ -2476,8 +2236,8 @@ export async function toggleFollow(followerEmail: string, followingEmail: string
       await followUser(followerEmail, followingEmail)
       return { isFollowing: true }
     }
-  } catch (error) {
-    console.error('toggleFollow error:', error)
+  } catch (error: any) {
+    console.error('toggleFollow error:', error?.message)
     throw error
   }
 }
@@ -2517,13 +2277,12 @@ export async function searchUsers(searchTerm: string): Promise<DbUser[]> {
     }) as any
 
     if (nameResult.errors) {
-      console.error('GraphQL errors in searchUsers:', nameResult.errors)
       return []
     }
 
     return nameResult?.data?.listUsers?.items ?? []
   } catch (error: any) {
-    console.error('searchUsers error:', error)
+    console.error('searchUsers error:', error?.message)
     return []
   }
 }
@@ -2537,6 +2296,7 @@ export async function searchTournaments(searchTerm: string): Promise<DbTournamen
       listTournaments(filter: $filter, limit: $limit) {
         items {
           id name iconUrl coverImage category regionBlock prefecture district
+          tournamentType area subArea
           description ownerEmail coAdminEmails startDate endDate favoritesCount instagramUrl createdAt updatedAt
         }
       }
@@ -2556,13 +2316,1150 @@ export async function searchTournaments(searchTerm: string): Promise<DbTournamen
     }) as any
 
     if (result.errors) {
-      console.error('GraphQL errors in searchTournaments:', result.errors)
       return []
     }
 
     return result?.data?.listTournaments?.items ?? []
   } catch (error: any) {
-    console.error('searchTournaments error:', error)
+    console.error('searchTournaments error:', error?.message)
     return []
+  }
+}
+
+// ==================== Chat Functions ====================
+
+const CHAT_THREAD_FIELDS = 'id senderEmail senderName teamId teamName tournamentId tournamentName threadType status lastMessage lastMessageAt teamUnreadCount senderUnreadCount createdAt updatedAt'
+const CHAT_MESSAGE_FIELDS = 'id threadId senderEmail senderName content messageType isRead createdAt updatedAt'
+
+/**
+ * チャットスレッドを作成（大会運営者からチームへのオファー）
+ * 権限チェック: 大会運営者のみ
+ */
+export async function createChatThread(input: {
+  teamId: string
+  teamName: string
+  tournamentId: string
+  tournamentName: string
+  initialMessage: string
+}): Promise<DbChatThread> {
+  const currentEmail = await getCurrentUserEmail()
+  if (!currentEmail) {
+    throw new Error('オファーの送信にはログインが必要です')
+  }
+
+  // 権限チェック: 大会運営者のみ送信可能
+  const hasPermission = await checkTournamentAdminPermission(input.tournamentId, currentEmail)
+  if (!hasPermission) {
+    throw new Error('大会参加オファーは大会運営者のみ送信できます')
+  }
+
+  // 送信者の名前を取得
+  const currentUser = await getUserByEmail(currentEmail)
+  const senderName = currentUser ? `${currentUser.lastName} ${currentUser.firstName}` : currentEmail
+
+  const mutation = /* GraphQL */ `
+    mutation CreateChatThread($input: CreateChatThreadInput!) {
+      createChatThread(input: $input) {
+        ${CHAT_THREAD_FIELDS}
+      }
+    }
+  `
+
+  try {
+    const now = new Date().toISOString()
+    const threadInput = {
+      senderEmail: currentEmail,
+      senderName,
+      teamId: input.teamId,
+      teamName: input.teamName,
+      tournamentId: input.tournamentId,
+      tournamentName: input.tournamentName,
+      threadType: 'offer',
+      status: 'pending',
+      lastMessage: input.initialMessage,
+      lastMessageAt: now,
+      teamUnreadCount: 1,
+      senderUnreadCount: 0,
+    }
+    console.log('[createChatThread] 送信データ:', JSON.stringify(threadInput))
+
+    const result = await client.graphql({
+      query: mutation,
+      variables: { input: threadInput },
+      authMode: 'apiKey'
+    }) as any
+
+    console.log('[createChatThread] GraphQL結果:', JSON.stringify(result))
+
+    if (result.errors) {
+      console.error('[createChatThread] GraphQLエラー:', JSON.stringify(result.errors))
+      throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
+    }
+
+    const thread = result.data?.createChatThread
+    if (!thread) {
+      console.error('[createChatThread] スレッドデータが空:', JSON.stringify(result.data))
+      throw new Error('スレッドの作成に失敗しました（データなし）')
+    }
+
+    console.log('[createChatThread] スレッド作成成功:', thread.id)
+
+    // 初期メッセージを送信
+    try {
+      await createChatMessage({
+        threadId: thread.id,
+        content: input.initialMessage,
+        messageType: 'text',
+      })
+      console.log('[createChatThread] 初期メッセージ送信成功')
+    } catch (msgError: any) {
+      console.error('[createChatThread] 初期メッセージ送信失敗:', msgError?.message)
+      // メッセージ送信失敗でもスレッドは返す
+    }
+
+    // チーム運営者へ通知を送信
+    try {
+      await notifyTeamAdmins(input.teamId, {
+        type: 'offer_received',
+        title: '大会参加オファーが届きました',
+        message: `${senderName} から「${input.tournamentName}」への参加オファーが届きました`,
+        senderName,
+        relatedId: thread.id,
+        relatedType: 'chat',
+      })
+    } catch (notifyError) {
+      // 通知送信に失敗してもスレッド作成は成功とする
+      console.warn('[createChatThread] 通知送信失敗（続行）')
+    }
+
+    return thread
+  } catch (error: any) {
+    console.error('[createChatThread] エラー:', error)
+    console.error('[createChatThread] エラー名:', error?.name)
+    console.error('[createChatThread] エラーメッセージ:', error?.message)
+    console.error('[createChatThread] エラー詳細:', JSON.stringify(error, Object.getOwnPropertyNames(error || {})))
+    throw error
+  }
+}
+
+/**
+ * チャットメッセージを送信
+ */
+export async function createChatMessage(input: {
+  threadId: string
+  content: string
+  messageType: string
+}): Promise<DbChatMessage> {
+  const currentEmail = await getCurrentUserEmail()
+  if (!currentEmail) {
+    throw new Error('メッセージの送信にはログインが必要です')
+  }
+
+  const currentUser = await getUserByEmail(currentEmail)
+  const senderName = currentUser ? `${currentUser.lastName} ${currentUser.firstName}` : currentEmail
+
+  const mutation = /* GraphQL */ `
+    mutation CreateChatMessage($input: CreateChatMessageInput!) {
+      createChatMessage(input: $input) {
+        ${CHAT_MESSAGE_FIELDS}
+      }
+    }
+  `
+
+  try {
+    const result = await client.graphql({
+      query: mutation,
+      variables: {
+        input: {
+          threadId: input.threadId,
+          senderEmail: currentEmail,
+          senderName,
+          content: input.content,
+          messageType: input.messageType,
+          isRead: false,
+        }
+      },
+      authMode: 'apiKey'
+    }) as any
+
+    if (result.errors) {
+      throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
+    }
+
+    // スレッドの最終メッセージを更新
+    await updateChatThreadLastMessage(input.threadId, input.content, currentEmail)
+
+    return result.data.createChatMessage
+  } catch (error: any) {
+    console.error('createChatMessage error:', error?.message)
+    throw error
+  }
+}
+
+/**
+ * スレッドの最終メッセージ情報を更新（内部用）
+ */
+async function updateChatThreadLastMessage(threadId: string, lastMessage: string, senderEmail: string): Promise<void> {
+  // まずスレッドを取得して未読カウントを決定
+  const thread = await getChatThread(threadId)
+  if (!thread) return
+
+  const isSenderOriginalSender = thread.senderEmail === senderEmail
+  const updateInput: any = {
+    id: threadId,
+    lastMessage,
+    lastMessageAt: new Date().toISOString(),
+  }
+
+  // 相手側の未読カウントをインクリメント
+  if (isSenderOriginalSender) {
+    updateInput.teamUnreadCount = (thread.teamUnreadCount || 0) + 1
+  } else {
+    updateInput.senderUnreadCount = (thread.senderUnreadCount || 0) + 1
+  }
+
+  const mutation = /* GraphQL */ `
+    mutation UpdateChatThread($input: UpdateChatThreadInput!) {
+      updateChatThread(input: $input) {
+        ${CHAT_THREAD_FIELDS}
+      }
+    }
+  `
+
+  try {
+    await client.graphql({
+      query: mutation,
+      variables: { input: updateInput },
+      authMode: 'apiKey'
+    })
+  } catch (error: any) {
+    console.error('updateChatThreadLastMessage error:', error?.message)
+  }
+}
+
+/**
+ * チャットスレッドを取得
+ */
+export async function getChatThread(id: string): Promise<DbChatThread | null> {
+  const query = /* GraphQL */ `
+    query GetChatThread($id: ID!) {
+      getChatThread(id: $id) {
+        ${CHAT_THREAD_FIELDS}
+      }
+    }
+  `
+
+  try {
+    const result = await client.graphql({
+      query,
+      variables: { id },
+      authMode: 'apiKey'
+    }) as any
+
+    if (result.errors) {
+      return null
+    }
+
+    return result?.data?.getChatThread ?? null
+  } catch (error: any) {
+    console.error('getChatThread error:', error?.message)
+    return null
+  }
+}
+
+/**
+ * チーム宛てのチャットスレッド一覧を取得
+ * チーム運営者（ownerEmail/editorEmails）が閲覧する
+ */
+export async function getChatThreadsByTeam(teamId: string): Promise<DbChatThread[]> {
+  const query = /* GraphQL */ `
+    query ChatThreadsByTeam($teamId: ID!) {
+      chatThreadsByTeam(teamId: $teamId) {
+        items {
+          ${CHAT_THREAD_FIELDS}
+        }
+      }
+    }
+  `
+
+  try {
+    const result = await client.graphql({
+      query,
+      variables: { teamId },
+      authMode: 'apiKey'
+    }) as any
+
+    if (result.errors) {
+      return []
+    }
+
+    return result?.data?.chatThreadsByTeam?.items ?? []
+  } catch (error: any) {
+    console.error('getChatThreadsByTeam error:', error?.message)
+    return []
+  }
+}
+
+/**
+ * 大会運営者が送信したチャットスレッド一覧を取得
+ */
+export async function getChatThreadsBySender(senderEmail: string): Promise<DbChatThread[]> {
+  const query = /* GraphQL */ `
+    query ChatThreadsBySender($senderEmail: String!) {
+      chatThreadsBySender(senderEmail: $senderEmail) {
+        items {
+          ${CHAT_THREAD_FIELDS}
+        }
+      }
+    }
+  `
+
+  try {
+    const result = await client.graphql({
+      query,
+      variables: { senderEmail },
+      authMode: 'apiKey'
+    }) as any
+
+    if (result.errors) {
+      return []
+    }
+
+    return result?.data?.chatThreadsBySender?.items ?? []
+  } catch (error: any) {
+    console.error('getChatThreadsBySender error:', error?.message)
+    return []
+  }
+}
+
+/**
+ * 現在のユーザーに関連する全てのチャットスレッドを取得
+ * - 送信者として送ったスレッド
+ * - チーム運営者として受け取ったスレッド
+ */
+export async function getMyAllChatThreads(): Promise<DbChatThread[]> {
+  const currentEmail = await getCurrentUserEmail()
+  console.log('[getMyAllChatThreads] currentEmail:', currentEmail)
+  if (!currentEmail) return []
+
+  try {
+    // 1. 送信したスレッドを取得
+    const sentThreads = await getChatThreadsBySender(currentEmail)
+    console.log('[getMyAllChatThreads] sentThreads:', sentThreads.length)
+
+    // 2. 自分が運営するチーム宛てのスレッドを取得
+    // まず自分がオーナーまたはエディターのチームを検索
+    const myTeams = await getMyTeams(currentEmail)
+    console.log('[getMyAllChatThreads] myTeams:', myTeams.length, myTeams.map(t => ({ id: t.id, name: t.name })))
+    const receivedThreads: DbChatThread[] = []
+    for (const team of myTeams) {
+      const threads = await getChatThreadsByTeam(team.id)
+      console.log(`[getMyAllChatThreads] team ${team.name} (${team.id}) threads:`, threads.length)
+      receivedThreads.push(...threads)
+    }
+
+    // 重複を除去してマージ（lastMessageAtの降順）
+    const allThreads = [...sentThreads, ...receivedThreads]
+    const uniqueThreads = allThreads.filter((thread, index, self) =>
+      index === self.findIndex((t) => t.id === thread.id)
+    )
+
+    console.log('[getMyAllChatThreads] 合計スレッド数:', uniqueThreads.length)
+    return uniqueThreads.sort((a, b) => {
+      const dateA = a.lastMessageAt || a.createdAt || ''
+      const dateB = b.lastMessageAt || b.createdAt || ''
+      return dateB.localeCompare(dateA)
+    })
+  } catch (error: any) {
+    console.error('getMyAllChatThreads error:', error?.message)
+    return []
+  }
+}
+
+/**
+ * 自分がオーナーまたはエディターのチーム一覧を取得
+ */
+export async function getMyTeams(email: string): Promise<DbTeam[]> {
+  const query = /* GraphQL */ `
+    query ListTeams($filter: ModelTeamFilterInput, $limit: Int) {
+      listTeams(filter: $filter, limit: $limit) {
+        items {
+          id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website instagramUrl ownerEmail editorEmails isApproved createdAt updatedAt
+        }
+      }
+    }
+  `
+
+  try {
+    // オーナーとして所有するチーム
+    const ownerResult = await client.graphql({
+      query,
+      variables: {
+        filter: { ownerEmail: { eq: email } },
+        limit: 100
+      },
+      authMode: 'apiKey'
+    }) as any
+
+    const ownerTeams = ownerResult?.data?.listTeams?.items ?? []
+
+    // エディターとして参加するチーム
+    const editorResult = await client.graphql({
+      query,
+      variables: {
+        filter: { editorEmails: { contains: email } },
+        limit: 100
+      },
+      authMode: 'apiKey'
+    }) as any
+
+    const editorTeams = editorResult?.data?.listTeams?.items ?? []
+
+    // 重複除去
+    const allTeams = [...ownerTeams, ...editorTeams]
+    return allTeams.filter((team: DbTeam, index: number, self: DbTeam[]) =>
+      index === self.findIndex((t) => t.id === team.id)
+    )
+  } catch (error: any) {
+    console.error('getMyTeams error:', error?.message)
+    return []
+  }
+}
+
+/**
+ * チャットスレッドのメッセージ一覧を取得
+ */
+export async function getChatMessages(threadId: string): Promise<DbChatMessage[]> {
+  const query = /* GraphQL */ `
+    query ChatMessagesByThreadIdAndCreatedAt($threadId: ID!) {
+      chatMessagesByThreadIdAndCreatedAt(threadId: $threadId, sortDirection: ASC) {
+        items {
+          ${CHAT_MESSAGE_FIELDS}
+        }
+      }
+    }
+  `
+
+  try {
+    const result = await client.graphql({
+      query,
+      variables: { threadId },
+      authMode: 'apiKey'
+    }) as any
+
+    if (result.errors) {
+      return []
+    }
+
+    return result?.data?.chatMessagesByThreadIdAndCreatedAt?.items ?? []
+  } catch (error: any) {
+    console.error('getChatMessages error:', error?.message)
+    return []
+  }
+}
+
+/**
+ * チャットスレッドのステータスを更新（承認/辞退）
+ * チーム運営者のみ実行可能
+ */
+export async function updateChatThreadStatus(threadId: string, status: 'accepted' | 'rejected'): Promise<DbChatThread> {
+  const currentEmail = await getCurrentUserEmail()
+  if (!currentEmail) {
+    throw new Error('ステータスの更新にはログインが必要です')
+  }
+
+  const thread = await getChatThread(threadId)
+  if (!thread) {
+    throw new Error('スレッドが見つかりません')
+  }
+
+  // チーム運営者かチェック
+  const team = await getTeam(thread.teamId)
+  if (!team) {
+    throw new Error('チームが見つかりません')
+  }
+
+  const isTeamAdmin = team.ownerEmail === currentEmail || team.editorEmails?.includes(currentEmail) || false
+  if (!isTeamAdmin) {
+    throw new Error('オファーの承認/辞退はチーム運営者のみ実行できます')
+  }
+
+  const mutation = /* GraphQL */ `
+    mutation UpdateChatThread($input: UpdateChatThreadInput!) {
+      updateChatThread(input: $input) {
+        ${CHAT_THREAD_FIELDS}
+      }
+    }
+  `
+
+  try {
+    const statusLabel = status === 'accepted' ? '承認' : '辞退'
+    const result = await client.graphql({
+      query: mutation,
+      variables: {
+        input: {
+          id: threadId,
+          status,
+        }
+      },
+      authMode: 'apiKey'
+    }) as any
+
+    if (result.errors) {
+      throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
+    }
+
+    // システムメッセージを送信
+    const currentUser = await getUserByEmail(currentEmail)
+    const userName = currentUser ? `${currentUser.lastName} ${currentUser.firstName}` : currentEmail
+    await createChatMessage({
+      threadId,
+      content: `${userName} がオファーを${statusLabel}しました`,
+      messageType: 'system',
+    })
+
+    return result.data.updateChatThread
+  } catch (error: any) {
+    console.error('updateChatThreadStatus error:', error?.message)
+    throw error
+  }
+}
+
+/**
+ * チャットスレッドの未読カウントをリセット
+ */
+export async function markChatThreadAsRead(threadId: string): Promise<void> {
+  const currentEmail = await getCurrentUserEmail()
+  if (!currentEmail) return
+
+  const thread = await getChatThread(threadId)
+  if (!thread) return
+
+  const isSenderOriginalSender = thread.senderEmail === currentEmail
+  const updateInput: any = { id: threadId }
+
+  if (isSenderOriginalSender) {
+    updateInput.senderUnreadCount = 0
+  } else {
+    updateInput.teamUnreadCount = 0
+  }
+
+  const mutation = /* GraphQL */ `
+    mutation UpdateChatThread($input: UpdateChatThreadInput!) {
+      updateChatThread(input: $input) {
+        ${CHAT_THREAD_FIELDS}
+      }
+    }
+  `
+
+  try {
+    await client.graphql({
+      query: mutation,
+      variables: { input: updateInput },
+      authMode: 'apiKey'
+    })
+  } catch (error: any) {
+    console.error('markChatThreadAsRead error:', error?.message)
+  }
+}
+
+/**
+ * 未読メッセージの合計数を取得
+ */
+export async function getTotalUnreadCount(): Promise<number> {
+  const currentEmail = await getCurrentUserEmail()
+  if (!currentEmail) return 0
+
+  try {
+    const allThreads = await getMyAllChatThreads()
+    let total = 0
+
+    for (const thread of allThreads) {
+      if (thread.senderEmail === currentEmail) {
+        total += thread.senderUnreadCount || 0
+      } else {
+        total += thread.teamUnreadCount || 0
+      }
+    }
+
+    return total
+  } catch (error: any) {
+    console.error('getTotalUnreadCount error:', error?.message)
+    return 0
+  }
+}
+
+// ==================== Notification Functions ====================
+
+const NOTIFICATION_FIELDS = 'id recipientEmail type title message senderName senderAvatar relatedId relatedType isRead createdAt updatedAt'
+
+/**
+ * 通知を作成（チーム運営者へのオファー通知など）
+ */
+export async function createNotification(input: {
+  recipientEmail: string
+  type: string
+  title: string
+  message: string
+  senderName?: string
+  senderAvatar?: string
+  relatedId?: string
+  relatedType?: string
+}): Promise<DbNotification> {
+  const mutation = /* GraphQL */ `
+    mutation CreateNotification($input: CreateNotificationInput!) {
+      createNotification(input: $input) {
+        ${NOTIFICATION_FIELDS}
+      }
+    }
+  `
+
+  try {
+    const result = await client.graphql({
+      query: mutation,
+      variables: {
+        input: {
+          ...input,
+          isRead: false,
+        }
+      },
+      authMode: 'apiKey'
+    }) as any
+
+    if (result.errors) {
+      throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
+    }
+
+    return result.data.createNotification
+  } catch (error: any) {
+    console.error('createNotification error:', error?.message)
+    throw error
+  }
+}
+
+/**
+ * チームの運営者全員に通知を送信
+ */
+export async function notifyTeamAdmins(teamId: string, notification: {
+  type: string
+  title: string
+  message: string
+  senderName?: string
+  senderAvatar?: string
+  relatedId?: string
+  relatedType?: string
+}): Promise<void> {
+  try {
+    const team = await getTeam(teamId)
+    if (!team) return
+
+    // オーナーとエディター全員のメールアドレスを収集
+    const adminEmails = [team.ownerEmail, ...(team.editorEmails || [])]
+    const uniqueEmails = [...new Set(adminEmails.filter(Boolean))]
+
+    // 各管理者に通知を送信
+    await Promise.all(
+      uniqueEmails.map(email =>
+        createNotification({
+          recipientEmail: email,
+          ...notification,
+        })
+      )
+    )
+  } catch (error: any) {
+    console.error('notifyTeamAdmins error:', error?.message)
+  }
+}
+
+/**
+ * ユーザーの通知一覧を取得
+ */
+export async function getNotifications(recipientEmail: string, limit = 50): Promise<DbNotification[]> {
+  const query = /* GraphQL */ `
+    query NotificationsByRecipient($recipientEmail: String!, $limit: Int, $sortDirection: ModelSortDirection) {
+      notificationsByRecipient(recipientEmail: $recipientEmail, limit: $limit, sortDirection: $sortDirection) {
+        items {
+          ${NOTIFICATION_FIELDS}
+        }
+      }
+    }
+  `
+
+  try {
+    const result = await client.graphql({
+      query,
+      variables: { recipientEmail, limit, sortDirection: 'DESC' },
+      authMode: 'apiKey'
+    }) as any
+
+    if (result.errors) {
+      return []
+    }
+
+    return result?.data?.notificationsByRecipient?.items ?? []
+  } catch (error: any) {
+    console.error('getNotifications error:', error?.message)
+    return []
+  }
+}
+
+/**
+ * 通知を既読にする
+ */
+export async function markNotificationAsRead(id: string): Promise<void> {
+  const mutation = /* GraphQL */ `
+    mutation UpdateNotification($input: UpdateNotificationInput!) {
+      updateNotification(input: $input) {
+        id isRead
+      }
+    }
+  `
+
+  try {
+    await client.graphql({
+      query: mutation,
+      variables: { input: { id, isRead: true } },
+      authMode: 'apiKey'
+    })
+  } catch (error: any) {
+    console.error('markNotificationAsRead error:', error?.message)
+  }
+}
+
+/**
+ * 全通知を既読にする
+ */
+export async function markAllNotificationsAsRead(recipientEmail: string): Promise<void> {
+  try {
+    const notifications = await getNotifications(recipientEmail)
+    const unread = notifications.filter(n => !n.isRead)
+    await Promise.all(unread.map(n => markNotificationAsRead(n.id)))
+  } catch (error: any) {
+    console.error('markAllNotificationsAsRead error:', error?.message)
+  }
+}
+
+/**
+ * 未読通知数を取得
+ */
+export async function getUnreadNotificationCount(recipientEmail: string): Promise<number> {
+  try {
+    const notifications = await getNotifications(recipientEmail)
+    return notifications.filter(n => !n.isRead).length
+  } catch (error: any) {
+    console.error('getUnreadNotificationCount error:', error?.message)
+    return 0
+  }
+}
+
+/**
+ * 自分が運営する大会一覧を取得
+ */
+export async function getMyManagedTournaments(email: string): Promise<DbTournament[]> {
+  try {
+    const allTournaments = await listTournaments(200)
+    return allTournaments.filter(
+      (t: DbTournament) => t.ownerEmail === email || t.coAdminEmails?.includes(email)
+    )
+  } catch (error: any) {
+    console.error('getMyManagedTournaments error:', error?.message)
+    return []
+  }
+}
+
+// ユーザーが運営するチームが参加している大会を取得（参加予定・過去参加を分類）
+export async function getMyTeamTournaments(email: string): Promise<{
+  upcoming: (DbTournament & { teamName?: string })[]
+  past: (DbTournament & { teamName?: string })[]
+}> {
+  try {
+    const teams = await getMyTeams(email)
+    if (teams.length === 0) return { upcoming: [], past: [] }
+
+    // 各チームの参加大会を取得
+    const allTournamentTeams = await Promise.all(
+      teams.map(async (team) => {
+        const tts = await getTeamTournaments(team.id)
+        return tts.map(tt => ({ ...tt, teamName: team.name }))
+      })
+    )
+
+    const now = new Date()
+    const upcoming: (DbTournament & { teamName?: string })[] = []
+    const past: (DbTournament & { teamName?: string })[] = []
+    const seenIds = new Set<string>()
+
+    for (const teamTournaments of allTournamentTeams) {
+      for (const tt of teamTournaments) {
+        if (!tt.tournament || seenIds.has(tt.tournament.id)) continue
+        seenIds.add(tt.tournament.id)
+
+        const tournamentWithTeam = { ...tt.tournament, teamName: tt.teamName }
+        const endDate = tt.tournament.endDate ? new Date(tt.tournament.endDate) : null
+        const startDate = tt.tournament.startDate ? new Date(tt.tournament.startDate) : null
+
+        // 終了日がある場合はそれで判定、なければ開始日、どちらもなければ参加予定扱い
+        if (endDate && endDate < now) {
+          past.push(tournamentWithTeam)
+        } else if (startDate && startDate < now && !endDate) {
+          // 開始済みだが終了日未設定 → 開催中扱いで参加予定に含める
+          upcoming.push(tournamentWithTeam)
+        } else {
+          upcoming.push(tournamentWithTeam)
+        }
+      }
+    }
+
+    // 参加予定: 開始日が近い順、過去: 終了日が新しい順
+    upcoming.sort((a, b) => {
+      const da = a.startDate ? new Date(a.startDate).getTime() : Infinity
+      const db = b.startDate ? new Date(b.startDate).getTime() : Infinity
+      return da - db
+    })
+    past.sort((a, b) => {
+      const da = a.endDate ? new Date(a.endDate).getTime() : 0
+      const db = b.endDate ? new Date(b.endDate).getTime() : 0
+      return db - da
+    })
+
+    return { upcoming, past }
+  } catch (error: any) {
+    console.error('getMyTeamTournaments error:', error?.message)
+    return { upcoming: [], past: [] }
+  }
+}
+
+// ==================== 管理者機能 ====================
+
+// 管理者固定認証情報
+const ADMIN_CREDENTIALS = {
+  username: 'admin',
+  password: 'admin',
+}
+
+// 管理者メールアドレス一覧（Cognitoメールでの管理者判定も残す）
+const ADMIN_EMAILS = [
+  'kowaki1111@gmail.com',
+]
+
+/**
+ * 管理者固定ID/パスワードでログイン
+ * 成功時はsessionStorageに管理者セッションを保存
+ */
+export function adminLogin(username: string, password: string): boolean {
+  if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('yell_admin_session', 'true')
+    }
+    return true
+  }
+  return false
+}
+
+/**
+ * 管理者セッションをクリア
+ */
+export function adminLogout(): void {
+  if (typeof window !== 'undefined') {
+    sessionStorage.removeItem('yell_admin_session')
+  }
+}
+
+/**
+ * 管理者固定ログインでセッションが有効かどうか
+ */
+export function isAdminLoggedIn(): boolean {
+  if (typeof window !== 'undefined') {
+    return sessionStorage.getItem('yell_admin_session') === 'true'
+  }
+  return false
+}
+
+/**
+ * 現在のユーザーがシステム管理者かどうかを判定
+ * 固定ID/パスワードでのログイン、またはCognitoメールアドレスで判定
+ */
+export async function isSystemAdmin(): Promise<boolean> {
+  // 固定ログインセッションがあればOK
+  if (isAdminLoggedIn()) return true
+  // Cognitoメールでの判定
+  const email = await getCurrentUserEmail()
+  if (!email) return false
+  return ADMIN_EMAILS.includes(email.toLowerCase().trim())
+}
+
+/**
+ * メールアドレスがシステム管理者かどうかを判定（同期版）
+ */
+export function isAdminEmail(email: string): boolean {
+  return ADMIN_EMAILS.includes(email.toLowerCase().trim())
+}
+
+/**
+ * 管理者用: 全ユーザー一覧を取得（ページネーション対応）
+ */
+export async function adminListAllUsers(limit = 500): Promise<DbUser[]> {
+  const query = /* GraphQL */ `
+    query ListUsers($limit: Int, $nextToken: String) {
+      listUsers(limit: $limit, nextToken: $nextToken) {
+        items {
+          id firstName lastName email bio avatar category region regionBlock prefecture district
+          isEmailPublic isRegistrationDatePublic instagramUrl createdAt updatedAt
+        }
+        nextToken
+      }
+    }
+  `
+
+  const allItems: DbUser[] = []
+  let nextToken: string | null = null
+
+  try {
+    do {
+      const result = await client.graphql({
+        query,
+        variables: { limit: Math.min(limit - allItems.length, 200), nextToken },
+        authMode: 'apiKey'
+      }) as any
+
+      const items = result?.data?.listUsers?.items ?? []
+      allItems.push(...items)
+      nextToken = result?.data?.listUsers?.nextToken || null
+    } while (nextToken && allItems.length < limit)
+
+    return allItems
+  } catch (error: any) {
+    console.error('adminListAllUsers error:', error?.message)
+    return []
+  }
+}
+
+/**
+ * 管理者用: 全チーム一覧を取得（承認・未承認含む）
+ */
+export async function adminListAllTeams(limit = 500): Promise<DbTeam[]> {
+  const query = /* GraphQL */ `
+    query ListTeams($limit: Int, $nextToken: String) {
+      listTeams(limit: $limit, nextToken: $nextToken) {
+        items {
+          id name shortName logoUrl region prefecture headcount category
+          ownerEmail editorEmails isApproved createdAt updatedAt
+        }
+        nextToken
+      }
+    }
+  `
+
+  const allItems: DbTeam[] = []
+  let nextToken: string | null = null
+
+  try {
+    do {
+      const result = await client.graphql({
+        query,
+        variables: { limit: Math.min(limit - allItems.length, 200), nextToken },
+        authMode: 'apiKey'
+      }) as any
+
+      const items = result?.data?.listTeams?.items ?? []
+      allItems.push(...items)
+      nextToken = result?.data?.listTeams?.nextToken || null
+    } while (nextToken && allItems.length < limit)
+
+    return allItems
+  } catch (error: any) {
+    console.error('adminListAllTeams error:', error?.message)
+    return []
+  }
+}
+
+/**
+ * 管理者用: 全大会一覧を取得
+ */
+export async function adminListAllTournaments(limit = 500): Promise<DbTournament[]> {
+  const query = /* GraphQL */ `
+    query ListTournaments($limit: Int, $nextToken: String) {
+      listTournaments(limit: $limit, nextToken: $nextToken) {
+        items {
+          id name category regionBlock prefecture district tournamentType area subArea
+          ownerEmail coAdminEmails startDate endDate favoritesCount createdAt updatedAt
+        }
+        nextToken
+      }
+    }
+  `
+
+  const allItems: DbTournament[] = []
+  let nextToken: string | null = null
+
+  try {
+    do {
+      const result = await client.graphql({
+        query,
+        variables: { limit: Math.min(limit - allItems.length, 200), nextToken },
+        authMode: 'apiKey'
+      }) as any
+
+      const items = result?.data?.listTournaments?.items ?? []
+      allItems.push(...items)
+      nextToken = result?.data?.listTournaments?.nextToken || null
+    } while (nextToken && allItems.length < limit)
+
+    return allItems
+  } catch (error: any) {
+    console.error('adminListAllTournaments error:', error?.message)
+    return []
+  }
+}
+
+/**
+ * 管理者用: 全チャットスレッド一覧を取得
+ */
+export async function adminListAllChatThreads(limit = 500): Promise<DbChatThread[]> {
+  const query = /* GraphQL */ `
+    query ListChatThreads($limit: Int, $nextToken: String) {
+      listChatThreads(limit: $limit, nextToken: $nextToken) {
+        items {
+          ${CHAT_THREAD_FIELDS}
+        }
+        nextToken
+      }
+    }
+  `
+
+  const allItems: DbChatThread[] = []
+  let nextToken: string | null = null
+
+  try {
+    do {
+      const result = await client.graphql({
+        query,
+        variables: { limit: Math.min(limit - allItems.length, 200), nextToken },
+        authMode: 'apiKey'
+      }) as any
+
+      const items = result?.data?.listChatThreads?.items ?? []
+      allItems.push(...items)
+      nextToken = result?.data?.listChatThreads?.nextToken || null
+    } while (nextToken && allItems.length < limit)
+
+    return allItems
+  } catch (error: any) {
+    console.error('adminListAllChatThreads error:', error?.message)
+    return []
+  }
+}
+
+/**
+ * 管理者用: ユーザー情報を更新
+ */
+export async function adminUpdateUser(id: string, input: Partial<DbUser>): Promise<DbUser> {
+  const mutation = /* GraphQL */ `
+    mutation UpdateUser($input: UpdateUserInput!) {
+      updateUser(input: $input) {
+        id firstName lastName email bio avatar category region regionBlock prefecture district
+        isEmailPublic isRegistrationDatePublic instagramUrl createdAt updatedAt
+      }
+    }
+  `
+
+  const result = await client.graphql({
+    query: mutation,
+    variables: { input: { id, ...input } },
+    authMode: 'apiKey'
+  }) as any
+
+  if (result.errors) {
+    throw new Error(result.errors[0]?.message || 'ユーザー更新エラー')
+  }
+
+  return result.data.updateUser
+}
+
+/**
+ * 管理者用: ユーザーを削除
+ */
+export async function adminDeleteUser(id: string): Promise<void> {
+  const mutation = /* GraphQL */ `
+    mutation DeleteUser($input: DeleteUserInput!) {
+      deleteUser(input: $input) { id }
+    }
+  `
+
+  const result = await client.graphql({
+    query: mutation,
+    variables: { input: { id } },
+    authMode: 'apiKey'
+  }) as any
+
+  if (result.errors) {
+    throw new Error(result.errors[0]?.message || 'ユーザー削除エラー')
+  }
+}
+
+/**
+ * 管理者用: チームの承認状態を更新
+ */
+export async function adminUpdateTeamApproval(id: string, isApproved: boolean): Promise<DbTeam> {
+  const mutation = /* GraphQL */ `
+    mutation UpdateTeam($input: UpdateTeamInput!) {
+      updateTeam(input: $input) {
+        id name isApproved
+      }
+    }
+  `
+
+  const result = await client.graphql({
+    query: mutation,
+    variables: { input: { id, isApproved } },
+    authMode: 'apiKey'
+  }) as any
+
+  if (result.errors) {
+    throw new Error(result.errors[0]?.message || 'チーム更新エラー')
+  }
+
+  return result.data.updateTeam
+}
+
+/**
+ * 管理者用: 大会を削除
+ */
+export async function adminDeleteTournament(id: string): Promise<void> {
+  const mutation = /* GraphQL */ `
+    mutation DeleteTournament($input: DeleteTournamentInput!) {
+      deleteTournament(input: $input) { id }
+    }
+  `
+
+  const result = await client.graphql({
+    query: mutation,
+    variables: { input: { id } },
+    authMode: 'apiKey'
+  }) as any
+
+  if (result.errors) {
+    throw new Error(result.errors[0]?.message || '大会削除エラー')
+  }
+}
+
+/**
+ * 管理者用: チームを削除
+ */
+export async function adminDeleteTeam(id: string): Promise<void> {
+  const mutation = /* GraphQL */ `
+    mutation DeleteTeam($input: DeleteTeamInput!) {
+      deleteTeam(input: $input) { id }
+    }
+  `
+
+  const result = await client.graphql({
+    query: mutation,
+    variables: { input: { id } },
+    authMode: 'apiKey'
+  }) as any
+
+  if (result.errors) {
+    throw new Error(result.errors[0]?.message || 'チーム削除エラー')
   }
 }

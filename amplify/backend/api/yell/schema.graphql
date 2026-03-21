@@ -206,6 +206,66 @@ type TournamentInvitation @model @auth(rules: [{allow: public}]) {
   tournament: Tournament @belongsTo(fields: ["tournamentId"])
 }
 
+# ==================== ChatThread ====================
+# 大会運営者からチームへのオファーチャットスレッド
+type ChatThread @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  # 送信者情報（大会運営者）
+  senderEmail: String! @index(name: "bySender", queryField: "chatThreadsBySender")
+  senderName: String!
+  # 受信チーム情報
+  teamId: ID! @index(name: "byTeam", queryField: "chatThreadsByTeam")
+  teamName: String!
+  # 大会情報
+  tournamentId: ID! @index(name: "byTournament", queryField: "chatThreadsByTournament")
+  tournamentName: String!
+  # スレッドのタイプ（offer: 大会参加オファー）
+  threadType: String!
+  # ステータス（pending: 確認待ち, accepted: 承認, rejected: 辞退）
+  status: String!
+  # 最新メッセージ情報（一覧表示用）
+  lastMessage: String
+  lastMessageAt: AWSDateTime
+  # 未読カウント（チーム運営者側）
+  teamUnreadCount: Int
+  # 未読カウント（大会運営者側）
+  senderUnreadCount: Int
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+}
+
+# ==================== ChatMessage ====================
+# チャットスレッド内の個別メッセージ
+type ChatMessage @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  threadId: ID! @index(name: "byThread", sortKeyFields: ["createdAt"])
+  senderEmail: String!
+  senderName: String!
+  content: String!
+  # メッセージタイプ（text: テキスト, system: システムメッセージ）
+  messageType: String!
+  isRead: Boolean
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+}
+
+# ==================== Notification ====================
+# チーム運営者やユーザーへの通知
+type Notification @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  recipientEmail: String! @index(name: "byRecipient", sortKeyFields: ["createdAt"], queryField: "notificationsByRecipient")
+  type: String!
+  title: String!
+  message: String!
+  senderName: String
+  senderAvatar: String
+  relatedId: String
+  relatedType: String
+  isRead: Boolean!
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+}
+
 # ==================== Region ====================
 type Region @model @auth(rules: [{allow: public}]) {
   id: ID!

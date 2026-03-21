@@ -1,16 +1,14 @@
-"use client"
-import { useRouter } from "next/navigation"
+import Link from "next/link"
 
 export default function LandingPage() {
-  const router = useRouter()
-
   return (
     <div
       style={{
         position: "fixed",
         top: 0,
         left: 0,
-        width: "100vw",
+        right: 0,
+        width: "100%",
         height: "100vh",
         overflow: "hidden",
         margin: 0,
@@ -72,6 +70,7 @@ export default function LandingPage() {
           gap: "40px",
           border: "none",
           outline: "none",
+          boxSizing: "border-box",
         }}
       >
         {/* Logo */}
@@ -86,6 +85,8 @@ export default function LandingPage() {
               filter: "brightness(0) invert(1)",
               border: "none",
               outline: "none",
+              display: "block",
+              margin: "0 auto",
             }}
           />
         </div>
@@ -119,17 +120,18 @@ export default function LandingPage() {
             alignItems: "center",
             gap: "16px",
             width: "100%",
-            maxWidth: "300px",
+            maxWidth: "320px",
+            padding: "0 16px",
             border: "none",
             outline: "none",
+            boxSizing: "border-box",
           }}
         >
-          <div
-            onClick={() => router.push("/welcome")}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => e.key === "Enter" && router.push("/welcome")}
+          <Link
+            href="/welcome"
+            prefetch={true}
             style={{
+              display: "block",
               width: "100%",
               padding: "16px 32px",
               borderRadius: "9999px",
@@ -144,19 +146,19 @@ export default function LandingPage() {
               boxSizing: "border-box",
               border: "none",
               outline: "none",
+              textDecoration: "none",
               WebkitTapHighlightColor: "transparent",
               userSelect: "none",
             }}
           >
             Yellを楽しむ
-          </div>
+          </Link>
 
-          <div
-            onClick={() => router.push("/register")}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => e.key === "Enter" && router.push("/register")}
+          <Link
+            href="/login"
+            prefetch={true}
             style={{
+              display: "block",
               width: "100%",
               padding: "14px 32px",
               borderRadius: "9999px",
@@ -171,12 +173,13 @@ export default function LandingPage() {
               textShadow: "0 1px 4px rgba(0,0,0,0.2)",
               cursor: "pointer",
               boxSizing: "border-box",
+              textDecoration: "none",
               WebkitTapHighlightColor: "transparent",
               userSelect: "none",
             }}
           >
             Yellをはじめる
-          </div>
+          </Link>
         </div>
       </div>
     </div>

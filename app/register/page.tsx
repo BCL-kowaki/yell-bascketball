@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
 import { signUp } from "aws-amplify/auth"
 import { Eye, EyeOff } from "lucide-react"
@@ -131,26 +132,68 @@ export default function RegisterPage() {
         position: "fixed",
         top: 0,
         left: 0,
-        width: "100vw",
+        right: 0,
+        width: "100%",
         height: "100vh",
         overflow: "auto",
         margin: 0,
         padding: 0,
         border: "none",
         outline: "none",
-        background: "linear-gradient(135deg, rgba(247, 147, 30, 0.9) 0%, rgba(240, 106, 78, 0.9) 40%, rgba(232, 75, 138, 0.9) 100%)",
+        backgroundColor: "#000",
       }}
     >
+      {/* 動画背景 */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          zIndex: 0,
+          border: "none",
+          outline: "none",
+        }}
+      >
+        <source src="/videos/landing-bg.mp4" type="video/mp4" />
+      </video>
+
+      {/* グラデーションオーバーレイ */}
       <div
         style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          zIndex: 1,
+          background:
+            "linear-gradient(135deg, rgba(247, 147, 30, 0.9) 0%, rgba(240, 106, 78, 0.9) 40%, rgba(232, 75, 138, 0.9) 100%)",
+          border: "none",
+          outline: "none",
+        }}
+      />
+
+      {/* コンテンツ */}
+      <div
+        style={{
+          position: "relative",
+          zIndex: 2,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          minHeight: "100%",
+          minHeight: "100vh",
           padding: "24px 16px",
           border: "none",
           outline: "none",
+          boxSizing: "border-box",
         }}
       >
         {/* Logo */}
@@ -370,18 +413,20 @@ export default function RegisterPage() {
             }}
           >
             すでにアカウントをお持ちですか？{" "}
-            <span
-              onClick={() => router.push("/login")}
+            <Link
+              href="/login"
+              prefetch={true}
               style={{
                 color: "#f06a4e",
                 cursor: "pointer",
                 fontWeight: 600,
                 border: "none",
                 outline: "none",
+                textDecoration: "none",
               }}
             >
               ログイン
-            </span>
+            </Link>
           </div>
         </div>
       </div>

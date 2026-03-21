@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { MapPin, Navigation, ChevronRight, Loader2 } from "lucide-react"
 import { getCurrentPosition, getNearestPrefecture } from "@/lib/geolocation"
 import { REGION_BLOCKS, PREFECTURES_BY_REGION } from "@/lib/regionData"
@@ -49,7 +50,8 @@ export default function WelcomePage() {
         position: "fixed",
         top: 0,
         left: 0,
-        width: "100vw",
+        right: 0,
+        width: "100%",
         height: "100vh",
         overflow: "auto",
         margin: 0,
@@ -228,20 +230,10 @@ export default function WelcomePage() {
             const regionSlug = REGION_NAME_TO_SLUG[region]
             const prefectures = PREFECTURES_BY_REGION[region] || []
             return (
-              <div
+              <Link
                 key={region}
-                onClick={() => {
-                  if (regionSlug) {
-                    router.push(`/tournaments/${regionSlug}`)
-                  }
-                }}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && regionSlug) {
-                    router.push(`/tournaments/${regionSlug}`)
-                  }
-                }}
+                href={regionSlug ? `/tournaments/${regionSlug}` : '/tournaments'}
+                prefetch={true}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -252,6 +244,7 @@ export default function WelcomePage() {
                   cursor: "pointer",
                   border: "none",
                   outline: "none",
+                  textDecoration: "none",
                   WebkitTapHighlightColor: "transparent",
                 }}
               >
@@ -267,18 +260,17 @@ export default function WelcomePage() {
                   </div>
                 </div>
                 <ChevronRight style={{ width: 16, height: 16, color: "rgba(255,255,255,0.5)" }} />
-              </div>
+              </Link>
             )
           })}
         </div>
 
         {/* All tournaments link */}
-        <div
-          onClick={() => router.push("/tournaments")}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => e.key === "Enter" && router.push("/tournaments")}
+        <Link
+          href="/tournaments"
+          prefetch={true}
           style={{
+            display: "block",
             marginTop: "24px",
             padding: "12px 24px",
             color: "rgba(255,255,255,0.8)",
@@ -292,7 +284,7 @@ export default function WelcomePage() {
           }}
         >
           すべての大会を見る
-        </div>
+        </Link>
       </div>
     </div>
   )

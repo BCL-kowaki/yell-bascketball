@@ -53,9 +53,11 @@ import {
   Search,
   Plus,
   Trophy,
-  Instagram
+  Instagram,
+  Send
 } from "lucide-react"
-import { getTeam, getCurrentUserEmail, updateTeam, type DbTeam, getPostsByTeam, createPost, type DbPost, toggleFavoriteTeam, checkFavoriteTeam, getUserByEmail, deletePost, toggleLike as toggleDbLike, addComment as addDbComment, getCommentsByPost, updatePostCounts, checkLikeStatus, searchUsers, getTeamTournaments, type DbUser, type DbTournamentTeam, type DbTournament } from "@/lib/api"
+import { getTeam, getCurrentUserEmail, updateTeam, type DbTeam, getPostsByTeam, createPost, type DbPost, toggleFavoriteTeam, checkFavoriteTeam, getUserByEmail, deletePost, toggleLike as toggleDbLike, addComment as addDbComment, getCommentsByPost, updatePostCounts, checkLikeStatus, searchUsers, getTeamTournaments, type DbUser, type DbTournamentTeam, type DbTournament, createChatThread, checkTournamentAdminPermission, listTournaments } from "@/lib/api"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { uploadImageToS3, uploadPdfToS3, uploadVideoToS3, refreshS3Url } from "@/lib/storage"
 
 // PDF表示コンポーネント（トップページと同じ）
@@ -201,6 +203,15 @@ export default function TeamDetailPage() {
   const [availablePrefectures, setAvailablePrefectures] = useState<string[]>([])
   const [availableDistricts, setAvailableDistricts] = useState<string[]>([])
   
+  // メッセージ送信（オファー）関連
+  const [showMessageDialog, setShowMessageDialog] = useState(false)
+  const [messageText, setMessageText] = useState("")
+  const [isSendingMessage, setIsSendingMessage] = useState(false)
+  const [isTournamentAdmin, setIsTournamentAdmin] = useState(false)
+  const [myTournaments, setMyTournaments] = useState<DbTournament[]>([])
+  const [selectedTournamentId, setSelectedTournamentId] = useState("")
+  const [isLoadingMyTournaments, setIsLoadingMyTournaments] = useState(false)
+
   // File input refs
   const imageInputRef = useRef<HTMLInputElement>(null)
   const pdfInputRef = useRef<HTMLInputElement>(null)
@@ -257,7 +268,7 @@ export default function TeamDetailPage() {
     try {
       const email = await getCurrentUserEmail()
       setCurrentUserEmail(email || null)
-      
+
       // ユーザーのアバター情報も取得
       if (email) {
         const userData = await getUserByEmail(email)
@@ -274,6 +285,20 @@ export default function TeamDetailPage() {
             name: `${userData.lastName} ${userData.firstName}`,
             avatar: avatarUrl,
           })
+        }
+
+        // 大会運営者かチェック（運営中の大会が1つ以上あるか）
+        try {
+          const allTournaments = await listTournaments(200)
+          const emailLower = email.toLowerCase().trim()
+          const hasManagedTournament = allTournaments.some((t: any) => {
+            const ownerMatch = t.ownerEmail?.toLowerCase().trim() === emailLower
+            const coAdminMatch = t.coAdminEmails?.some((e: string) => e.toLowerCase().trim() === emailLower)
+            return ownerMatch || coAdminMatch
+          })
+          setIsTournamentAdmin(hasManagedTournament)
+        } catch {
+          setIsTournamentAdmin(false)
         }
       }
     } catch (error) {
@@ -1123,6 +1148,84 @@ export default function TeamDetailPage() {
     }
   }
 
+  // メッセージ送信ダイアログを開く（自分が運営する大会を読み込み）
+  async function handleOpenMessageDialog() {
+    if (!currentUserEmail) {
+      setShowLoginModal(true)
+      return
+    }
+    setShowMessageDialog(true)
+    setIsLoadingMyTournaments(true)
+    try {
+      // 自分が主催者または運営者の大会をすべて取得
+      const allTournaments = await listTournaments(200)
+      const emailLower = currentUserEmail.toLowerCase().trim()
+      console.log('[MessageDialog] currentUserEmail:', currentUserEmail, '→ emailLower:', emailLower)
+      console.log('[MessageDialog] allTournaments count:', allTournaments.length)
+      if (allTournaments.length > 0) {
+        console.log('[MessageDialog] サンプル大会:', allTournaments.slice(0, 3).map(t => ({
+          name: t.name,
+          ownerEmail: t.ownerEmail,
+          coAdminEmails: t.coAdminEmails,
+        })))
+      }
+      const mine = allTournaments.filter((t: any) => {
+        const ownerMatch = t.ownerEmail?.toLowerCase().trim() === emailLower
+        const coAdminMatch = t.coAdminEmails?.some((e: string) => e.toLowerCase().trim() === emailLower)
+        return ownerMatch || coAdminMatch
+      })
+      console.log('[MessageDialog] マッチした大会数:', mine.length)
+      setMyTournaments(mine)
+      if (mine.length > 0) {
+        setSelectedTournamentId(mine[0].id)
+      }
+    } catch (error) {
+      console.error('Failed to load tournaments:', error)
+    } finally {
+      setIsLoadingMyTournaments(false)
+    }
+  }
+
+  // メッセージ（オファー）送信処理
+  async function handleSendMessage() {
+    if (!team || !messageText.trim() || !currentUserEmail || !selectedTournamentId) return
+
+    setIsSendingMessage(true)
+    try {
+      const selectedTournament = myTournaments.find(t => t.id === selectedTournamentId)
+      if (!selectedTournament) throw new Error('大会が見つかりません')
+
+      const thread = await createChatThread({
+        teamId: team.id,
+        teamName: team.name,
+        tournamentId: selectedTournament.id,
+        tournamentName: selectedTournament.name,
+        initialMessage: messageText.trim(),
+      })
+
+      toast({
+        title: "送信完了",
+        description: `${team.name} にメッセージを送信しました`,
+      })
+
+      setShowMessageDialog(false)
+      setMessageText("")
+      setSelectedTournamentId("")
+
+      // チャットページへ遷移
+      router.push(`/messages/${thread.id}`)
+    } catch (error: any) {
+      console.error('Failed to send message:', error)
+      toast({
+        title: "エラー",
+        description: error?.message || "メッセージの送信に失敗しました",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSendingMessage(false)
+    }
+  }
+
   // Load posts when team is loaded
   useEffect(() => {
     if (team && params.id) {
@@ -1293,23 +1396,37 @@ export default function TeamDetailPage() {
 
             <div className="flex gap-2 w-full md:w-auto">
               {currentUserEmail ? (
-                <Button
-                  variant={isFavorite ? "default" : "outline"}
-                  className={`flex-1 md:flex-initial gap-2 ${isFavorite ? "bg-red-500 hover:bg-red-600" : ""}`}
-                  onClick={handleToggleFavorite}
-                >
-                  <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
-                  {isFavorite ? "お気に入り済み" : "お気に入り"}
-                </Button>
+                <>
+                  <Button
+                    variant={isFavorite ? "default" : "outline"}
+                    className={`flex-1 md:flex-initial gap-2 ${isFavorite ? "bg-red-500 hover:bg-red-600" : ""}`}
+                    onClick={handleToggleFavorite}
+                  >
+                    <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
+                    {isFavorite ? "お気に入り済み" : "お気に入り"}
+                  </Button>
+                  {isTournamentAdmin && (
+                    <Button
+                      variant="outline"
+                      className="flex-1 md:flex-initial gap-2 border-[#e84b8a] text-[#e84b8a] hover:bg-[#e84b8a] hover:text-white"
+                      onClick={handleOpenMessageDialog}
+                    >
+                      <Send className="w-4 h-4" />
+                      オファーを送る
+                    </Button>
+                  )}
+                </>
               ) : (
-                <Button
-                  variant="outline"
-                  className="flex-1 md:flex-initial gap-2"
-                  onClick={() => setShowLoginModal(true)}
-                >
-                  <Heart className="w-4 h-4" />
-                  お気に入り
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    className="flex-1 md:flex-initial gap-2"
+                    onClick={() => setShowLoginModal(true)}
+                  >
+                    <Heart className="w-4 h-4" />
+                    お気に入り
+                  </Button>
+                </>
               )}
           </div>
         </div>
@@ -2415,6 +2532,80 @@ export default function TeamDetailPage() {
         onOpenChange={setShowLoginModal}
         action="お気に入り登録"
       />
+
+      {/* メッセージ送信ダイアログ */}
+      <Dialog open={showMessageDialog} onOpenChange={setShowMessageDialog}>
+        <DialogContent className="!fixed !top-[50%] !left-[50%] !translate-x-[-50%] !translate-y-[-50%] w-[calc(100%-2rem)] md:w-[480px] max-w-[480px] bg-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="w-5 h-5 text-[#e84b8a]" />
+              {team?.name} にオファーを送る
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* 大会選択 */}
+            <div>
+              <Label className="text-sm font-medium text-gray-700">大会を選択</Label>
+              {isLoadingMyTournaments ? (
+                <div className="flex items-center gap-2 py-3 text-sm text-gray-500">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  読み込み中...
+                </div>
+              ) : myTournaments.length === 0 ? (
+                <div className="py-3">
+                  <p className="text-sm text-gray-500">運営中の大会がありません。大会を作成してからオファーを送信できます。</p>
+                </div>
+              ) : (
+                <Select value={selectedTournamentId} onValueChange={setSelectedTournamentId}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="大会を選択してください" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[9999]" position="popper" sideOffset={4}>
+                    {myTournaments.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        <div className="flex items-center gap-2">
+                          <Trophy className="w-3 h-3 text-[#e84b8a]" />
+                          {t.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            {/* メッセージ入力 */}
+            <div>
+              <Label className="text-sm font-medium text-gray-700">メッセージ</Label>
+              <Textarea
+                placeholder="チームへのメッセージを入力..."
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                className="mt-1 min-h-[120px] resize-none"
+              />
+            </div>
+
+            {/* 送信ボタン */}
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setShowMessageDialog(false)}>
+                キャンセル
+              </Button>
+              <Button
+                className="bg-[#e84b8a] hover:bg-[#d63d7a] text-white"
+                disabled={!messageText.trim() || !selectedTournamentId || isSendingMessage || myTournaments.length === 0}
+                onClick={handleSendMessage}
+              >
+                {isSendingMessage ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : (
+                  <Send className="w-4 h-4 mr-2" />
+                )}
+                送信してチャットへ
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Layout>
   )
 }

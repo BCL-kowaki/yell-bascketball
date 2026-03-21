@@ -1,39 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server'
 import * as jose from 'jose'
 
-// 注意: 開発用の簡易セッション発行エンドポイント。
-// クライアント側で Cognito サインイン成功後に呼び出し、
-// アプリ用の HTTP-only JWT クッキーを発行します。
+// JWT secret: middleware.ts と同じ値を使用
+const JWT_SECRET_STRING = process.env.JWT_SECRET || 'your-secure-jwt-secret-key-goes-here'
+const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_STRING)
 
 // セッション確認用のGETハンドラー
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get('accessToken')?.value
-    
+
     if (!token) {
       return NextResponse.json({ error: 'No session found' }, { status: 401 })
     }
 
-    const secret = new TextEncoder().encode(
-      process.env.JWT_SECRET || 'your-secure-jwt-secret-key-goes-here'
-    )
-
     try {
-      const { payload } = await jose.jwtVerify(token, secret, {
+      const { payload } = await jose.jwtVerify(token, JWT_SECRET, {
         issuer: 'urn:example:issuer',
         audience: 'urn:example:audience',
       })
-      
-      return NextResponse.json({ 
+
+      return NextResponse.json({
         email: payload.email,
-        userId: payload.sub 
+        userId: payload.sub
       }, { status: 200 })
-    } catch (error) {
-      // トークンが無効な場合
+    } catch (error: any) {
+      console.error('[/api/session GET] JWT検証失敗:', error?.message)
       return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
     }
   } catch (error) {
-    console.error('session GET error', error)
+    console.error('[/api/session GET] サーバーエラー:', error)
     return NextResponse.json({ error: 'internal error' }, { status: 500 })
   }
 }
@@ -44,12 +40,10 @@ export async function POST(request: NextRequest) {
     const { email, userId } = body
 
     if (!email) {
+      console.error('[/api/session POST] emailが未指定')
       return NextResponse.json({ error: 'email is required' }, { status: 400 })
     }
 
-    const secret = new TextEncoder().encode(
-      process.env.JWT_SECRET || 'your-secure-jwt-secret-key-goes-here'
-    )
     const alg = 'HS256'
 
     const jwt = await new jose.SignJWT({ sub: userId || email, email })
@@ -58,21 +52,21 @@ export async function POST(request: NextRequest) {
       .setIssuer('urn:example:issuer')
       .setAudience('urn:example:audience')
       .setExpirationTime('2h')
-      .sign(secret)
+      .sign(JWT_SECRET)
+
+    console.log('[/api/session POST] セッション発行成功:', email)
 
     const response = NextResponse.json({ message: 'session issued' }, { status: 200 })
     response.cookies.set('accessToken', jwt, {
       httpOnly: true,
       secure: process.env.NODE_ENV !== 'development',
-      sameSite: 'strict',
+      sameSite: 'lax',
       maxAge: 60 * 60 * 2,
       path: '/',
     })
     return response
   } catch (error) {
-    console.error('session error', error)
+    console.error('[/api/session POST] サーバーエラー:', error)
     return NextResponse.json({ error: 'internal error' }, { status: 500 })
   }
 }
-
-

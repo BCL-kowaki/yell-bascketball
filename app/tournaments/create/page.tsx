@@ -273,10 +273,9 @@ export default function CreateTournamentPage() {
         regionBlock: formData.regionBlock || null,
         prefecture: formData.prefecture || null,
         district: formData.tournamentType === "official" ? null : (formData.district || null),
-        // TODO: amplify push 後に有効化 - tournamentType, area, subArea
-        // tournamentType: formData.tournamentType || "cup",
-        // area: formData.tournamentType === "official" ? (formData.area || null) : null,
-        // subArea: formData.tournamentType === "official" ? (formData.subArea || null) : null,
+        tournamentType: formData.tournamentType || "cup",
+        area: formData.tournamentType === "official" ? (formData.area || null) : null,
+        subArea: formData.tournamentType === "official" ? (formData.subArea || null) : null,
         description: formData.description || null,
         ownerEmail: currentUser.email,
         coAdminEmails: selectedCoAdmins.map(admin => admin.email),

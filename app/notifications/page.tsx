@@ -9,65 +9,53 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Bell, Trophy, Users, Heart, MessageCircle, Mail, Loader2, CheckCircle } from "lucide-react"
 import Link from "next/link"
 import { Layout } from "@/components/layout"
-import { getCurrentUserEmail } from "@/lib/api"
-
-// 通知タイプ
-type NotificationType =
-  | "tournament_update"    // お気に入り大会が更新された
-  | "team_update"          // お気に入りチームが更新された
-  | "offer_received"       // 参加オファーが届いた
-  | "offer_accepted"       // オファーが承認された
-  | "offer_rejected"       // オファーが辞退された
-  | "comment"              // コメントが付いた
-  | "like"                 // いいねされた
-
-interface Notification {
-  id: string
-  type: NotificationType
-  title: string
-  message: string
-  avatar?: string
-  relatedId?: string // tournament or team ID
-  relatedType?: "tournament" | "team" | "post"
-  isRead: boolean
-  createdAt: string
-}
+import {
+  getCurrentUserEmail,
+  getNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  type DbNotification
+} from "@/lib/api"
 
 export default function NotificationsPage() {
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("all")
-
-  // TODO: Replace with actual API calls when GraphQL schema is updated
-  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [notifications, setNotifications] = useState<DbNotification[]>([])
 
   useEffect(() => {
-    const loadUser = async () => {
+    const loadData = async () => {
       try {
         const email = await getCurrentUserEmail()
         setCurrentUserEmail(email || null)
+        if (email) {
+          const notifs = await getNotifications(email)
+          setNotifications(notifs)
+        }
       } catch {
         setCurrentUserEmail(null)
       } finally {
         setIsLoading(false)
       }
     }
-    loadUser()
+    loadData()
   }, [])
 
-  const handleMarkAsRead = (notificationId: string) => {
+  const handleMarkAsRead = async (notificationId: string) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n))
     )
-    // TODO: Call API to mark notification as read
+    await markNotificationAsRead(notificationId)
   }
 
-  const handleMarkAllAsRead = () => {
+  const handleMarkAllAsRead = async () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
-    // TODO: Call API to mark all notifications as read
+    if (currentUserEmail) {
+      await markAllNotificationsAsRead(currentUserEmail)
+    }
   }
 
-  const getNotificationIcon = (type: NotificationType) => {
+  const getNotificationIcon = (type: string) => {
     switch (type) {
       case "tournament_update":
         return <Trophy className="h-4 w-4 text-red-500" />
@@ -88,16 +76,35 @@ export default function NotificationsPage() {
     }
   }
 
-  const getNotificationLink = (notification: Notification): string | undefined => {
+  const getNotificationLink = (notification: DbNotification): string | undefined => {
     if (!notification.relatedId || !notification.relatedType) return undefined
     switch (notification.relatedType) {
       case "tournament":
         return `/tournaments/${notification.relatedId}`
       case "team":
         return `/teams/${notification.relatedId}`
+      case "chat":
+        return `/messages/${notification.relatedId}`
       default:
         return undefined
     }
+  }
+
+  // 時刻フォーマット
+  const formatTime = (dateStr: string | null | undefined) => {
+    if (!dateStr) return ""
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const minutes = Math.floor(diff / (1000 * 60))
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+
+    if (minutes < 1) return "たった今"
+    if (minutes < 60) return `${minutes}分前`
+    if (hours < 24) return `${hours}時間前`
+    if (days < 7) return `${days}日前`
+    return date.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })
   }
 
   const filteredNotifications = notifications.filter((n) => {
@@ -210,7 +217,7 @@ export default function NotificationsPage() {
                               <div className="flex items-start gap-3">
                                 <div className="relative flex-shrink-0">
                                   <Avatar className="h-10 w-10">
-                                    <AvatarImage src={notification.avatar || "/placeholder.svg"} />
+                                    <AvatarImage src={notification.senderAvatar || "/placeholder.svg"} />
                                     <AvatarFallback className="bg-gray-200">
                                       {notification.title.charAt(0)}
                                     </AvatarFallback>
@@ -224,9 +231,9 @@ export default function NotificationsPage() {
                                     <div className="flex-1">
                                       <p className="text-sm">
                                         <span className="font-semibold text-gray-900">{notification.title}</span>
-                                        <span className="text-gray-600"> {notification.message}</span>
                                       </p>
-                                      <p className="text-xs text-gray-500 mt-1">{notification.createdAt}</p>
+                                      <p className="text-sm text-gray-600 mt-0.5">{notification.message}</p>
+                                      <p className="text-xs text-gray-400 mt-1">{formatTime(notification.createdAt)}</p>
                                     </div>
                                     {!notification.isRead && (
                                       <div className="flex items-center gap-2 flex-shrink-0">
@@ -253,7 +260,7 @@ export default function NotificationsPage() {
                         )
 
                         return link ? (
-                          <Link key={notification.id} href={link}>
+                          <Link key={notification.id} href={link} onClick={() => !notification.isRead && handleMarkAsRead(notification.id)}>
                             {content}
                           </Link>
                         ) : (

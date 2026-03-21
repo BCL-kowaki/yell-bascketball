@@ -61,6 +61,7 @@ import {
   checkLikeStatus,
   searchTeams,
   searchUsers,
+  createChatThread,
   type DbTournament,
   type DbUser,
   type DbPost,
@@ -308,8 +309,11 @@ export default function TournamentDetailPage() {
   const [rankingSearchResults, setRankingSearchResults] = useState<Record<number, DbTeam[]>>({})
   const [selectedRankingTeams, setSelectedRankingTeams] = useState<Record<number, DbTeam | null>>({})
 
-  // メッセージ用の状態（チャット機能で実装予定）
-  const [messages, setMessages] = useState<any[]>([])
+  // オファー送信関連
+  const [showOfferDialog, setShowOfferDialog] = useState(false)
+  const [offerTargetTeam, setOfferTargetTeam] = useState<DbTeam | null>(null)
+  const [offerMessage, setOfferMessage] = useState("")
+  const [isSendingOffer, setIsSendingOffer] = useState(false)
 
   // コメント関連
   const [showComments, setShowComments] = useState<Record<string, boolean>>({})
@@ -939,10 +943,9 @@ export default function TournamentDetailPage() {
         category: editForm.category,
         regionBlock: editForm.regionBlock,
         prefecture: editForm.prefecture,
-        // TODO: amplify push 後に有効化 - tournamentType, area, subArea
-        // tournamentType: editForm.tournamentType || "cup",
-        // area: editForm.tournamentType === "official" ? (editForm.area || null) : null,
-        // subArea: editForm.tournamentType === "official" ? (editForm.subArea || null) : null,
+        tournamentType: editForm.tournamentType || "cup",
+        area: editForm.tournamentType === "official" ? (editForm.area || null) : null,
+        subArea: editForm.tournamentType === "official" ? (editForm.subArea || null) : null,
         district: editForm.district,
         instagramUrl: editForm.instagramUrl || null,
         coAdminEmails: coAdminEmails.length > 0 ? coAdminEmails : null,
@@ -1586,6 +1589,38 @@ export default function TournamentDetailPage() {
         description: "大会結果の削除に失敗しました",
         variant: "destructive",
       })
+    }
+  }
+
+  // オファー送信処理
+  const handleSendOffer = async () => {
+    if (!tournament || !offerTargetTeam || !offerMessage.trim() || !currentUserEmail) return
+
+    setIsSendingOffer(true)
+    try {
+      await createChatThread({
+        teamId: offerTargetTeam.id,
+        teamName: offerTargetTeam.name,
+        tournamentId: tournament.id,
+        tournamentName: tournament.name,
+        initialMessage: offerMessage.trim(),
+      })
+      toast({
+        title: "送信完了",
+        description: `${offerTargetTeam.name} にオファーを送信しました`,
+      })
+      setShowOfferDialog(false)
+      setOfferTargetTeam(null)
+      setOfferMessage("")
+    } catch (error: any) {
+      console.error('Failed to send offer:', error)
+      toast({
+        title: "エラー",
+        description: error?.message || "オファーの送信に失敗しました",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSendingOffer(false)
     }
   }
 
@@ -2549,10 +2584,12 @@ export default function TournamentDetailPage() {
                   <div className="flex items-center justify-between">
                     <CardTitle>参加チーム</CardTitle>
                     {canEdit && (
-                      <Button onClick={() => setShowAddTeamDialog(true)}>
-                        <Users className="w-4 h-4 mr-2" />
-                        チームを追加
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button onClick={() => setShowAddTeamDialog(true)}>
+                          <Users className="w-4 h-4 mr-2" />
+                          チームを追加
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </CardHeader>
@@ -2600,16 +2637,33 @@ export default function TournamentDetailPage() {
                                   )}
                                 </div>
                                 </Link>
-                              {canEdit && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleRemoveTeam(tournamentTeam.id)}
-                                    className="ml-2"
-                                >
-                                  <X className="w-4 h-4" />
-                                </Button>
-                              )}
+                              <div className="flex items-center gap-1">
+                                {canEdit && team && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-[#e84b8a] border-[#e84b8a] hover:bg-[#e84b8a] hover:text-white text-xs"
+                                    onClick={() => {
+                                      setOfferTargetTeam(team)
+                                      setOfferMessage(`${tournament?.name || '大会'}への参加をお誘いいたします。ぜひご検討ください。`)
+                                      setShowOfferDialog(true)
+                                    }}
+                                  >
+                                    <Send className="w-3 h-3 mr-1" />
+                                    オファー
+                                  </Button>
+                                )}
+                                {canEdit && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleRemoveTeam(tournamentTeam.id)}
+                                    className="ml-1"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                           </CardContent>
                         </Card>
@@ -2619,6 +2673,55 @@ export default function TournamentDetailPage() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* オファー送信ダイアログ */}
+              <Dialog open={showOfferDialog} onOpenChange={setShowOfferDialog}>
+                <DialogContent className="!fixed !top-[50%] !left-[50%] !translate-x-[-50%] !translate-y-[-50%] w-[calc(100%-2rem)] md:w-[480px] max-w-[480px] bg-white">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Trophy className="w-5 h-5 text-[#e84b8a]" />
+                      大会参加オファーを送信
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <p className="text-sm text-gray-600">送信先チーム</p>
+                      <p className="font-semibold text-gray-900">{offerTargetTeam?.name}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <p className="text-sm text-gray-600">大会</p>
+                      <p className="font-semibold text-gray-900">{tournament?.name}</p>
+                    </div>
+                    <div>
+                      <Label htmlFor="offerMessage" className="text-sm font-medium">メッセージ</Label>
+                      <Textarea
+                        id="offerMessage"
+                        placeholder="チームへのメッセージを入力..."
+                        value={offerMessage}
+                        onChange={(e) => setOfferMessage(e.target.value)}
+                        className="mt-1 min-h-[100px] resize-none"
+                      />
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <Button variant="outline" onClick={() => setShowOfferDialog(false)}>
+                        キャンセル
+                      </Button>
+                      <Button
+                        className="bg-brand-gradient hover:opacity-90 text-white"
+                        disabled={!offerMessage.trim() || isSendingOffer}
+                        onClick={handleSendOffer}
+                      >
+                        {isSendingOffer ? (
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        ) : (
+                          <Send className="w-4 h-4 mr-2" />
+                        )}
+                        オファーを送信
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
 
               {/* チーム追加ダイアログ */}
               <Dialog open={showAddTeamDialog} onOpenChange={setShowAddTeamDialog}>

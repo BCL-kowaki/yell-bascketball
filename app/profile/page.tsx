@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
-import { getUserByEmail, updateUser, listPosts, getCurrentUserEmail, searchTeams, followUser, unfollowUser, checkFollowStatus, getFollowCounts, getUserFavorites, getCommentsByPost, addComment as addDbComment, updatePostCounts, toggleLike as toggleDbLike, type DbUser, type DbPost, type DbTeam, type DbTournament } from "@/lib/api"
+import { getUserByEmail, updateUser, listPosts, getCurrentUserEmail, searchTeams, followUser, unfollowUser, checkFollowStatus, getFollowCounts, getUserFavorites, getCommentsByPost, addComment as addDbComment, updatePostCounts, toggleLike as toggleDbLike, getMyManagedTournaments, getMyTeams, getMyTeamTournaments, type DbUser, type DbPost, type DbTeam, type DbTournament } from "@/lib/api"
 import { uploadImageToS3, refreshS3Url } from "@/lib/storage"
 import { CATEGORIES, REGION_BLOCKS, PREFECTURES_BY_REGION, DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS } from "@/lib/regionData"
 import { Button } from "@/components/ui/button"
@@ -15,14 +15,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Camera, MapPin, Calendar, Edit2, Save, X, Search, Plus, XCircle, UserPlus, Users, Heart, Instagram } from "lucide-react"
+import { Camera, MapPin, Calendar, Edit2, Save, X, Search, Plus, XCircle, UserPlus, Users, Heart, Instagram, Trophy, Settings, Loader2, Clock, ChevronRight } from "lucide-react"
 import { Layout } from "@/components/layout"
 import { useToast } from "@/hooks/use-toast"
 import { ProfilePostCard } from "@/components/profile-post-card"
 import { CommentModal } from "@/components/comment-modal"
 
 export default function ProfilePage() {
-  ensureAmplifyConfigured()
   const router = useRouter()
   const { toast } = useToast()
   const [user, setUser] = useState<DbUser | null>(null)
@@ -62,12 +61,22 @@ export default function ProfilePage() {
   const [isFollowing, setIsFollowing] = useState(false)
   const [followCounts, setFollowCounts] = useState({ followers: 0, following: 0 })
   const [isLoadingFollow, setIsLoadingFollow] = useState(false)
-  const [activeTab, setActiveTab] = useState("timeline")
+  const [activeTab, setActiveTab] = useState("tournaments")
 
   // お気に入り関連
   const [favoriteTeams, setFavoriteTeams] = useState<DbTeam[]>([])
   const [favoriteTournaments, setFavoriteTournaments] = useState<DbTournament[]>([])
   const [isLoadingFavorites, setIsLoadingFavorites] = useState(false)
+
+  // 運営関連
+  const [managedTournaments, setManagedTournaments] = useState<DbTournament[]>([])
+  const [managedTeams, setManagedTeams] = useState<DbTeam[]>([])
+  const [isLoadingManaged, setIsLoadingManaged] = useState(false)
+
+  // チーム参加大会関連
+  const [upcomingTournaments, setUpcomingTournaments] = useState<(DbTournament & { teamName?: string })[]>([])
+  const [pastTournaments, setPastTournaments] = useState<(DbTournament & { teamName?: string })[]>([])
+  const [isLoadingTeamTournaments, setIsLoadingTeamTournaments] = useState(false)
 
   // コメントモーダル関連
   const [commentModalOpen, setCommentModalOpen] = useState(false)
@@ -86,6 +95,7 @@ export default function ProfilePage() {
   const [refreshedCoverUrl, setRefreshedCoverUrl] = useState<string | null>(null)
 
   useEffect(() => {
+    ensureAmplifyConfigured()
     loadUserProfile()
   }, [])
 
@@ -95,6 +105,8 @@ export default function ProfilePage() {
       loadFollowStatus()
       loadFollowCounts()
       loadFavorites()
+      loadManagedData()
+      loadTeamTournaments()
     }
   }, [user])
 
@@ -152,12 +164,7 @@ export default function ProfilePage() {
       const email = await getCurrentUserEmail()
 
       if (!email) {
-        console.error('Could not get email from Amplify session')
-        toast({
-          title: "エラー",
-          description: "ログインが必要です。",
-          variant: "destructive",
-        })
+        console.error('Could not get email from session')
         router.push('/login')
         return
       }
@@ -167,13 +174,23 @@ export default function ProfilePage() {
       const userData = await getUserByEmail(email)
 
       if (!userData) {
-        console.error('User not found in DynamoDB for email:', email)
-        toast({
-          title: "エラー",
-          description: "ユーザー情報が見つかりません。ログインし直してください。",
-          variant: "destructive",
-        })
-        setTimeout(() => router.push('/login'), 2000)
+        console.log('User not found in DynamoDB, creating...', email)
+        // DB未登録の場合は自動作成を試みる
+        try {
+          const { generateClient } = await import("aws-amplify/api")
+          const { createUser } = await import("@/src/graphql/mutations")
+          const apiClient = generateClient({ authMode: 'apiKey' })
+          await apiClient.graphql({
+            query: createUser,
+            variables: { input: { email: email, firstName: '', lastName: '' } },
+            authMode: 'apiKey'
+          })
+          console.log('User created in DynamoDB, redirecting to setup-profile')
+        } catch (createError) {
+          console.error('Failed to create user in DB:', createError)
+        }
+        // プロフィール設定ページへ
+        window.location.href = '/setup-profile'
         return
       }
       
@@ -245,11 +262,6 @@ export default function ProfilePage() {
         error?.name === 'UserNotFoundException' ||
         error?.name === 'UserUnAuthenticatedException'
       ) {
-        toast({
-          title: "認証エラー",
-          description: "ログインが必要です",
-          variant: "destructive",
-        })
         router.push('/login')
         return
       }
@@ -615,6 +627,39 @@ export default function ProfilePage() {
       console.error("Failed to load favorites:", error)
     } finally {
       setIsLoadingFavorites(false)
+    }
+  }
+
+  // 運営データを読み込む
+  const loadManagedData = async () => {
+    if (!user) return
+    setIsLoadingManaged(true)
+    try {
+      const [tournaments, teams] = await Promise.all([
+        getMyManagedTournaments(user.email),
+        getMyTeams(user.email),
+      ])
+      setManagedTournaments(tournaments)
+      setManagedTeams(teams)
+    } catch (error) {
+      console.error("Failed to load managed data:", error)
+    } finally {
+      setIsLoadingManaged(false)
+    }
+  }
+
+  // チーム参加大会を読み込む
+  const loadTeamTournaments = async () => {
+    if (!user) return
+    setIsLoadingTeamTournaments(true)
+    try {
+      const { upcoming, past } = await getMyTeamTournaments(user.email)
+      setUpcomingTournaments(upcoming)
+      setPastTournaments(past)
+    } catch (error) {
+      console.error("Failed to load team tournaments:", error)
+    } finally {
+      setIsLoadingTeamTournaments(false)
     }
   }
 
@@ -1059,24 +1104,30 @@ export default function ProfilePage() {
           {/* タブメニュー */}
           <div className="mt-6 border-t border-border border-b border-border">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-3 bg-transparent h-auto p-0 gap-0">
-              <TabsTrigger 
-                value="timeline" 
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
+              <TabsList className="grid w-full grid-cols-4 bg-transparent h-auto p-0 gap-0">
+              <TabsTrigger
+                value="tournaments"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium text-sm"
               >
-                タイムライン
+                大会
               </TabsTrigger>
-              <TabsTrigger 
-                value="about" 
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
+              <TabsTrigger
+                value="management"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium text-sm"
+              >
+                運営
+              </TabsTrigger>
+              <TabsTrigger
+                value="timeline"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium text-sm"
+              >
+                投稿
+              </TabsTrigger>
+              <TabsTrigger
+                value="about"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium text-sm"
               >
                 基本情報
-              </TabsTrigger>
-              <TabsTrigger 
-                value="photos" 
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
-              >
-                写真
               </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -1243,69 +1294,298 @@ export default function ProfilePage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="photos" className="mt-2 space-y-2 w-full overflow-hidden box-border">
-              <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
-                <CardHeader>
-                  <h3 className="font-semibold text-lg">写真</h3>
-                </CardHeader>
-                <CardContent>
-                  {isLoadingPosts ? (
-                    <div className="text-center py-12">
-                      <p className="text-muted-foreground">読み込み中...</p>
-                    </div>
-                  ) : (() => {
-                    // 画像を含む投稿をフィルタリング
-                    const photoPosts = userPosts.filter(post => post.imageUrl)
-                    
-                    if (photoPosts.length === 0) {
-                      return (
-                        <div className="text-center py-12">
-                          <p className="text-muted-foreground">まだ写真がありません</p>
-                        </div>
-                      )
-                    }
-
-                    return (
-                      <div className="grid grid-cols-3 gap-1 md:gap-2">
-                        {photoPosts.map((post) => (
-                          <div
-                            key={post.id}
-                            className="relative aspect-square overflow-hidden rounded-md cursor-pointer group hover:opacity-90 transition-opacity"
-                            onClick={() => {
-                              // クリックで投稿詳細に遷移またはモーダル表示
-                              setSelectedPostForComment(post)
-                              setCommentModalOpen(true)
-                            }}
-                          >
-                            <img
-                              src={post.imageUrl || '/placeholder.svg'}
-                              alt={post.content || '写真'}
-                              className="w-full h-full object-cover"
-                              onError={async (e) => {
-                                if (post.imageUrl && !post.imageUrl.startsWith('data:') && !post.imageUrl.startsWith('blob:')) {
-                                  try {
-                                    const refreshed = await refreshS3Url(post.imageUrl, true)
-                                    if (refreshed) {
-                                      (e.target as HTMLImageElement).src = refreshed
-                                    }
-                                  } catch (err) {
-                                    console.error('Failed to refresh image URL:', err)
-                                  }
-                                }
-                              }}
-                            />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                              <div className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-sm font-medium">
-                                {post.likesCount || 0} <Heart className="w-4 h-4 inline" fill="currentColor" />
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+            {/* 大会タブ */}
+            <TabsContent value="tournaments" className="mt-2 space-y-4 w-full overflow-hidden box-border">
+              {isLoadingTeamTournaments ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+                </div>
+              ) : (
+                <>
+                  {/* 参加予定大会 */}
+                  <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-5 h-5 text-[#f7931e]" />
+                        <h3 className="font-semibold text-lg">参加予定大会</h3>
+                        <span className="text-sm text-muted-foreground">({upcomingTournaments.length})</span>
                       </div>
-                    )
-                  })()}
-                </CardContent>
-              </Card>
+                    </CardHeader>
+                    <CardContent>
+                      {upcomingTournaments.length === 0 ? (
+                        <div className="text-center py-8">
+                          <Calendar className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                          <p className="text-muted-foreground text-sm">参加予定の大会はありません</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {upcomingTournaments.map((tournament) => (
+                            <Link key={tournament.id} href={`/tournaments/${tournament.id}`}>
+                              <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100">
+                                <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                                  {tournament.iconUrl ? (
+                                    <img
+                                      src={tournament.iconUrl}
+                                      alt={tournament.name}
+                                      className="w-full h-full object-cover"
+                                      onError={async (e) => {
+                                        if (tournament.iconUrl && !tournament.iconUrl.startsWith('data:')) {
+                                          try {
+                                            const refreshed = await refreshS3Url(tournament.iconUrl, true)
+                                            if (refreshed) (e.target as HTMLImageElement).src = refreshed
+                                          } catch {}
+                                        }
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                      <Trophy className="w-6 h-6 text-gray-400" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-sm truncate">{tournament.name}</p>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    {tournament.teamName && (
+                                      <span className="text-xs text-[#e84b8a] font-medium">{tournament.teamName}</span>
+                                    )}
+                                    {tournament.category && (
+                                      <span className="text-xs text-gray-500">{tournament.category}</span>
+                                    )}
+                                  </div>
+                                  {tournament.startDate && (
+                                    <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                                      <Calendar className="w-3 h-3" />
+                                      {new Date(tournament.startDate).toLocaleDateString('ja-JP', { year: 'numeric', month: 'short', day: 'numeric' })}
+                                      {tournament.endDate && ` ~ ${new Date(tournament.endDate).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })}`}
+                                    </p>
+                                  )}
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* 過去参加した大会 */}
+                  <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-5 h-5 text-gray-500" />
+                        <h3 className="font-semibold text-lg">過去参加した大会</h3>
+                        <span className="text-sm text-muted-foreground">({pastTournaments.length})</span>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {pastTournaments.length === 0 ? (
+                        <div className="text-center py-8">
+                          <Clock className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                          <p className="text-muted-foreground text-sm">過去に参加した大会はありません</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {pastTournaments.map((tournament) => (
+                            <Link key={tournament.id} href={`/tournaments/${tournament.id}`}>
+                              <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100">
+                                <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                                  {tournament.iconUrl ? (
+                                    <img
+                                      src={tournament.iconUrl}
+                                      alt={tournament.name}
+                                      className="w-full h-full object-cover"
+                                      onError={async (e) => {
+                                        if (tournament.iconUrl && !tournament.iconUrl.startsWith('data:')) {
+                                          try {
+                                            const refreshed = await refreshS3Url(tournament.iconUrl, true)
+                                            if (refreshed) (e.target as HTMLImageElement).src = refreshed
+                                          } catch {}
+                                        }
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                      <Trophy className="w-6 h-6 text-gray-400" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-sm truncate text-gray-600">{tournament.name}</p>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    {tournament.teamName && (
+                                      <span className="text-xs text-gray-500 font-medium">{tournament.teamName}</span>
+                                    )}
+                                    {tournament.category && (
+                                      <span className="text-xs text-gray-400">{tournament.category}</span>
+                                    )}
+                                  </div>
+                                  {(tournament.startDate || tournament.endDate) && (
+                                    <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                                      <Calendar className="w-3 h-3" />
+                                      {tournament.startDate && new Date(tournament.startDate).toLocaleDateString('ja-JP', { year: 'numeric', month: 'short', day: 'numeric' })}
+                                      {tournament.endDate && ` ~ ${new Date(tournament.endDate).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })}`}
+                                    </p>
+                                  )}
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+            </TabsContent>
+
+            {/* 運営タブ */}
+            <TabsContent value="management" className="mt-2 space-y-4 w-full overflow-hidden box-border">
+              {isLoadingManaged ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+                </div>
+              ) : (
+                <>
+                  {/* 運営中の大会 */}
+                  <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+                    <CardHeader>
+                      <div className="flex items-center gap-2">
+                        <Trophy className="w-5 h-5 text-[#e84b8a]" />
+                        <h3 className="font-semibold text-lg">運営中の大会</h3>
+                        <span className="text-sm text-muted-foreground">({managedTournaments.length})</span>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {managedTournaments.length === 0 ? (
+                        <div className="text-center py-8">
+                          <Trophy className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                          <p className="text-muted-foreground text-sm">運営中の大会はありません</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {managedTournaments.map((tournament) => (
+                            <Link key={tournament.id} href={`/tournaments/${tournament.id}`}>
+                              <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100">
+                                <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                                  {tournament.iconUrl ? (
+                                    <img
+                                      src={tournament.iconUrl}
+                                      alt={tournament.name}
+                                      className="w-full h-full object-cover"
+                                      onError={async (e) => {
+                                        if (tournament.iconUrl && !tournament.iconUrl.startsWith('data:')) {
+                                          try {
+                                            const refreshed = await refreshS3Url(tournament.iconUrl, true)
+                                            if (refreshed) {
+                                              (e.target as HTMLImageElement).src = refreshed
+                                            }
+                                          } catch (err) {
+                                            console.error('Failed to refresh icon URL:', err)
+                                          }
+                                        }
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                      <Trophy className="w-6 h-6 text-gray-400" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-sm truncate">{tournament.name}</p>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    {tournament.category && (
+                                      <span className="text-xs text-gray-500">{tournament.category}</span>
+                                    )}
+                                    {tournament.prefecture && (
+                                      <span className="text-xs text-gray-500">{tournament.prefecture}</span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-gray-400 mt-0.5">
+                                    運営者
+                                  </p>
+                                </div>
+                                <Settings className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* 運営中のチーム */}
+                  <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+                    <CardHeader>
+                      <div className="flex items-center gap-2">
+                        <Users className="w-5 h-5 text-[#e84b8a]" />
+                        <h3 className="font-semibold text-lg">運営中のチーム</h3>
+                        <span className="text-sm text-muted-foreground">({managedTeams.length})</span>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {managedTeams.length === 0 ? (
+                        <div className="text-center py-8">
+                          <Users className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                          <p className="text-muted-foreground text-sm">運営中のチームはありません</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {managedTeams.map((team) => (
+                            <Link key={team.id} href={`/teams/${team.id}`}>
+                              <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100">
+                                <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                                  {team.logoUrl ? (
+                                    <img
+                                      src={team.logoUrl}
+                                      alt={team.name}
+                                      className="w-full h-full object-cover"
+                                      onError={async (e) => {
+                                        if (team.logoUrl && !team.logoUrl.startsWith('data:')) {
+                                          try {
+                                            const refreshed = await refreshS3Url(team.logoUrl, true)
+                                            if (refreshed) {
+                                              (e.target as HTMLImageElement).src = refreshed
+                                            }
+                                          } catch (err) {
+                                            console.error('Failed to refresh logo URL:', err)
+                                          }
+                                        }
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                      <Users className="w-6 h-6 text-gray-400" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-sm truncate">{team.name}</p>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    {team.category && (
+                                      <span className="text-xs text-gray-500">{team.category}</span>
+                                    )}
+                                    {team.prefecture && (
+                                      <span className="text-xs text-gray-500">{team.prefecture}</span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-gray-400 mt-0.5">
+                                    運営者
+                                  </p>
+                                </div>
+                                <Settings className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </>
+              )}
             </TabsContent>
         </div>
       </div>

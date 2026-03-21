@@ -3,12 +3,13 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { 
-  Users, 
-  Trophy, 
-  MessageCircle, 
-  User, 
-  Home
+import {
+  Users,
+  Trophy,
+  MessageCircle,
+  User,
+  Home,
+  Smartphone
 } from "lucide-react"
 
 interface SidebarMenuProps {
@@ -30,6 +31,13 @@ export function SidebarMenu({ isLoggedIn = false, currentUser }: SidebarMenuProp
       icon: Home,
       label: "タイムライン",
       show: true,
+      external: false
+    },
+    {
+      href: "/timeline",
+      icon: Smartphone,
+      label: "フィード",
+      show: isLoggedIn,
       external: false
     },
     {
@@ -58,7 +66,7 @@ export function SidebarMenu({ isLoggedIn = false, currentUser }: SidebarMenuProp
       icon: MessageCircle,
       label: "チャット",
       show: isLoggedIn,
-      external: true
+      external: false
     }
   ]
 

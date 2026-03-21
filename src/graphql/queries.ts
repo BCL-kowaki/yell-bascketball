@@ -73,6 +73,9 @@ export const getTournament = /* GraphQL */ `
       regionBlock
       prefecture
       district
+      tournamentType
+      area
+      subArea
       description
       ownerEmail
       coAdminEmails
@@ -122,6 +125,9 @@ export const listTournaments = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -244,6 +250,9 @@ export const getPost = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -422,6 +431,9 @@ export const getFavorite = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -530,6 +542,9 @@ export const getTournamentTeam = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -614,6 +629,9 @@ export const getTournamentResult = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -682,6 +700,9 @@ export const getTournamentInvitation = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -715,6 +736,144 @@ export const listTournamentInvitations = /* GraphQL */ `
         inviterEmail
         inviteeEmail
         status
+        createdAt
+        updatedAt
+        __typename
+      }
+      nextToken
+      __typename
+    }
+  }
+`;
+export const getChatThread = /* GraphQL */ `
+  query GetChatThread($id: ID!) {
+    getChatThread(id: $id) {
+      id
+      senderEmail
+      senderName
+      teamId
+      teamName
+      tournamentId
+      tournamentName
+      threadType
+      status
+      lastMessage
+      lastMessageAt
+      teamUnreadCount
+      senderUnreadCount
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const listChatThreads = /* GraphQL */ `
+  query ListChatThreads(
+    $filter: ModelChatThreadFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    listChatThreads(filter: $filter, limit: $limit, nextToken: $nextToken) {
+      items {
+        id
+        senderEmail
+        senderName
+        teamId
+        teamName
+        tournamentId
+        tournamentName
+        threadType
+        status
+        lastMessage
+        lastMessageAt
+        teamUnreadCount
+        senderUnreadCount
+        createdAt
+        updatedAt
+        __typename
+      }
+      nextToken
+      __typename
+    }
+  }
+`;
+export const getChatMessage = /* GraphQL */ `
+  query GetChatMessage($id: ID!) {
+    getChatMessage(id: $id) {
+      id
+      threadId
+      senderEmail
+      senderName
+      content
+      messageType
+      isRead
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const listChatMessages = /* GraphQL */ `
+  query ListChatMessages(
+    $filter: ModelChatMessageFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    listChatMessages(filter: $filter, limit: $limit, nextToken: $nextToken) {
+      items {
+        id
+        threadId
+        senderEmail
+        senderName
+        content
+        messageType
+        isRead
+        createdAt
+        updatedAt
+        __typename
+      }
+      nextToken
+      __typename
+    }
+  }
+`;
+export const getNotification = /* GraphQL */ `
+  query GetNotification($id: ID!) {
+    getNotification(id: $id) {
+      id
+      recipientEmail
+      type
+      title
+      message
+      senderName
+      senderAvatar
+      relatedId
+      relatedType
+      isRead
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const listNotifications = /* GraphQL */ `
+  query ListNotifications(
+    $filter: ModelNotificationFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    listNotifications(filter: $filter, limit: $limit, nextToken: $nextToken) {
+      items {
+        id
+        recipientEmail
+        type
+        title
+        message
+        senderName
+        senderAvatar
+        relatedId
+        relatedType
+        isRead
         createdAt
         updatedAt
         __typename
@@ -1262,6 +1421,191 @@ export const tournamentInvitationsByTournamentId = /* GraphQL */ `
         inviterEmail
         inviteeEmail
         status
+        createdAt
+        updatedAt
+        __typename
+      }
+      nextToken
+      __typename
+    }
+  }
+`;
+export const chatThreadsBySender = /* GraphQL */ `
+  query ChatThreadsBySender(
+    $senderEmail: String!
+    $sortDirection: ModelSortDirection
+    $filter: ModelChatThreadFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    chatThreadsBySender(
+      senderEmail: $senderEmail
+      sortDirection: $sortDirection
+      filter: $filter
+      limit: $limit
+      nextToken: $nextToken
+    ) {
+      items {
+        id
+        senderEmail
+        senderName
+        teamId
+        teamName
+        tournamentId
+        tournamentName
+        threadType
+        status
+        lastMessage
+        lastMessageAt
+        teamUnreadCount
+        senderUnreadCount
+        createdAt
+        updatedAt
+        __typename
+      }
+      nextToken
+      __typename
+    }
+  }
+`;
+export const chatThreadsByTeam = /* GraphQL */ `
+  query ChatThreadsByTeam(
+    $teamId: ID!
+    $sortDirection: ModelSortDirection
+    $filter: ModelChatThreadFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    chatThreadsByTeam(
+      teamId: $teamId
+      sortDirection: $sortDirection
+      filter: $filter
+      limit: $limit
+      nextToken: $nextToken
+    ) {
+      items {
+        id
+        senderEmail
+        senderName
+        teamId
+        teamName
+        tournamentId
+        tournamentName
+        threadType
+        status
+        lastMessage
+        lastMessageAt
+        teamUnreadCount
+        senderUnreadCount
+        createdAt
+        updatedAt
+        __typename
+      }
+      nextToken
+      __typename
+    }
+  }
+`;
+export const chatThreadsByTournament = /* GraphQL */ `
+  query ChatThreadsByTournament(
+    $tournamentId: ID!
+    $sortDirection: ModelSortDirection
+    $filter: ModelChatThreadFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    chatThreadsByTournament(
+      tournamentId: $tournamentId
+      sortDirection: $sortDirection
+      filter: $filter
+      limit: $limit
+      nextToken: $nextToken
+    ) {
+      items {
+        id
+        senderEmail
+        senderName
+        teamId
+        teamName
+        tournamentId
+        tournamentName
+        threadType
+        status
+        lastMessage
+        lastMessageAt
+        teamUnreadCount
+        senderUnreadCount
+        createdAt
+        updatedAt
+        __typename
+      }
+      nextToken
+      __typename
+    }
+  }
+`;
+export const chatMessagesByThreadIdAndCreatedAt = /* GraphQL */ `
+  query ChatMessagesByThreadIdAndCreatedAt(
+    $threadId: ID!
+    $createdAt: ModelStringKeyConditionInput
+    $sortDirection: ModelSortDirection
+    $filter: ModelChatMessageFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    chatMessagesByThreadIdAndCreatedAt(
+      threadId: $threadId
+      createdAt: $createdAt
+      sortDirection: $sortDirection
+      filter: $filter
+      limit: $limit
+      nextToken: $nextToken
+    ) {
+      items {
+        id
+        threadId
+        senderEmail
+        senderName
+        content
+        messageType
+        isRead
+        createdAt
+        updatedAt
+        __typename
+      }
+      nextToken
+      __typename
+    }
+  }
+`;
+export const notificationsByRecipient = /* GraphQL */ `
+  query NotificationsByRecipient(
+    $recipientEmail: String!
+    $createdAt: ModelStringKeyConditionInput
+    $sortDirection: ModelSortDirection
+    $filter: ModelNotificationFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    notificationsByRecipient(
+      recipientEmail: $recipientEmail
+      createdAt: $createdAt
+      sortDirection: $sortDirection
+      filter: $filter
+      limit: $limit
+      nextToken: $nextToken
+    ) {
+      items {
+        id
+        recipientEmail
+        type
+        title
+        message
+        senderName
+        senderAvatar
+        relatedId
+        relatedType
+        isRead
         createdAt
         updatedAt
         __typename

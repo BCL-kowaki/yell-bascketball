@@ -1,9 +1,7 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { signOut } from "aws-amplify/auth"
-import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -12,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Settings, LogOut, Search, Trophy, Users, User, X } from "lucide-react"
+import { Settings, LogOut, Search, Trophy, Users, User, X, Smartphone, MessageCircle, ShieldAlert } from "lucide-react"
 
 interface HeaderNavigationProps {
   isLoggedIn?: boolean
@@ -21,14 +19,37 @@ interface HeaderNavigationProps {
     avatar?: string
     email?: string
   }
+  isAdmin?: boolean
 }
 
-export function HeaderNavigation({ isLoggedIn = false, currentUser }: HeaderNavigationProps) {
-  ensureAmplifyConfigured()
-
+export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = false }: HeaderNavigationProps) {
   const pathname = usePathname()
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  // ログイン中は未読メッセージ数を取得
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setUnreadCount(0)
+      return
+    }
+
+    const fetchUnread = async () => {
+      try {
+        const { getTotalUnreadCount } = await import("@/lib/api")
+        const count = await getTotalUnreadCount()
+        setUnreadCount(count)
+      } catch {
+        // エラー時は0のまま
+      }
+    }
+
+    fetchUnread()
+    // 60秒ごとにポーリングして未読数を更新
+    const interval = setInterval(fetchUnread, 60000)
+    return () => clearInterval(interval)
+  }, [isLoggedIn])
 
   const isActive = (path: string) => {
     if (path === "/") return pathname === path
@@ -37,15 +58,16 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser }: HeaderNavi
 
   const handleLogout = async () => {
     try {
+      // レイアウトキャッシュをクリア
+      const { clearLayoutCache } = await import("@/components/layout")
+      clearLayoutCache()
       try {
+        const { signOut } = await import("aws-amplify/auth")
         await signOut({ global: true })
-      } catch (cognitoError) {
-        console.error("Cognito signOut error:", cognitoError)
-      }
+      } catch { /* Cognito signOut失敗は無視 */ }
       await fetch("/api/logout", { method: "POST" })
       window.location.href = "/login"
-    } catch (error) {
-      console.error("ログアウトエラー:", error)
+    } catch {
       window.location.href = "/login"
     }
   }
@@ -58,10 +80,12 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser }: HeaderNavi
     setIsSearchOpen(false)
   }
 
-  // ログイン・ゲスト共通: 大会 | チーム
+  // ログイン・ゲスト共通: 大会 | チーム | タイムライン | プロフィール
   const navItems = [
     { href: "/tournaments", icon: Trophy, label: "大会一覧" },
     { href: "/teams", icon: Users, label: "チーム一覧" },
+    { href: "/timeline", icon: Smartphone, label: "タイムライン", requireLogin: true },
+    { href: "/profile", icon: User, label: "マイページ", requireLogin: true },
   ]
 
   return (
@@ -93,6 +117,21 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser }: HeaderNavi
             )}
           </button>
 
+          {/* メッセージボタン（ログイン時のみ） */}
+          {isLoggedIn && (
+            <Link
+              href="/messages"
+              className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 shrink-0"
+            >
+              <MessageCircle className="w-[18px] h-[18px] text-gray-700" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white rounded-full bg-red-500">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
+            </Link>
+          )}
+
           {/* ログイン済み: ユーザー名 + アバター（ドロップダウンでプロフィール/設定） */}
           {isLoggedIn ? (
             <DropdownMenu>
@@ -110,6 +149,14 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser }: HeaderNavi
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
+                {isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <a href="/admin" target="_blank" rel="noopener noreferrer" className="flex items-center cursor-pointer">
+                      <ShieldAlert className="mr-3 h-4 w-4" />
+                      管理者パネル
+                    </a>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem asChild>
                   <Link href="/profile" className="flex items-center cursor-pointer">
                     <User className="mr-3 h-4 w-4" />
@@ -162,30 +209,35 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser }: HeaderNavi
         </div>
       )}
 
-      {/* 2段目: 大会 | チーム（全ユーザー共通） */}
-      <div
-        className="grid grid-cols-2 h-11 border-b border-gray-100"
-        style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', padding: 0, margin: 0 }}
-      >
-        {navItems.map((item) => {
-          const IconComponent = item.icon
-          const active = isActive(item.href)
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center justify-center h-full relative ${
-                active ? "text-[#e84b8a]" : "text-gray-500 hover:bg-gray-50"
-              }`}
-            >
-              <IconComponent className="w-5 h-5" />
-              {active && (
-                <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-brand-gradient-h" />
-              )}
-            </Link>
-          )
-        })}
-      </div>
+      {/* 2段目: 大会 | チーム | マイページ */}
+      {(() => {
+        const visibleNavItems = navItems.filter(item => !item.requireLogin || isLoggedIn)
+        return (
+          <div
+            className={`grid h-11 border-b border-gray-100 ${visibleNavItems.length === 4 ? 'grid-cols-4' : visibleNavItems.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}
+            style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', padding: 0, margin: 0 }}
+          >
+            {visibleNavItems.map((item) => {
+              const IconComponent = item.icon
+              const active = isActive(item.href)
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center justify-center h-full relative ${
+                    active ? "text-[#e84b8a]" : "text-gray-500 hover:bg-gray-50"
+                  }`}
+                >
+                  <IconComponent className="w-5 h-5" />
+                  {active && (
+                    <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-brand-gradient-h" />
+                  )}
+                </Link>
+              )
+            })}
+          </div>
+        )
+      })()}
     </header>
   )
 }

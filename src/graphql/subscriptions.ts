@@ -93,6 +93,9 @@ export const onCreateTournament = /* GraphQL */ `
       regionBlock
       prefecture
       district
+      tournamentType
+      area
+      subArea
       description
       ownerEmail
       coAdminEmails
@@ -139,6 +142,9 @@ export const onUpdateTournament = /* GraphQL */ `
       regionBlock
       prefecture
       district
+      tournamentType
+      area
+      subArea
       description
       ownerEmail
       coAdminEmails
@@ -185,6 +191,9 @@ export const onDeleteTournament = /* GraphQL */ `
       regionBlock
       prefecture
       district
+      tournamentType
+      area
+      subArea
       description
       ownerEmail
       coAdminEmails
@@ -365,6 +374,9 @@ export const onCreatePost = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -437,6 +449,9 @@ export const onUpdatePost = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -509,6 +524,9 @@ export const onDeletePost = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -707,6 +725,9 @@ export const onCreateFavorite = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -761,6 +782,9 @@ export const onUpdateFavorite = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -815,6 +839,9 @@ export const onDeleteFavorite = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -908,6 +935,9 @@ export const onCreateTournamentTeam = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -965,6 +995,9 @@ export const onUpdateTournamentTeam = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -1022,6 +1055,9 @@ export const onDeleteTournamentTeam = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -1086,6 +1122,9 @@ export const onCreateTournamentResult = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -1129,6 +1168,9 @@ export const onUpdateTournamentResult = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -1172,6 +1214,9 @@ export const onDeleteTournamentResult = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -1209,6 +1254,9 @@ export const onCreateTournamentInvitation = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -1246,6 +1294,9 @@ export const onUpdateTournamentInvitation = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -1283,6 +1334,9 @@ export const onDeleteTournamentInvitation = /* GraphQL */ `
         regionBlock
         prefecture
         district
+        tournamentType
+        area
+        subArea
         description
         ownerEmail
         coAdminEmails
@@ -1294,6 +1348,195 @@ export const onDeleteTournamentInvitation = /* GraphQL */ `
         updatedAt
         __typename
       }
+      __typename
+    }
+  }
+`;
+export const onCreateChatThread = /* GraphQL */ `
+  subscription OnCreateChatThread(
+    $filter: ModelSubscriptionChatThreadFilterInput
+  ) {
+    onCreateChatThread(filter: $filter) {
+      id
+      senderEmail
+      senderName
+      teamId
+      teamName
+      tournamentId
+      tournamentName
+      threadType
+      status
+      lastMessage
+      lastMessageAt
+      teamUnreadCount
+      senderUnreadCount
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const onUpdateChatThread = /* GraphQL */ `
+  subscription OnUpdateChatThread(
+    $filter: ModelSubscriptionChatThreadFilterInput
+  ) {
+    onUpdateChatThread(filter: $filter) {
+      id
+      senderEmail
+      senderName
+      teamId
+      teamName
+      tournamentId
+      tournamentName
+      threadType
+      status
+      lastMessage
+      lastMessageAt
+      teamUnreadCount
+      senderUnreadCount
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const onDeleteChatThread = /* GraphQL */ `
+  subscription OnDeleteChatThread(
+    $filter: ModelSubscriptionChatThreadFilterInput
+  ) {
+    onDeleteChatThread(filter: $filter) {
+      id
+      senderEmail
+      senderName
+      teamId
+      teamName
+      tournamentId
+      tournamentName
+      threadType
+      status
+      lastMessage
+      lastMessageAt
+      teamUnreadCount
+      senderUnreadCount
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const onCreateChatMessage = /* GraphQL */ `
+  subscription OnCreateChatMessage(
+    $filter: ModelSubscriptionChatMessageFilterInput
+  ) {
+    onCreateChatMessage(filter: $filter) {
+      id
+      threadId
+      senderEmail
+      senderName
+      content
+      messageType
+      isRead
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const onUpdateChatMessage = /* GraphQL */ `
+  subscription OnUpdateChatMessage(
+    $filter: ModelSubscriptionChatMessageFilterInput
+  ) {
+    onUpdateChatMessage(filter: $filter) {
+      id
+      threadId
+      senderEmail
+      senderName
+      content
+      messageType
+      isRead
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const onDeleteChatMessage = /* GraphQL */ `
+  subscription OnDeleteChatMessage(
+    $filter: ModelSubscriptionChatMessageFilterInput
+  ) {
+    onDeleteChatMessage(filter: $filter) {
+      id
+      threadId
+      senderEmail
+      senderName
+      content
+      messageType
+      isRead
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const onCreateNotification = /* GraphQL */ `
+  subscription OnCreateNotification(
+    $filter: ModelSubscriptionNotificationFilterInput
+  ) {
+    onCreateNotification(filter: $filter) {
+      id
+      recipientEmail
+      type
+      title
+      message
+      senderName
+      senderAvatar
+      relatedId
+      relatedType
+      isRead
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const onUpdateNotification = /* GraphQL */ `
+  subscription OnUpdateNotification(
+    $filter: ModelSubscriptionNotificationFilterInput
+  ) {
+    onUpdateNotification(filter: $filter) {
+      id
+      recipientEmail
+      type
+      title
+      message
+      senderName
+      senderAvatar
+      relatedId
+      relatedType
+      isRead
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const onDeleteNotification = /* GraphQL */ `
+  subscription OnDeleteNotification(
+    $filter: ModelSubscriptionNotificationFilterInput
+  ) {
+    onDeleteNotification(filter: $filter) {
+      id
+      recipientEmail
+      type
+      title
+      message
+      senderName
+      senderAvatar
+      relatedId
+      relatedType
+      isRead
+      createdAt
+      updatedAt
       __typename
     }
   }
