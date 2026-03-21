@@ -1,4 +1,9 @@
 version: 1
+backend:
+  phases:
+    build:
+      commands:
+        - '# バックエンドは既にデプロイ済みのためスキップ'
 frontend:
   phases:
     preBuild:
