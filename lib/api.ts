@@ -460,20 +460,28 @@ export async function listPosts(limit = 50, filter?: { authorEmail?: string; tou
   `
 
   try {
-    // 明示的にauthModeを指定してIdentity Poolへのアクセスを回避
-    const result = await client.graphql({
-      query,
-      variables: { filter: finalFilter, limit },
-      authMode: 'apiKey' // 明示的にAPI_KEY認証を指定
-    }) as any
+    let allItems: DbPost[] = []
+    let nextToken: string | null = null
 
-    if (result.errors) {
-      const errorMessage = result.errors[0]?.message || 'GraphQL error'
-      throw new Error(`GraphQL error: ${errorMessage}`)
-    }
+    // ページネーションで全投稿を取得
+    do {
+      const result = await client.graphql({
+        query,
+        variables: { filter: finalFilter, limit, nextToken },
+        authMode: 'apiKey'
+      }) as any
 
-    const items = result?.data?.listPosts?.items ?? []
-    return items
+      if (result.errors) {
+        const errorMessage = result.errors[0]?.message || 'GraphQL error'
+        throw new Error(`GraphQL error: ${errorMessage}`)
+      }
+
+      const items = result?.data?.listPosts?.items ?? []
+      allItems = [...allItems, ...items]
+      nextToken = result?.data?.listPosts?.nextToken || null
+    } while (nextToken)
+
+    return allItems
   } catch (error: any) {
     console.error('listPosts error:', error?.message)
     return []

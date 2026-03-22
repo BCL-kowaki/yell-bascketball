@@ -22,14 +22,18 @@ import { Layout } from "@/components/layout"
 import {
   getCurrentUserEmail,
   getMyAllChatThreads,
+  getTeam,
   type DbChatThread
 } from "@/lib/api"
+import { refreshS3Url } from "@/lib/storage"
 
 export default function MessagesPage() {
   const router = useRouter()
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [threads, setThreads] = useState<DbChatThread[]>([])
+  // チームIDからロゴURLへのマップ
+  const [teamLogos, setTeamLogos] = useState<Map<string, string>>(new Map())
 
   useEffect(() => {
     const loadData = async () => {
@@ -41,6 +45,24 @@ export default function MessagesPage() {
           const allThreads = await getMyAllChatThreads()
           console.log('[MessagesPage] allThreads:', allThreads.length, allThreads.map(t => ({ id: t.id, teamName: t.teamName, senderEmail: t.senderEmail })))
           setThreads(allThreads)
+
+          // 各スレッドのチームロゴを取得
+          const logoMap = new Map<string, string>()
+          const uniqueTeamIds = [...new Set(allThreads.map(t => t.teamId))]
+          await Promise.all(
+            uniqueTeamIds.map(async (teamId) => {
+              try {
+                const team = await getTeam(teamId)
+                if (team?.logoUrl) {
+                  const url = await refreshS3Url(team.logoUrl)
+                  if (url) logoMap.set(teamId, url)
+                }
+              } catch (e) {
+                // ロゴ取得失敗は無視
+              }
+            })
+          )
+          setTeamLogos(logoMap)
         }
       } catch (error: any) {
         console.error('[MessagesPage] エラー:', error?.message || error)
@@ -180,11 +202,14 @@ export default function MessagesPage() {
                   onClick={() => router.push(`/messages/${thread.id}`)}
                   className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
                 >
-                  {/* アバター */}
+                  {/* アバター（チームアイコン） */}
                   <div className="relative flex-shrink-0">
                     <Avatar className="w-14 h-14">
+                      {teamLogos.get(thread.teamId) ? (
+                        <AvatarImage src={teamLogos.get(thread.teamId)} alt={thread.teamName} />
+                      ) : null}
                       <AvatarFallback className="bg-gradient-to-br from-[#e84b8a] to-[#f4a261] text-white font-bold text-lg">
-                        {info.name?.[0] || "?"}
+                        {thread.teamName?.[0] || "?"}
                       </AvatarFallback>
                     </Avatar>
                     {info.unreadCount > 0 && (
