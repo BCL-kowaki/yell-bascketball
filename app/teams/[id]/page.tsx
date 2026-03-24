@@ -1097,7 +1097,7 @@ export default function TeamDetailPage() {
       setIsUploadingFiles(false)
 
       // 投稿を作成
-      await createPost({
+      const newPost = await createPost({
         content: newPostContent.trim(),
         teamId: typeof params.id === 'string' ? params.id : undefined,
         authorEmail: currentUserEmail || undefined,
@@ -1109,6 +1109,12 @@ export default function TeamDetailPage() {
         videoUrl: videoUrl || undefined,
         videoName: videoName || undefined,
       } as any)
+
+      // 楽観的UIアップデート: 投稿結果を即座にpostsの先頭に追加
+      if (newPost) {
+        console.log('チーム投稿作成成功 - teamId:', newPost.teamId, 'postId:', newPost.id)
+        setPosts(prev => [newPost, ...prev])
+      }
 
       toast({
         title: "投稿しました",
@@ -1129,7 +1135,8 @@ export default function TeamDetailPage() {
 
       setNewPostContent("")
       clearAttachments()
-      await loadTeamPosts()
+      // DynamoDBのEventual Consistencyを考慮して少し待ってから再読み込み
+      setTimeout(() => loadTeamPosts(), 1500)
     } catch (error) {
       console.error("Failed to create post:", error)
       toast({

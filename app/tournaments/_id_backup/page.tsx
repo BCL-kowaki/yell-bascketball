@@ -821,7 +821,7 @@ export default function TournamentDetailPage() {
         }
       }
 
-      await createPost({
+      const newPost = await createPost({
         content: postContent,
         imageUrl,
         pdfUrl,
@@ -832,6 +832,12 @@ export default function TournamentDetailPage() {
         likesCount: 0,
         commentsCount: 0
       })
+
+      // 楽観的UIアップデート: 投稿結果を即座にpostsの先頭に追加
+      if (newPost) {
+        console.log('大会投稿作成成功 - tournamentId:', newPost.tournamentId, 'postId:', newPost.id)
+        setPosts(prev => [newPost as any, ...prev])
+      }
 
       toast({
         title: "成功",
@@ -866,7 +872,8 @@ export default function TournamentDetailPage() {
         videoInputRef.current.value = ""
       }
 
-      await loadPosts()
+      // DynamoDBのEventual Consistencyを考慮して少し待ってから再読み込み
+      setTimeout(() => loadPosts(), 1500)
     } catch (error) {
       console.error('Failed to create post:', error)
       toast({
