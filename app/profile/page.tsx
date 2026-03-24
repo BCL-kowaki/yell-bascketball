@@ -1277,13 +1277,13 @@ export default function ProfilePage() {
           </div>
         </div>
 
-      <div className="max-w-[1152px] mx-auto pb-20 px-4 md:px-8">
+      <div className="max-w-[1152px] mx-auto pb-20 px-0 md:px-8">
         <div className="flex justify-center gap-6">
         <div className="w-full min-w-0 overflow-hidden box-border">
           <TabsContent value="timeline" className="mt-2 space-y-2 w-full overflow-hidden box-border">
               {/* 投稿フォーム（自分のプロフィールのみ） */}
               {isOwnProfile && user && (
-                <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+                <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none">
                   <CardHeader className="px-3 py-3">
                     <div className="flex items-center gap-2">
                       <Avatar className="w-10 h-10 shrink-0">
@@ -1387,7 +1387,7 @@ export default function ProfilePage() {
                   <p className="text-muted-foreground">読み込み中...</p>
                 </div>
               ) : userPosts.length === 0 ? (
-                <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+                <Card className="border-0 shadow-sm bg-white sm:rounded-lg rounded-none">
                   <CardContent className="p-8 text-center">
                     <p className="text-muted-foreground">まだ投稿がありません</p>
                     {isOwnProfile && (
@@ -1440,7 +1440,7 @@ export default function ProfilePage() {
             </TabsContent>
 
             <TabsContent value="about" className="mt-2 space-y-2 w-full overflow-hidden box-border">
-              <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+              <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none">
                 <CardHeader>
                   <h3 className="font-semibold text-lg">基本情報</h3>
                 </CardHeader>
@@ -1550,7 +1550,7 @@ export default function ProfilePage() {
               ) : (
                 <>
                   {/* 参加予定大会 */}
-                  <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+                  <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none">
                     <CardHeader className="pb-2">
                       <div className="flex items-center gap-2">
                         <Calendar className="w-5 h-5 text-[#f7931e]" />
@@ -1618,7 +1618,7 @@ export default function ProfilePage() {
                   </Card>
 
                   {/* 過去参加した大会 */}
-                  <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+                  <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none">
                     <CardHeader className="pb-2">
                       <div className="flex items-center gap-2">
                         <Clock className="w-5 h-5 text-gray-500" />
@@ -1697,7 +1697,7 @@ export default function ProfilePage() {
               ) : (
                 <>
                   {/* 運営中の大会 */}
-                  <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+                  <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none">
                     <CardHeader>
                       <div className="flex items-center gap-2">
                         <Trophy className="w-5 h-5 text-[#e84b8a]" />
@@ -1765,7 +1765,7 @@ export default function ProfilePage() {
                   </Card>
 
                   {/* 運営中のチーム */}
-                  <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+                  <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none">
                     <CardHeader>
                       <div className="flex items-center gap-2">
                         <Users className="w-5 h-5 text-[#e84b8a]" />
@@ -1836,8 +1836,8 @@ export default function ProfilePage() {
             </TabsContent>
 
             {/* モバイル用 公式SNSリンク（lg未満で表示） */}
-            <div className="lg:hidden mt-6 mb-4 px-2">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
+            <div className="lg:hidden mt-2 mb-4">
+              <div className="bg-white sm:rounded-lg rounded-none shadow-sm border-0 p-4">
                 <h4 className="text-xs font-semibold text-gray-500 flex items-center gap-1 mb-3">
                   <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>

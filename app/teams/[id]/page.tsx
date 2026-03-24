@@ -1656,7 +1656,7 @@ export default function TeamDetailPage() {
                   <p className="text-muted-foreground mt-4">読み込み中...</p>
                 </div>
               ) : posts.length === 0 ? (
-                <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+                <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none">
                   <CardContent className="py-12">
                     <div className="text-center">
                       <p className="text-muted-foreground">まだ投稿がありません</p>
@@ -1880,7 +1880,7 @@ export default function TeamDetailPage() {
 
             {/* 基本データタブ */}
             <TabsContent value="about" className="mt-2">
-              <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+              <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-lg">基本データ</h3>
@@ -2368,7 +2368,7 @@ export default function TeamDetailPage() {
 
             {/* 写真タブ */}
             <TabsContent value="photos" className="mt-2">
-              <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+              <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none">
                 <CardHeader>
                   <h3 className="font-semibold text-lg">写真ギャラリー</h3>
                 </CardHeader>
@@ -2426,7 +2426,7 @@ export default function TeamDetailPage() {
                     const tournament = tt.tournament
                     return (
                       <Link key={tt.id} href={`/tournaments/${tournament.id}`}>
-                        <Card className="border-0 shadow-sm sm:shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white sm:bg-white/90 sm:backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer group h-full overflow-hidden rounded-none sm:rounded-xl">
+                        <Card className="border-0 shadow-sm bg-white hover:shadow-xl transition-all duration-300 cursor-pointer group h-full overflow-hidden rounded-none sm:rounded-xl">
                           {/* カバー画像 */}
                           <div className="relative w-full h-32 overflow-hidden">
                             {tournament.coverImage ? (
