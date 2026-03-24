@@ -445,13 +445,13 @@ const postFields = `
   authorEmail createdAt
 `
 
-export async function listPosts(limit = 50, filter?: { authorEmail?: string; tournamentId?: string }): Promise<DbPost[]> {
+export async function listPosts(limit = 50, filter?: { authorEmail?: string; tournamentId?: string; teamId?: string }): Promise<DbPost[]> {
   const fallbackFields = `
     id content imageUrl videoUrl videoName pdfUrl pdfName locationName locationAddress
     linkUrl linkTitle linkDescription linkImage likesCount commentsCount
     authorEmail createdAt tournamentId teamId
   `
-  
+
   // フィルターを構築
   let filterInput: any = {}
   if (filter?.authorEmail) {
@@ -459,6 +459,9 @@ export async function listPosts(limit = 50, filter?: { authorEmail?: string; tou
   }
   if (filter?.tournamentId) {
     filterInput.tournamentId = { eq: filter.tournamentId }
+  }
+  if (filter?.teamId) {
+    filterInput.teamId = { eq: filter.teamId }
   }
   const finalFilter = Object.keys(filterInput).length > 0 ? filterInput : undefined
   
@@ -472,6 +475,7 @@ export async function listPosts(limit = 50, filter?: { authorEmail?: string; tou
   `
 
   try {
+    console.log('listPosts - filter:', JSON.stringify(finalFilter), 'limit:', limit)
     let allItems: DbPost[] = []
     let nextToken: string | null = null
 
@@ -485,6 +489,7 @@ export async function listPosts(limit = 50, filter?: { authorEmail?: string; tou
 
       if (result.errors) {
         const errorMessage = result.errors[0]?.message || 'GraphQL error'
+        console.error('listPosts GraphQL error:', JSON.stringify(result.errors))
         throw new Error(`GraphQL error: ${errorMessage}`)
       }
 
@@ -493,6 +498,7 @@ export async function listPosts(limit = 50, filter?: { authorEmail?: string; tou
       nextToken = result?.data?.listPosts?.nextToken || null
     } while (nextToken)
 
+    console.log('listPosts - returned:', allItems.length, 'posts')
     return allItems
   } catch (error: any) {
     console.error('listPosts error:', error?.message)
@@ -501,11 +507,17 @@ export async function listPosts(limit = 50, filter?: { authorEmail?: string; tou
 }
 
 export async function getPostsByTeam(teamId: string): Promise<DbPost[]> {
-  // GSIが作成されるまでの一時的な回避策: listPostsを使用してフィルタリング
+  // GraphQLフィルタでteamIdに一致する投稿を直接取得
   try {
-    const allPosts = await listPosts(1000)
-    const teamPosts = allPosts.filter(post => post.teamId === teamId)
-    return teamPosts
+    console.log('getPostsByTeam - teamId:', teamId)
+    const teamPosts = await listPosts(1000, { teamId })
+    console.log('getPostsByTeam - found posts:', teamPosts.length, 'posts for teamId:', teamId)
+    // 念のためクライアント側でもフィルタリング
+    const filteredPosts = teamPosts.filter(post => post.teamId === teamId)
+    if (filteredPosts.length !== teamPosts.length) {
+      console.warn('getPostsByTeam - GraphQL filter returned extra posts. Filtered:', filteredPosts.length, 'vs Total:', teamPosts.length)
+    }
+    return filteredPosts
   } catch (error: any) {
     console.error('getPostsByTeam error:', error?.message)
     return []
@@ -513,11 +525,17 @@ export async function getPostsByTeam(teamId: string): Promise<DbPost[]> {
 }
 
 export async function getPostsByTournament(tournamentId: string): Promise<DbPost[]> {
-  // GSIが作成されるまでの一時的な回避策: listPostsを使用してフィルタリング
+  // GraphQLフィルタでtournamentIdに一致する投稿を直接取得
   try {
-    const allPosts = await listPosts(1000)
-    const tournamentPosts = allPosts.filter(post => post.tournamentId === tournamentId)
-    return tournamentPosts
+    console.log('getPostsByTournament - tournamentId:', tournamentId)
+    const tournamentPosts = await listPosts(1000, { tournamentId })
+    console.log('getPostsByTournament - found posts:', tournamentPosts.length, 'posts for tournamentId:', tournamentId)
+    // 念のためクライアント側でもフィルタリング
+    const filteredPosts = tournamentPosts.filter(post => post.tournamentId === tournamentId)
+    if (filteredPosts.length !== tournamentPosts.length) {
+      console.warn('getPostsByTournament - GraphQL filter returned extra posts. Filtered:', filteredPosts.length, 'vs Total:', tournamentPosts.length)
+    }
+    return filteredPosts
   } catch (error: any) {
     console.error('getPostsByTournament error:', error?.message)
     return []
@@ -564,10 +582,20 @@ export async function createPost(input: Partial<DbPost>): Promise<DbPost> {
       }
     }
     
+    // undefinedフィールドを除去（GraphQLに送信しないため）
+    const cleanedInput = Object.fromEntries(
+      Object.entries(sanitizedInput).filter(([_, v]) => v !== undefined)
+    )
+
+    console.log('createPost - sending input:', JSON.stringify(cleanedInput, (key, value) => {
+      if (typeof value === 'string' && value.length > 100) return value.substring(0, 100) + '...'
+      return value
+    }))
+
     // 明示的にauthModeを指定してIdentity Poolへのアクセスを回避
     const result = await client.graphql({
       query: mutation,
-      variables: { input: sanitizedInput },
+      variables: { input: cleanedInput },
       authMode: 'apiKey' // 明示的にAPI_KEY認証を指定
     }) as any
 
@@ -596,6 +624,13 @@ export async function createPost(input: Partial<DbPost>): Promise<DbPost> {
     if (!result.data?.createPost) {
       throw new Error('Post creation returned no data')
     }
+
+    console.log('createPost - result:', JSON.stringify({
+      id: result.data.createPost.id,
+      teamId: result.data.createPost.teamId,
+      tournamentId: result.data.createPost.tournamentId,
+      authorEmail: result.data.createPost.authorEmail,
+    }))
 
     return result.data.createPost
   } catch (error: any) {
