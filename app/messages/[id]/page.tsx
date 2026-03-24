@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import {
   ArrowLeft,
@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { Layout } from "@/components/layout"
+import { refreshS3Url } from "@/lib/storage"
 import { notifyNewChatMessage } from "@/lib/push-sender"
 import {
   getCurrentUserEmail,
@@ -47,6 +48,7 @@ export default function ChatDetailPage() {
   const [isSending, setIsSending] = useState(false)
   const [isTeamAdmin, setIsTeamAdmin] = useState(false)
   const [team, setTeam] = useState<DbTeam | null>(null)
+  const [teamLogoUrl, setTeamLogoUrl] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   // Enterキー2回連続送信用のタイマー
@@ -80,6 +82,14 @@ export default function ChatDetailPage() {
         // チーム情報を取得
         const teamData = await getTeam(threadData.teamId)
         setTeam(teamData)
+
+        // チームロゴURLをリフレッシュ
+        if (teamData?.logoUrl) {
+          try {
+            const url = await refreshS3Url(teamData.logoUrl)
+            setTeamLogoUrl(url)
+          } catch { /* ロゴ取得失敗は無視 */ }
+        }
 
         // チーム運営者かチェック
         if (teamData) {
@@ -282,6 +292,7 @@ export default function ChatDetailPage() {
           </Button>
 
           <Avatar className="w-10 h-10 flex-shrink-0">
+            {teamLogoUrl && <AvatarImage src={teamLogoUrl} alt={otherName || ""} />}
             <AvatarFallback className="bg-gradient-to-br from-[#e84b8a] to-[#f4a261] text-white font-bold">
               {otherName?.[0] || "?"}
             </AvatarFallback>
