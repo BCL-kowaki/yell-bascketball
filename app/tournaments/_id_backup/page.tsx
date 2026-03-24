@@ -2633,100 +2633,96 @@ export default function TournamentDetailPage() {
 
             {/* 参加チームタブ */}
             <TabsContent value="teams" className="mt-2">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle>参加チーム</CardTitle>
-                    {canEdit && (
-                      <div className="flex gap-2">
-                        <Button onClick={() => setShowAddTeamDialog(true)}>
-                          <Users className="w-4 h-4 mr-2" />
-                          チームを追加
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {isLoadingTeams ? (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground">読み込み中...</p>
-                    </div>
-                  ) : participatingTeams.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-8">参加チームはまだ登録されていません</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {participatingTeams.map((tournamentTeam) => {
-                        const team = tournamentTeam.team
-                        const teamName = tournamentTeam.teamName || team?.name || "不明なチーム"
-                        return (
-                          <Card key={tournamentTeam.id} className="hover:bg-gray-50 transition-colors">
-                            <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                                <Link 
-                                  href={team?.id ? `/teams/${team.id}` : '#'} 
-                                  className="flex items-center gap-3 flex-1 hover:opacity-80 transition-opacity"
-                                >
-                                  <Avatar className="w-12 h-12">
-                                    <AvatarImage src={team?.logoUrl || undefined} />
-                                    <AvatarFallback>
-                                      {teamName[0] || "T"}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="font-semibold text-base text-gray-900 truncate">{teamName}</p>
-                                    <div className="flex items-center gap-2 mt-1">
-                                      {team?.prefecture && (
-                                        <p className="text-xs text-gray-500">{team.prefecture}</p>
-                                      )}
-                                      {team?.category && (
-                                        <>
-                                          {team.prefecture && <span className="text-xs text-gray-400">•</span>}
-                                          <p className="text-xs text-gray-500">{team.category}</p>
-                                        </>
-                                      )}
-                                    </div>
-                                  {tournamentTeam.participationYear && (
-                                      <p className="text-xs text-gray-400 mt-1">{tournamentTeam.participationYear}年参加</p>
+              <div className="flex items-center justify-between px-1 mb-3">
+                <h3 className="font-bold text-base text-black">参加チーム</h3>
+                {canEdit && (
+                  <Button onClick={() => setShowAddTeamDialog(true)} size="sm" className="bg-gradient-to-r from-[#f7931e] via-[#f06a4e] to-[#e84b8a] hover:opacity-90 text-white">
+                    <Users className="w-4 h-4 mr-2" />
+                    チームを追加
+                  </Button>
+                )}
+              </div>
+              {isLoadingTeams ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">読み込み中...</p>
+                </div>
+              ) : participatingTeams.length === 0 ? (
+                <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none">
+                  <CardContent className="py-8">
+                    <p className="text-muted-foreground text-center">参加チームはまだ登録されていません</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-2">
+                  {participatingTeams.map((tournamentTeam) => {
+                    const team = tournamentTeam.team
+                    const teamName = tournamentTeam.teamName || team?.name || "不明なチーム"
+                    return (
+                      <Card key={tournamentTeam.id} className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none hover:bg-gray-50 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <Link
+                              href={team?.id ? `/teams/${team.id}` : '#'}
+                              className="flex items-center gap-3 flex-1 hover:opacity-80 transition-opacity"
+                            >
+                              <Avatar className="w-12 h-12">
+                                <AvatarImage src={team?.logoUrl || undefined} />
+                                <AvatarFallback>
+                                  {teamName[0] || "T"}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-base text-gray-900 truncate">{teamName}</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  {team?.prefecture && (
+                                    <p className="text-xs text-gray-500">{team.prefecture}</p>
+                                  )}
+                                  {team?.category && (
+                                    <>
+                                      {team.prefecture && <span className="text-xs text-gray-400">•</span>}
+                                      <p className="text-xs text-gray-500">{team.category}</p>
+                                    </>
                                   )}
                                 </div>
-                                </Link>
-                              <div className="flex items-center gap-1">
-                                {canEdit && team && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-[#e84b8a] border-[#e84b8a] hover:bg-[#e84b8a] hover:text-white text-xs"
-                                    onClick={() => {
-                                      setOfferTargetTeam(team)
-                                      setOfferMessage(`${tournament?.name || '大会'}への参加をお誘いいたします。ぜひご検討ください。`)
-                                      setShowOfferDialog(true)
-                                    }}
-                                  >
-                                    <Send className="w-3 h-3 mr-1" />
-                                    オファー
-                                  </Button>
-                                )}
-                                {canEdit && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleRemoveTeam(tournamentTeam.id)}
-                                    className="ml-1"
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </Button>
+                                {tournamentTeam.participationYear && (
+                                  <p className="text-xs text-gray-400 mt-1">{tournamentTeam.participationYear}年参加</p>
                                 )}
                               </div>
+                            </Link>
+                            <div className="flex items-center gap-1">
+                              {canEdit && team && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-[#e84b8a] border-[#e84b8a] hover:bg-[#e84b8a] hover:text-white text-xs"
+                                  onClick={() => {
+                                    setOfferTargetTeam(team)
+                                    setOfferMessage(`${tournament?.name || '大会'}への参加をお誘いいたします。ぜひご検討ください。`)
+                                    setShowOfferDialog(true)
+                                  }}
+                                >
+                                  <Send className="w-3 h-3 mr-1" />
+                                  オファー
+                                </Button>
+                              )}
+                              {canEdit && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleRemoveTeam(tournamentTeam.id)}
+                                  className="ml-1"
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              )}
                             </div>
-                          </CardContent>
-                        </Card>
-                        )
-                      })}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
+              )}
 
               {/* オファー送信ダイアログ */}
               <Dialog open={showOfferDialog} onOpenChange={setShowOfferDialog}>
