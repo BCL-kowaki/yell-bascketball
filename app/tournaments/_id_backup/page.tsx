@@ -2636,7 +2636,7 @@ export default function TournamentDetailPage() {
               <div className="flex items-center justify-between px-1 mb-3">
                 <h3 className="font-bold text-base text-black">参加チーム</h3>
                 {canEdit && (
-                  <Button onClick={() => setShowAddTeamDialog(true)} size="sm" className="bg-gradient-to-r from-[#f7931e] via-[#f06a4e] to-[#e84b8a] hover:opacity-90 text-white">
+                  <Button onClick={() => setShowAddTeamDialog(true)} className="bg-brand-gradient hover:opacity-90 text-white rounded-full px-4 h-9 text-sm">
                     <Users className="w-4 h-4 mr-2" />
                     チームを追加
                   </Button>
