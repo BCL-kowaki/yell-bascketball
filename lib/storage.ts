@@ -1122,65 +1122,37 @@ export async function getS3UrlFromKey(key: string, expiresIn: number = 3600 * 24
  * @returns 新しい署名付きURL、Blob URL、または元のURL（Base64データURLなどの場合）
  */
 export async function refreshS3Url(url: string | null | undefined, useDownload: boolean = false): Promise<string | null> {
-  if (!url) {
-    console.log('refreshS3Url: URL is null or undefined')
-    return null
-  }
-
-  console.log('refreshS3Url: Input URL:', url.substring(0, 200), 'useDownload:', useDownload)
+  if (!url) return null
 
   // Base64データURLの場合はそのまま返す
-  if (url.startsWith('data:')) {
-    console.log('refreshS3Url: Base64 data URL, returning as-is')
-    return url
-  }
+  if (url.startsWith('data:')) return url
 
   // blob: URLの場合はnullを返す（一時的なURL）
-  if (url.startsWith('blob:')) {
-    console.log('refreshS3Url: Blob URL, returning null')
-    return null
-  }
+  if (url.startsWith('blob:')) return null
 
   // S3のオブジェクトキーを抽出
   const key = extractS3KeyFromUrl(url)
-  if (!key) {
-    console.warn('refreshS3Url: Could not extract key from URL, returning original URL')
-    // キーが抽出できない場合は、元のURLを返す
-    return url
-  }
+  if (!key) return url
 
-  console.log('refreshS3Url: Extracted key:', key)
-  console.log('🔍 refreshS3Url: About to call getS3UrlFromKey with useDownload:', useDownload)
-  console.log('🔍 refreshS3Url: useDownload type:', typeof useDownload)
-  console.log('🔍 refreshS3Url: useDownload === true:', useDownload === true)
-
+  // 戦略: まず署名付きURL（軽量）を試み、失敗したらダウンロードモードにフォールバック
+  // useDownload=trueでも署名付きURLを先に試行（パフォーマンス向上）
   try {
-    // 新しい署名付きURLまたはBlob URLを生成
-    const newUrl = await getS3UrlFromKey(key, 3600 * 24 * 365, useDownload)
-    console.log('refreshS3Url: Generated new URL:', newUrl.substring(0, 200))
-    return newUrl
-  } catch (error) {
-    console.error('refreshS3Url: Failed to refresh S3 URL:', error)
-    console.error('refreshS3Url: Error details:', {
-      message: error instanceof Error ? error.message : String(error),
-      key: key
-    })
-
-    // 署名付きURLの生成に失敗した場合、ダウンロードモードを試行（useDownloadがfalseの場合のみ）
-    if (!useDownload) {
-      console.log('refreshS3Url: Retrying with download mode...')
-      try {
-        const blobUrl = await getS3UrlFromKey(key, 3600 * 24 * 365, true)
-        console.log('refreshS3Url: Successfully created Blob URL as fallback')
-        return blobUrl
-      } catch (downloadError) {
-        console.error('refreshS3Url: Download mode also failed:', downloadError)
-      }
-    }
-
-    // エラーが発生した場合は、元のURLを返す
-    return url
+    const signedUrl = await getS3UrlFromKey(key, 3600 * 24 * 365, false)
+    return signedUrl
+  } catch (signedError) {
+    console.warn('refreshS3Url: Signed URL failed for key:', key)
   }
+
+  // フォールバック: ダウンロードモード（Blob URL生成）
+  try {
+    const blobUrl = await getS3UrlFromKey(key, 3600 * 24 * 365, true)
+    return blobUrl
+  } catch (downloadError) {
+    console.error('refreshS3Url: Download mode also failed for key:', key)
+  }
+
+  // 最終手段: 元のURLを返す
+  return url
 }
 
 /**

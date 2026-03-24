@@ -3,8 +3,9 @@ import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
-import { getUserByEmail, updateUser, listPosts, getCurrentUserEmail, searchTeams, followUser, unfollowUser, checkFollowStatus, getFollowCounts, getUserFavorites, getCommentsByPost, addComment as addDbComment, updatePostCounts, toggleLike as toggleDbLike, getMyManagedTournaments, getMyTeams, getMyTeamTournaments, type DbUser, type DbPost, type DbTeam, type DbTournament } from "@/lib/api"
+import { getUserByEmail, updateUser, listPosts, getCurrentUserEmail, searchTeams, followUser, unfollowUser, checkFollowStatus, getFollowCounts, getUserFavorites, getCommentsByPost, addComment as addDbComment, updatePostCounts, toggleLike as toggleDbLike, getMyManagedTournaments, getMyTeams, getMyTeamTournaments, getSiteBanners, type DbUser, type DbPost, type DbTeam, type DbTournament, type SponsorBanner } from "@/lib/api"
 import { uploadImageToS3, refreshS3Url } from "@/lib/storage"
+import SponsorSidebar from "@/components/sponsor-sidebar"
 import { CATEGORIES, REGION_BLOCKS, PREFECTURES_BY_REGION, DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS } from "@/lib/regionData"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -94,9 +95,14 @@ export default function ProfilePage() {
   const [refreshedAvatarUrl, setRefreshedAvatarUrl] = useState<string | null>(null)
   const [refreshedCoverUrl, setRefreshedCoverUrl] = useState<string | null>(null)
 
+  // 運営バナー
+  const [siteBanners, setSiteBanners] = useState<SponsorBanner[]>([])
+
   useEffect(() => {
     ensureAmplifyConfigured()
     loadUserProfile()
+    // 運営バナーを取得
+    getSiteBanners().then(setSiteBanners).catch(() => {})
   }, [])
 
   // フォロー状態とお気に入りを読み込む
@@ -1135,8 +1141,9 @@ export default function ProfilePage() {
           </div>
         </div>
 
-      <div className="w-full max-w-6xl mx-auto pb-20 px-0">
-        <div className="w-full max-w-[720px] mx-auto px-0 overflow-hidden box-border">
+      <div className="max-w-[1080px] mx-auto pb-20 px-0 lg:px-4">
+        <div className="flex justify-center gap-3">
+        <div className="w-full max-w-[720px] px-0 overflow-hidden box-border">
           <TabsContent value="timeline" className="mt-2 space-y-2 w-full overflow-hidden box-border">
               {isLoadingPosts ? (
                 <div className="text-center py-12">
@@ -1588,6 +1595,9 @@ export default function ProfilePage() {
               )}
             </TabsContent>
         </div>
+        {/* 運営バナーサイドバー（デスクトップのみ） */}
+        <SponsorSidebar sponsors={siteBanners} title="YeLL 運営" />
+      </div>
       </div>
       </Tabs>
 

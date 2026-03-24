@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
-  Users, Trophy, Shield, MessageCircle, BarChart3, Megaphone,
+  Users, Trophy, Shield, MessageCircle, BarChart3, Megaphone, LayoutDashboard,
   Loader2, ShieldAlert, ChevronRight, Lock, LogOut
 } from "lucide-react"
 import {
@@ -199,6 +199,14 @@ export default function AdminDashboardPage() {
       count: null,
       color: "from-orange-500 to-orange-600",
       desc: "YeLL全体スポンサーバナーの設定",
+    },
+    {
+      href: "/admin/banners",
+      icon: LayoutDashboard,
+      label: "運営バナー管理",
+      count: null,
+      color: "from-pink-500 to-pink-600",
+      desc: "プロフィールページのサイドバナー設定",
     },
     {
       href: "/admin/stats",

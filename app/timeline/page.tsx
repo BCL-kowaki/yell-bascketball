@@ -137,24 +137,28 @@ function ImageWithRefresh({ imageUrl }: { imageUrl: string }) {
         return
       }
 
-      // S3のURLを更新（ダウンロードモードを使用）
+      // S3のURLを更新（まず署名付きURLで試行、失敗したらダウンロードモード）
       try {
-        console.log('🔄 ImageWithRefresh: Refreshing image URL with download mode...')
-        const newUrl = await refreshS3Url(imageUrl, true) // ダウンロードモードを強制
-        console.log('✅ ImageWithRefresh: Image URL refreshed successfully!')
-        console.log('🔗 ImageWithRefresh: New URL type:', newUrl?.startsWith('blob:') ? 'Blob URL' : 'Other')
-        console.log('🔗 ImageWithRefresh: New URL preview:', newUrl?.substring(0, 100))
-        setRefreshedUrl(newUrl || imageUrl)
-        setIsLoading(false)
+        console.log('🔄 ImageWithRefresh: Refreshing image URL...')
+        const newUrl = await refreshS3Url(imageUrl, false)
+        if (newUrl) {
+          setRefreshedUrl(newUrl)
+          setIsLoading(false)
+          return
+        }
       } catch (error) {
-        console.error('❌ ImageWithRefresh: Failed to refresh image URL:', error)
-        console.error('❌ ImageWithRefresh: Error details:', {
-          message: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-        })
-        setRefreshedUrl(imageUrl) // エラー時は元のURLを使用
-        setIsLoading(false)
+        console.warn('⚠️ ImageWithRefresh: Signed URL failed, trying download mode...')
       }
+
+      // フォールバック: ダウンロードモード（Blob URL生成）
+      try {
+        const blobUrl = await refreshS3Url(imageUrl, true)
+        setRefreshedUrl(blobUrl || imageUrl)
+      } catch (error) {
+        console.error('❌ ImageWithRefresh: All methods failed:', error)
+        setRefreshedUrl(imageUrl)
+      }
+      setIsLoading(false)
     }
 
     loadImage()

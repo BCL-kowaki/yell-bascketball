@@ -3580,6 +3580,53 @@ export async function getSiteSponsors(): Promise<SponsorBanner[]> {
 }
 
 /**
+ * YeLL運営バナー（プロフィールページ用）を取得
+ */
+export async function getSiteBanners(): Promise<SponsorBanner[]> {
+  const config = await getSiteConfig('site_banners')
+  if (!config) return []
+  return parseSponsors(config.configValue)
+}
+
+/**
+ * YeLL運営バナーを更新（なければ作成）
+ */
+export async function updateSiteBanners(banners: SponsorBanner[], updatedBy: string): Promise<void> {
+  const existingConfig = await getSiteConfig('site_banners')
+  const bannersJson = stringifySponsors(banners)
+
+  if (existingConfig) {
+    const mutation = /* GraphQL */ `
+      mutation UpdateSiteConfig($input: UpdateSiteConfigInput!) {
+        updateSiteConfig(input: $input) {
+          ${SITE_CONFIG_FIELDS}
+        }
+      }
+    `
+    const result = await client.graphql({
+      query: mutation,
+      variables: { input: { id: existingConfig.id, configValue: bannersJson, updatedBy } },
+      authMode: 'apiKey'
+    }) as any
+    if (result.errors) throw new Error(result.errors[0]?.message || '運営バナー更新エラー')
+  } else {
+    const mutation = /* GraphQL */ `
+      mutation CreateSiteConfig($input: CreateSiteConfigInput!) {
+        createSiteConfig(input: $input) {
+          ${SITE_CONFIG_FIELDS}
+        }
+      }
+    `
+    const result = await client.graphql({
+      query: mutation,
+      variables: { input: { configKey: 'site_banners', configValue: bannersJson, updatedBy } },
+      authMode: 'apiKey'
+    }) as any
+    if (result.errors) throw new Error(result.errors[0]?.message || '運営バナー作成エラー')
+  }
+}
+
+/**
  * YeLL全体スポンサーを更新（なければ作成）
  */
 export async function updateSiteSponsors(sponsors: SponsorBanner[], updatedBy: string): Promise<void> {

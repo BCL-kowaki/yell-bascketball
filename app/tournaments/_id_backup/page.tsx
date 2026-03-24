@@ -105,15 +105,21 @@ function ImageWithRefresh({ imageUrl }: { imageUrl: string }) {
         return
       }
 
+      // まず署名付きURLで試行
       try {
-        const newUrl = await refreshS3Url(imageUrl, true)
-        setRefreshedUrl(newUrl || imageUrl)
-        setIsLoading(false)
+        const newUrl = await refreshS3Url(imageUrl, false)
+        if (newUrl) { setRefreshedUrl(newUrl); setIsLoading(false); return }
+      } catch (e) { /* フォールバックへ */ }
+
+      // フォールバック: ダウンロードモード
+      try {
+        const blobUrl = await refreshS3Url(imageUrl, true)
+        setRefreshedUrl(blobUrl || imageUrl)
       } catch (error) {
         console.error('Failed to refresh image URL:', error)
         setRefreshedUrl(imageUrl)
-        setIsLoading(false)
       }
+      setIsLoading(false)
     }
 
     loadImage()
