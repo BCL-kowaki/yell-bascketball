@@ -244,8 +244,13 @@ type ChatMessage @model @auth(rules: [{allow: public}]) {
   senderEmail: String!
   senderName: String!
   content: String!
-  # メッセージタイプ（text: テキスト, system: システムメッセージ）
+  # メッセージタイプ（text: テキスト, image: 画像, video: 動画, pdf: PDF, system: システムメッセージ）
   messageType: String!
+  # メディア添付（画像・動画・PDF）
+  imageUrl: String
+  videoUrl: String
+  pdfUrl: String
+  pdfName: String
   isRead: Boolean
   createdAt: AWSDateTime
   updatedAt: AWSDateTime

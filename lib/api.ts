@@ -204,6 +204,10 @@ export type DbChatMessage = {
   senderName: string
   content: string
   messageType: string
+  imageUrl?: string | null
+  videoUrl?: string | null
+  pdfUrl?: string | null
+  pdfName?: string | null
   isRead?: boolean | null
   createdAt?: string | null
   updatedAt?: string | null
@@ -2402,7 +2406,7 @@ export async function searchTournaments(searchTerm: string): Promise<DbTournamen
 // ==================== Chat Functions ====================
 
 const CHAT_THREAD_FIELDS = 'id senderEmail senderName teamId teamName tournamentId tournamentName threadType status lastMessage lastMessageAt teamUnreadCount senderUnreadCount createdAt updatedAt'
-const CHAT_MESSAGE_FIELDS = 'id threadId senderEmail senderName content messageType isRead createdAt updatedAt'
+const CHAT_MESSAGE_FIELDS = 'id threadId senderEmail senderName content messageType imageUrl videoUrl pdfUrl pdfName isRead createdAt updatedAt'
 
 /**
  * チャットスレッドを作成（大会運営者からチームへのオファー）
@@ -2522,6 +2526,10 @@ export async function createChatMessage(input: {
   threadId: string
   content: string
   messageType: string
+  imageUrl?: string | null
+  videoUrl?: string | null
+  pdfUrl?: string | null
+  pdfName?: string | null
 }): Promise<DbChatMessage> {
   const currentEmail = await getCurrentUserEmail()
   if (!currentEmail) {
@@ -2539,19 +2547,24 @@ export async function createChatMessage(input: {
     }
   `
 
+  // メディアフィールドを構築
+  const messageInput: any = {
+    threadId: input.threadId,
+    senderEmail: currentEmail,
+    senderName,
+    content: input.content,
+    messageType: input.messageType,
+    isRead: false,
+  }
+  if (input.imageUrl) messageInput.imageUrl = input.imageUrl
+  if (input.videoUrl) messageInput.videoUrl = input.videoUrl
+  if (input.pdfUrl) messageInput.pdfUrl = input.pdfUrl
+  if (input.pdfName) messageInput.pdfName = input.pdfName
+
   try {
     const result = await client.graphql({
       query: mutation,
-      variables: {
-        input: {
-          threadId: input.threadId,
-          senderEmail: currentEmail,
-          senderName,
-          content: input.content,
-          messageType: input.messageType,
-          isRead: false,
-        }
-      },
+      variables: { input: messageInput },
       authMode: 'apiKey'
     }) as any
 
@@ -2560,7 +2573,8 @@ export async function createChatMessage(input: {
     }
 
     // スレッドの最終メッセージを更新
-    await updateChatThreadLastMessage(input.threadId, input.content, currentEmail)
+    const lastMsg = input.imageUrl ? '📷 画像' : input.videoUrl ? '🎬 動画' : input.pdfUrl ? '📄 PDF' : input.content
+    await updateChatThreadLastMessage(input.threadId, lastMsg, currentEmail)
 
     return result.data.createChatMessage
   } catch (error: any) {

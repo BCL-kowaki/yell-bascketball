@@ -15,11 +15,16 @@ import {
   XCircle,
   Loader2,
   Users,
-  Info
+  Info,
+  Image as ImageIcon,
+  Video,
+  FileText,
+  X,
+  Paperclip
 } from "lucide-react"
 import Link from "next/link"
 import { Layout } from "@/components/layout"
-import { refreshS3Url } from "@/lib/storage"
+import { refreshS3Url, uploadImageToS3, uploadVideoToS3, uploadPdfToS3 } from "@/lib/storage"
 import { notifyNewChatMessage } from "@/lib/push-sender"
 import {
   getCurrentUserEmail,
@@ -35,6 +40,49 @@ import {
   type DbTeam
 } from "@/lib/api"
 
+// メディア表示コンポーネント
+function MediaImage({ url }: { url: string }) {
+  const [src, setSrc] = useState<string | null>(null)
+  useEffect(() => {
+    refreshS3Url(url).then(u => setSrc(u))
+  }, [url])
+  if (!src) return <div className="w-48 h-32 bg-gray-200 animate-pulse rounded" />
+  return (
+    <a href={src} target="_blank" rel="noopener noreferrer">
+      <img src={src} alt="画像" className="max-w-[240px] max-h-[300px] object-cover rounded-lg" />
+    </a>
+  )
+}
+
+function MediaVideo({ url }: { url: string }) {
+  const [src, setSrc] = useState<string | null>(null)
+  useEffect(() => {
+    refreshS3Url(url).then(u => setSrc(u))
+  }, [url])
+  if (!src) return <div className="w-48 h-32 bg-gray-200 animate-pulse rounded" />
+  return (
+    <video src={src} controls className="max-w-[240px] max-h-[300px] rounded-lg" />
+  )
+}
+
+function MediaPdf({ url, name, isMyMsg }: { url: string; name?: string | null; isMyMsg: boolean }) {
+  const [src, setSrc] = useState<string | null>(null)
+  useEffect(() => {
+    refreshS3Url(url).then(u => setSrc(u))
+  }, [url])
+  return (
+    <a
+      href={src || '#'}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`flex items-center gap-2 px-3 py-2 ${isMyMsg ? 'text-white/90 hover:text-white' : 'text-gray-700 hover:text-gray-900'}`}
+    >
+      <FileText className="w-5 h-5 flex-shrink-0" />
+      <span className="text-sm truncate max-w-[180px]">{name || 'PDF'}</span>
+    </a>
+  )
+}
+
 export default function ChatDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -49,6 +97,16 @@ export default function ChatDetailPage() {
   const [isTeamAdmin, setIsTeamAdmin] = useState(false)
   const [team, setTeam] = useState<DbTeam | null>(null)
   const [teamLogoUrl, setTeamLogoUrl] = useState<string | null>(null)
+  // メディア添付用
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [selectedVideo, setSelectedVideo] = useState<File | null>(null)
+  const [selectedPdf, setSelectedPdf] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [videoPreview, setVideoPreview] = useState<string | null>(null)
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+  const videoInputRef = useRef<HTMLInputElement>(null)
+  const pdfInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   // Enterキー2回連続送信用のタイマー
@@ -117,42 +175,117 @@ export default function ChatDetailPage() {
     scrollToBottom()
   }, [messages])
 
+  // メディアファイル選択ハンドラー
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    // 他のメディアをクリア
+    clearMedia()
+    setSelectedImage(file)
+    const reader = new FileReader()
+    reader.onloadend = () => setImagePreview(reader.result as string)
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    clearMedia()
+    setSelectedVideo(file)
+    setVideoPreview(URL.createObjectURL(file))
+    e.target.value = ''
+  }
+
+  const handlePdfSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    clearMedia()
+    setSelectedPdf(file)
+    e.target.value = ''
+  }
+
+  const clearMedia = () => {
+    setSelectedImage(null)
+    setSelectedVideo(null)
+    setSelectedPdf(null)
+    setImagePreview(null)
+    if (videoPreview) URL.revokeObjectURL(videoPreview)
+    setVideoPreview(null)
+  }
+
+  const hasMedia = selectedImage || selectedVideo || selectedPdf
+
   // メッセージ送信
   const handleSend = async () => {
-    if (!newMessage.trim() || !thread || !currentUserEmail || isSending) return
+    if ((!newMessage.trim() && !hasMedia) || !thread || !currentUserEmail || isSending) return
 
     setIsSending(true)
     try {
+      let imageUrl: string | undefined
+      let videoUrl: string | undefined
+      let pdfUrl: string | undefined
+      let pdfName: string | undefined
+      let messageType = 'text'
+
+      // メディアアップロード
+      if (selectedImage) {
+        setUploadProgress('画像をアップロード中...')
+        const s3Key = await uploadImageToS3(selectedImage)
+        imageUrl = s3Key
+        messageType = 'image'
+      } else if (selectedVideo) {
+        setUploadProgress('動画をアップロード中...')
+        const s3Key = await uploadVideoToS3(selectedVideo)
+        videoUrl = s3Key
+        messageType = 'video'
+      } else if (selectedPdf) {
+        setUploadProgress('PDFをアップロード中...')
+        const s3Key = await uploadPdfToS3(selectedPdf)
+        pdfUrl = s3Key
+        pdfName = selectedPdf.name
+        messageType = 'pdf'
+      }
+
+      setUploadProgress(null)
+
+      const content = newMessage.trim() || (messageType === 'image' ? '📷 画像' : messageType === 'video' ? '🎬 動画' : messageType === 'pdf' ? '📄 PDF' : '')
+
       const msg = await createChatMessage({
         threadId: thread.id,
-        content: newMessage.trim(),
-        messageType: 'text',
+        content,
+        messageType,
+        imageUrl,
+        videoUrl,
+        pdfUrl,
+        pdfName,
       })
       setMessages(prev => [...prev, msg])
 
       // プッシュ通知: 相手側に通知（非同期・エラーは無視）
       if (thread && currentUserEmail) {
-        const isSender = currentUserEmail === thread.senderEmail
-        // 送信者なら→チーム運営者に通知、チーム運営者なら→送信者に通知
-        const recipientEmails = isSender
+        const isSenderUser = currentUserEmail === thread.senderEmail
+        const recipientEmails = isSenderUser
           ? (team ? [team.ownerEmail, ...(team.editorEmails || [])].filter(Boolean) as string[] : [])
           : [thread.senderEmail]
         const filteredRecipients = recipientEmails.filter(e => e !== currentUserEmail)
         notifyNewChatMessage(
           filteredRecipients,
           thread.senderName || '送信者',
-          newMessage.trim(),
+          content,
           thread.id
         ).catch(() => {})
       }
 
       setNewMessage("")
+      clearMedia()
       // テキストエリアの高さをリセット
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto'
       }
     } catch (error) {
       console.error('Failed to send message:', error)
+      setUploadProgress(null)
     } finally {
       setIsSending(false)
     }
@@ -401,13 +534,28 @@ export default function ChatDetailPage() {
 
                         {/* メッセージ吹き出し */}
                         <div
-                          className={`px-3 py-2 rounded-2xl ${
+                          className={`rounded-2xl overflow-hidden ${
                             isMyMessage(msg)
                               ? 'bg-[#e84b8a] text-white rounded-br-md'
                               : 'bg-white text-gray-900 rounded-bl-md shadow-sm'
-                          }`}
+                          } ${msg.imageUrl || msg.videoUrl ? '' : 'px-3 py-2'}`}
                         >
-                          <p className="text-[14px] leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
+                          {/* 画像メッセージ */}
+                          {msg.imageUrl && (
+                            <MediaImage url={msg.imageUrl} />
+                          )}
+                          {/* 動画メッセージ */}
+                          {msg.videoUrl && (
+                            <MediaVideo url={msg.videoUrl} />
+                          )}
+                          {/* PDFメッセージ */}
+                          {msg.pdfUrl && (
+                            <MediaPdf url={msg.pdfUrl} name={msg.pdfName} isMyMsg={isMyMessage(msg)} />
+                          )}
+                          {/* テキスト（メディアがある場合はキャプション表示） */}
+                          {msg.content && !(msg.content === '📷 画像' || msg.content === '🎬 動画' || msg.content === '📄 PDF') && (
+                            <p className={`text-[14px] leading-relaxed whitespace-pre-wrap break-words ${msg.imageUrl || msg.videoUrl ? 'px-3 py-2' : ''}`}>{msg.content}</p>
+                          )}
                         </div>
 
                         {/* 時刻 */}
@@ -425,11 +573,80 @@ export default function ChatDetailPage() {
         </div>
       </div>
 
+      {/* 隠しファイル入力 */}
+      <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
+      <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideoSelect} />
+      <input ref={pdfInputRef} type="file" accept=".pdf" className="hidden" onChange={handlePdfSelect} />
+
       {/* メッセージ入力エリア */}
       {canSendMessage ? (
         <div className="sticky bottom-0 bg-white border-t border-gray-200">
           <div className="max-w-2xl mx-auto px-3 py-2">
+            {/* アップロード進捗 */}
+            {uploadProgress && (
+              <div className="flex items-center gap-2 px-3 py-1.5 mb-1 text-xs text-[#e84b8a]">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                {uploadProgress}
+              </div>
+            )}
+
+            {/* メディアプレビュー */}
+            {hasMedia && (
+              <div className="relative mb-2 px-1">
+                {imagePreview && (
+                  <div className="relative inline-block">
+                    <img src={imagePreview} alt="プレビュー" className="h-20 rounded-lg object-cover" />
+                    <button onClick={clearMedia} className="absolute -top-1.5 -right-1.5 bg-gray-700 text-white rounded-full w-5 h-5 flex items-center justify-center">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+                {videoPreview && (
+                  <div className="relative inline-block">
+                    <video src={videoPreview} className="h-20 rounded-lg" />
+                    <button onClick={clearMedia} className="absolute -top-1.5 -right-1.5 bg-gray-700 text-white rounded-full w-5 h-5 flex items-center justify-center">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+                {selectedPdf && (
+                  <div className="relative inline-flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-2">
+                    <FileText className="w-5 h-5 text-red-500" />
+                    <span className="text-xs text-gray-700 max-w-[150px] truncate">{selectedPdf.name}</span>
+                    <button onClick={clearMedia} className="ml-1 text-gray-500 hover:text-gray-700">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="flex items-end gap-2">
+              {/* メディア添付ボタン群 */}
+              <div className="flex items-center gap-0.5 flex-shrink-0">
+                <button
+                  onClick={() => imageInputRef.current?.click()}
+                  className="p-2 text-gray-400 hover:text-[#e84b8a] transition-colors rounded-full hover:bg-gray-100"
+                  title="画像を添付"
+                >
+                  <ImageIcon className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => videoInputRef.current?.click()}
+                  className="p-2 text-gray-400 hover:text-[#e84b8a] transition-colors rounded-full hover:bg-gray-100"
+                  title="動画を添付"
+                >
+                  <Video className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => pdfInputRef.current?.click()}
+                  className="p-2 text-gray-400 hover:text-[#e84b8a] transition-colors rounded-full hover:bg-gray-100"
+                  title="PDFを添付"
+                >
+                  <FileText className="w-5 h-5" />
+                </button>
+              </div>
+
               <Textarea
                 ref={textareaRef}
                 placeholder="メッセージを入力..."
@@ -471,7 +688,7 @@ export default function ChatDetailPage() {
               />
               <Button
                 onClick={handleSend}
-                disabled={!newMessage.trim() || isSending}
+                disabled={(!newMessage.trim() && !hasMedia) || isSending}
                 className="bg-[#e84b8a] hover:bg-[#d63d7a] text-white rounded-full w-10 h-10 p-0 flex-shrink-0"
               >
                 {isSending ? (
