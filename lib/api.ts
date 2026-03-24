@@ -446,10 +446,8 @@ const postFields = `
 `
 
 export async function listPosts(limit = 50, filter?: { authorEmail?: string; tournamentId?: string }): Promise<DbPost[]> {
-  // 一時的にvideoUrl/videoNameを除外（amplify pushが完了するまで）
-  // TODO: amplify push完了後、postFieldsを使用するように戻す
   const fallbackFields = `
-    id content imageUrl pdfUrl pdfName locationName locationAddress
+    id content imageUrl videoUrl videoName pdfUrl pdfName locationName locationAddress
     linkUrl linkTitle linkDescription linkImage likesCount commentsCount
     authorEmail createdAt tournamentId teamId
   `
@@ -527,25 +525,21 @@ export async function getPostsByTournament(tournamentId: string): Promise<DbPost
 }
 
 export async function createPost(input: Partial<DbPost>): Promise<DbPost> {
-  // 一時的にvideoUrl/videoNameを除外（amplify pushが完了するまで）
-  // TODO: amplify push完了後、この除外を削除
-  const { videoUrl, videoName, ...inputWithoutVideo } = input
-
   const fallbackFields = `
-    id content imageUrl pdfUrl pdfName locationName locationAddress
+    id content imageUrl videoUrl videoName pdfUrl pdfName locationName locationAddress
     linkUrl linkTitle linkDescription linkImage likesCount commentsCount
-    authorEmail createdAt
+    authorEmail tournamentId teamId createdAt
   `
-  
+
   const mutation = /* GraphQL */ `
     mutation CreatePost($input: CreatePostInput!) {
       createPost(input: $input) { ${fallbackFields} }
     }
   `
-  
+
   try {
     // Base64データが大きすぎる場合は除外（S3 URLのみ許可）
-    const sanitizedInput = { ...inputWithoutVideo }
+    const sanitizedInput = { ...input }
     
     // 画像のBase64データサイズチェック（200MB制限、圧縮後）
     if (sanitizedInput.imageUrl && sanitizedInput.imageUrl.startsWith('data:')) {
@@ -731,9 +725,9 @@ export async function checkLikeStatus(postId: string, userEmail: string): Promis
 
 export async function updatePost(id: string, input: Partial<DbPost>): Promise<DbPost> {
   const fallbackFields = `
-    id content imageUrl pdfUrl pdfName locationName locationAddress
+    id content imageUrl videoUrl videoName pdfUrl pdfName locationName locationAddress
     linkUrl linkTitle linkDescription linkImage likesCount commentsCount
-    authorEmail createdAt
+    authorEmail tournamentId teamId createdAt
   `
   
   const mutation = /* GraphQL */ `
