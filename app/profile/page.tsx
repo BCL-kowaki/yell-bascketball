@@ -3,8 +3,8 @@ import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
-import { getUserByEmail, updateUser, listPosts, getCurrentUserEmail, searchTeams, followUser, unfollowUser, checkFollowStatus, getFollowCounts, getUserFavorites, getCommentsByPost, addComment as addDbComment, updatePostCounts, toggleLike as toggleDbLike, getMyManagedTournaments, getMyTeams, getMyTeamTournaments, getSiteBanners, type DbUser, type DbPost, type DbTeam, type DbTournament, type SponsorBanner } from "@/lib/api"
-import { uploadImageToS3, refreshS3Url } from "@/lib/storage"
+import { getUserByEmail, updateUser, listPosts, createPost as createDbPost, getCurrentUserEmail, searchTeams, followUser, unfollowUser, checkFollowStatus, getFollowCounts, getUserFavorites, getCommentsByPost, addComment as addDbComment, updatePostCounts, toggleLike as toggleDbLike, getMyManagedTournaments, getMyTeams, getMyTeamTournaments, getSiteBanners, type DbUser, type DbPost, type DbTeam, type DbTournament, type SponsorBanner } from "@/lib/api"
+import { uploadImageToS3, uploadPdfToS3, uploadVideoToS3, refreshS3Url } from "@/lib/storage"
 import SponsorSidebar from "@/components/sponsor-sidebar"
 import { CATEGORIES, REGION_BLOCKS, PREFECTURES_BY_REGION, DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS } from "@/lib/regionData"
 import { Button } from "@/components/ui/button"
@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Camera, MapPin, Calendar, Edit2, Save, X, Search, Plus, XCircle, UserPlus, Users, Heart, Instagram, Trophy, Settings, Loader2, Clock, ChevronRight } from "lucide-react"
+import { Camera, MapPin, Calendar, Edit2, Save, X, Search, Plus, XCircle, UserPlus, Users, Heart, Instagram, Trophy, Settings, Loader2, Clock, ChevronRight, ImageIcon, FileText, Video, Send } from "lucide-react"
 import { Layout } from "@/components/layout"
 import { useToast } from "@/hooks/use-toast"
 import { ProfilePostCard } from "@/components/profile-post-card"
@@ -97,6 +97,20 @@ export default function ProfilePage() {
 
   // 運営バナー
   const [siteBanners, setSiteBanners] = useState<SponsorBanner[]>([])
+
+  // 投稿フォーム関連
+  const [isPostFormOpen, setIsPostFormOpen] = useState(false)
+  const [newPost, setNewPost] = useState("")
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [selectedPdf, setSelectedPdf] = useState<File | null>(null)
+  const [pdfPreview, setPdfPreview] = useState<string | null>(null)
+  const [selectedVideo, setSelectedVideo] = useState<File | null>(null)
+  const [videoPreview, setVideoPreview] = useState<string | null>(null)
+  const [isSubmittingPost, setIsSubmittingPost] = useState(false)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+  const pdfInputRef = useRef<HTMLInputElement>(null)
+  const videoInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     ensureAmplifyConfigured()
@@ -302,6 +316,128 @@ export default function ProfilePage() {
       })
     } finally {
       setIsLoadingPosts(false)
+    }
+  }
+
+  // 投稿フォーム: ファイル選択ハンドラー
+  const handlePostImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0]
+      setSelectedImage(file)
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handlePostPdfSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0]
+      setSelectedPdf(file)
+      if (pdfPreview) URL.revokeObjectURL(pdfPreview)
+      setPdfPreview(URL.createObjectURL(file))
+    }
+  }
+
+  const handlePostVideoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0]
+      setSelectedVideo(file)
+      if (videoPreview) URL.revokeObjectURL(videoPreview)
+      setVideoPreview(URL.createObjectURL(file))
+    }
+  }
+
+  // 投稿フォーム: 投稿送信
+  const handleSubmitPost = async () => {
+    if (!newPost.trim() && !selectedPdf && !selectedImage && !selectedVideo) return
+    if (!currentUserEmail) {
+      toast({ title: "エラー", description: "ログインが必要です", variant: "destructive" })
+      return
+    }
+
+    setIsSubmittingPost(true)
+    try {
+      // 画像、動画、PDFをS3にアップロード
+      let imageUrl: string | null = null
+      let videoUrl: string | null = null
+      let pdfUrl: string | null = null
+
+      if (selectedImage) {
+        try {
+          imageUrl = await uploadImageToS3(selectedImage, currentUserEmail)
+        } catch (error) {
+          console.error('Failed to upload image:', error)
+          imageUrl = imagePreview || null
+        }
+      }
+
+      if (selectedVideo) {
+        try {
+          videoUrl = await uploadVideoToS3(selectedVideo, currentUserEmail)
+        } catch (error) {
+          console.error('Failed to upload video:', error)
+          videoUrl = videoPreview || null
+        }
+      }
+
+      if (selectedPdf) {
+        try {
+          pdfUrl = await uploadPdfToS3(selectedPdf, currentUserEmail)
+        } catch (error) {
+          console.error('Failed to upload PDF:', error)
+          pdfUrl = null
+        }
+      }
+
+      // blob: URLは保存不可
+      if (pdfUrl && pdfUrl.startsWith('blob:')) {
+        toast({ title: "エラー", description: "PDFのURLが無効です。再度アップロードしてください。", variant: "destructive" })
+        setIsSubmittingPost(false)
+        return
+      }
+
+      const postInput = {
+        content: newPost || '',
+        imageUrl,
+        videoUrl,
+        videoName: selectedVideo?.name || null,
+        pdfUrl,
+        pdfName: selectedPdf?.name || null,
+        linkUrl: null,
+        linkTitle: null,
+        linkDescription: null,
+        linkImage: null,
+        likesCount: 0,
+        commentsCount: 0,
+        authorEmail: currentUserEmail,
+      }
+
+      await createDbPost(postInput)
+
+      toast({ title: "成功", description: "投稿が作成されました" })
+
+      // フォームをリセット
+      setNewPost("")
+      setSelectedImage(null)
+      setImagePreview(null)
+      setSelectedPdf(null)
+      if (pdfPreview) URL.revokeObjectURL(pdfPreview)
+      setPdfPreview(null)
+      setSelectedVideo(null)
+      if (videoPreview) URL.revokeObjectURL(videoPreview)
+      setVideoPreview(null)
+      setIsPostFormOpen(false)
+
+      // 投稿一覧を再読み込み
+      await loadUserPosts(currentUserEmail)
+    } catch (error: any) {
+      console.error("create post failed", error)
+      toast({ title: "エラー", description: error?.message || "投稿の作成に失敗しました", variant: "destructive" })
+    } finally {
+      setIsSubmittingPost(false)
     }
   }
 
@@ -855,7 +991,7 @@ export default function ProfilePage() {
   if (isLoading) {
     return (
       <Layout isLoggedIn={true} currentUser={{ name: "読み込み中..." }}>
-        <div className="max-w-6xl mx-auto pb-20 p-8 text-center">
+        <div className="max-w-[1152px] mx-auto pb-20 p-8 text-center">
           <p className="text-muted-foreground">読み込み中...</p>
         </div>
       </Layout>
@@ -865,7 +1001,7 @@ export default function ProfilePage() {
   if (!user) {
     return (
       <Layout isLoggedIn={false} currentUser={undefined}>
-        <div className="max-w-6xl mx-auto pb-20 p-8 text-center">
+        <div className="max-w-[1152px] mx-auto pb-20 p-8 text-center">
           <p className="text-muted-foreground">ユーザー情報が見つかりません</p>
         </div>
       </Layout>
@@ -966,8 +1102,8 @@ export default function ProfilePage() {
             />
           </div>
 
-        {/* Avatar and Cover Edit Button - Positioned relative to max-w-6xl container */}
-        <div className="absolute -bottom-12 md:-bottom-16 left-1/2 -translate-x-1/2 w-full max-w-6xl px-4 md:px-8">
+        {/* Avatar and Cover Edit Button - Positioned relative to max-w-[1152px] container */}
+        <div className="absolute -bottom-12 md:-bottom-16 left-1/2 -translate-x-1/2 w-full max-w-[1152px] px-4 md:px-8">
           <div className="relative">
             <div className="absolute left-0 -bottom-0">
             <div className="relative">
@@ -991,7 +1127,7 @@ export default function ProfilePage() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="w-screen -mx-[calc((100vw-100%)/2)] bg-card">
-          <div className="max-w-6xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-0">
+          <div className="max-w-[1152px] mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-0">
           <div className="flex flex-col md:flex-row items-start justify-between">
             <div className="flex-1 mb-4 md:mb-0">
               <>
@@ -1141,10 +1277,111 @@ export default function ProfilePage() {
           </div>
         </div>
 
-      <div className="max-w-6xl mx-auto pb-20 px-4 md:px-8">
+      <div className="max-w-[1152px] mx-auto pb-20 px-4 md:px-8">
         <div className="flex justify-center gap-6">
         <div className="w-full min-w-0 overflow-hidden box-border">
           <TabsContent value="timeline" className="mt-2 space-y-2 w-full overflow-hidden box-border">
+              {/* 投稿フォーム（自分のプロフィールのみ） */}
+              {isOwnProfile && user && (
+                <Card className="w-full border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
+                  <CardHeader className="px-3 py-3">
+                    <div className="flex items-center gap-2">
+                      <Avatar className="w-10 h-10 shrink-0">
+                        <AvatarImage src={refreshedAvatarUrl || user.avatar || "/placeholder.svg"} alt={`${user.lastName} ${user.firstName}`} />
+                        <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
+                          {user.firstName?.[0]}{user.lastName?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      {!isPostFormOpen ? (
+                        <button
+                          onClick={() => setIsPostFormOpen(true)}
+                          className="flex-1 h-10 px-4 bg-gray-100 rounded-full text-left text-gray-500 text-sm hover:bg-gray-200"
+                        >
+                          今何してる？
+                        </button>
+                      ) : (
+                        <div className="flex-1">
+                          <Textarea
+                            placeholder="今何してる？"
+                            value={newPost}
+                            onChange={(e) => setNewPost(e.target.value)}
+                            className="w-full min-h-[80px] resize-none border border-gray-200 rounded-lg bg-white text-sm focus-visible:ring-1 focus-visible:ring-[#f06a4e]/30 p-3"
+                            autoFocus
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="px-3 pb-3 pt-0">
+                    <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+                      <div className="flex items-center gap-4">
+                        <Button variant="ghost" size="sm" className="text-gray-600 hover:bg-gray-100 p-2 h-auto" onClick={() => imageInputRef.current?.click()}>
+                          <ImageIcon className="w-5 h-5 text-green-500" />
+                        </Button>
+                        <input type="file" ref={imageInputRef} onChange={handlePostImageSelect} accept="image/*" style={{ display: "none" }} />
+                        <Button variant="ghost" size="sm" className="text-gray-600 hover:bg-gray-100 p-2 h-auto" onClick={() => pdfInputRef.current?.click()}>
+                          <FileText className="w-5 h-5 text-red-500" />
+                        </Button>
+                        <input type="file" ref={pdfInputRef} onChange={handlePostPdfSelect} accept=".pdf" style={{ display: "none" }} />
+                        <Button variant="ghost" size="sm" className="text-gray-600 hover:bg-gray-100 p-2 h-auto" onClick={() => videoInputRef.current?.click()}>
+                          <Video className="w-5 h-5 text-purple-500" />
+                        </Button>
+                        <input type="file" ref={videoInputRef} onChange={handlePostVideoSelect} accept="video/*" style={{ display: "none" }} />
+                      </div>
+                      <Button
+                        onClick={handleSubmitPost}
+                        disabled={isSubmittingPost || (!newPost.trim() && !selectedPdf && !selectedImage && !selectedVideo)}
+                        className="px-4 h-9 bg-gradient-to-r from-[#f7931e] via-[#f06a4e] to-[#e84b8a] hover:opacity-90 text-white font-medium text-sm rounded-lg disabled:bg-gray-300 disabled:opacity-50"
+                      >
+                        {isSubmittingPost ? <Loader2 className="w-4 h-4 animate-spin" /> : "投稿"}
+                      </Button>
+                    </div>
+                    {/* プレビューエリア */}
+                    <div className="space-y-2 mt-2">
+                      {imagePreview && (
+                        <div className="relative">
+                          <img src={imagePreview} alt="選択した画像のプレビュー" className="rounded-lg max-h-40 w-auto" />
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="absolute top-2 right-2 rounded-full h-6 w-6 p-0"
+                            onClick={() => { setSelectedImage(null); setImagePreview(null); if (imageInputRef.current) imageInputRef.current.value = "" }}
+                          >
+                            X
+                          </Button>
+                        </div>
+                      )}
+                      {selectedPdf && (
+                        <div className="relative text-sm text-gray-500 p-2 border rounded-lg flex items-center justify-between">
+                          <span>選択中のPDF: {selectedPdf.name}</span>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="rounded-full h-6 w-6 p-0"
+                            onClick={() => { setSelectedPdf(null); if (pdfPreview) { URL.revokeObjectURL(pdfPreview); setPdfPreview(null) }; if (pdfInputRef.current) pdfInputRef.current.value = "" }}
+                          >
+                            X
+                          </Button>
+                        </div>
+                      )}
+                      {selectedVideo && videoPreview && (
+                        <div className="relative">
+                          <video src={videoPreview} controls className="rounded-lg max-h-40 w-auto" />
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="absolute top-2 right-2 rounded-full h-6 w-6 p-0"
+                            onClick={() => { setSelectedVideo(null); if (videoPreview) { URL.revokeObjectURL(videoPreview); setVideoPreview(null) }; if (videoInputRef.current) videoInputRef.current.value = "" }}
+                          >
+                            X
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {isLoadingPosts ? (
                 <div className="text-center py-12">
                   <p className="text-muted-foreground">読み込み中...</p>
@@ -1153,6 +1390,9 @@ export default function ProfilePage() {
                 <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm">
                   <CardContent className="p-8 text-center">
                     <p className="text-muted-foreground">まだ投稿がありません</p>
+                    {isOwnProfile && (
+                      <p className="text-sm text-gray-400 mt-2">上のフォームから最初の投稿を作成してみましょう！</p>
+                    )}
                   </CardContent>
                 </Card>
               ) : (
