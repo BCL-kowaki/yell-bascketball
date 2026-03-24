@@ -1456,27 +1456,27 @@ export default function TeamDetailPage() {
           {/* タブメニュー */}
           <div className="mt-6 order-t border-border border-b border-border">
             <TabsList className="grid w-full grid-cols-4 bg-transparent h-auto p-0 gap-0">
-              <TabsTrigger 
+              <TabsTrigger
                 value="timeline"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium text-sm"
               >
                 タイムライン
               </TabsTrigger>
-              <TabsTrigger 
+              <TabsTrigger
                 value="about"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium text-sm"
               >
                 基本データ
               </TabsTrigger>
-              <TabsTrigger 
+              <TabsTrigger
                 value="photos"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium text-sm"
               >
                 写真
               </TabsTrigger>
-              <TabsTrigger 
+              <TabsTrigger
                 value="tournaments"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium text-sm"
               >
                 参加大会
               </TabsTrigger>

@@ -2291,21 +2291,21 @@ export default function TournamentDetailPage() {
         {/* タブメニュー */}
           <div className="mt-6 border-t border-border border-b border-border">
             <TabsList className="grid w-full grid-cols-3 bg-transparent h-auto p-0 gap-0">
-              <TabsTrigger 
-                value="timeline" 
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
+              <TabsTrigger
+                value="timeline"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium text-sm"
               >
                 タイムライン
               </TabsTrigger>
-              <TabsTrigger 
+              <TabsTrigger
                 value="teams"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium text-sm"
               >
                 参加チーム
               </TabsTrigger>
-              <TabsTrigger 
+              <TabsTrigger
                 value="results"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium text-sm"
               >
                 過去大会結果
               </TabsTrigger>
