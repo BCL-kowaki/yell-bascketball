@@ -1279,7 +1279,7 @@ export default function ProfilePage() {
 
       <div className="max-w-[1152px] mx-auto pb-20 px-0 md:px-8">
         <div className="flex justify-center gap-6">
-        <div className="w-full min-w-0 overflow-hidden box-border">
+        <div className="w-full max-w-[720px] min-w-0 overflow-hidden box-border">
           <TabsContent value="timeline" className="mt-2 space-y-2 w-full overflow-hidden box-border">
               {/* 投稿フォーム（自分のプロフィールのみ） */}
               {isOwnProfile && user && (
