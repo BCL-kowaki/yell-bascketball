@@ -118,7 +118,7 @@ export function TournamentPostList({ posts, tournament, currentUserEmail }: Tour
                     <img
                       src={post.imageUrl}
                       alt="Post image"
-                      className="rounded-lg w-full mb-3 max-h-96 object-cover"
+                      className="rounded-lg w-full mb-3 h-auto"
                     />
                   )}
 
