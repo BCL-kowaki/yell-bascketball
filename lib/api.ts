@@ -3210,10 +3210,106 @@ const ADMIN_CREDENTIALS = {
   password: 'admin',
 }
 
-// 管理者メールアドレス一覧（Cognitoメールでの管理者判定も残す）
-const ADMIN_EMAILS = [
+// デフォルト管理者メールアドレス（フォールバック: 常に管理者として認識）
+const DEFAULT_ADMIN_EMAILS = [
   'kowaki1111@gmail.com',
 ]
+
+// キャッシュ済み管理者メールリスト（SiteConfigから取得後にキャッシュ）
+let _cachedAdminEmails: string[] | null = null
+let _adminEmailsCacheTime = 0
+const ADMIN_CACHE_TTL = 5 * 60 * 1000 // 5分間キャッシュ
+
+/**
+ * SiteConfigから管理者メールアドレス一覧を取得
+ * デフォルト管理者 + SiteConfigに登録された管理者をマージ
+ */
+export async function getAdminEmails(): Promise<string[]> {
+  // キャッシュが有効ならそれを使う
+  const now = Date.now()
+  if (_cachedAdminEmails && (now - _adminEmailsCacheTime) < ADMIN_CACHE_TTL) {
+    return _cachedAdminEmails
+  }
+
+  try {
+    const config = await getSiteConfig('admin_emails')
+    let dynamicEmails: string[] = []
+    if (config?.configValue) {
+      try {
+        dynamicEmails = JSON.parse(config.configValue)
+      } catch {
+        dynamicEmails = []
+      }
+    }
+    // デフォルト管理者 + 動的管理者をマージ（重複排除）
+    const allEmails = [...new Set([
+      ...DEFAULT_ADMIN_EMAILS.map(e => e.toLowerCase().trim()),
+      ...dynamicEmails.map((e: string) => e.toLowerCase().trim()),
+    ])]
+    _cachedAdminEmails = allEmails
+    _adminEmailsCacheTime = now
+    return allEmails
+  } catch (error) {
+    console.error('管理者メール取得エラー:', error)
+    return DEFAULT_ADMIN_EMAILS
+  }
+}
+
+/**
+ * 管理者メールアドレス一覧を更新（SiteConfigに保存）
+ */
+export async function updateAdminEmails(emails: string[], updatedBy: string): Promise<void> {
+  // デフォルト管理者は必ず含める
+  const allEmails = [...new Set([
+    ...DEFAULT_ADMIN_EMAILS.map(e => e.toLowerCase().trim()),
+    ...emails.map(e => e.toLowerCase().trim()).filter(e => e.length > 0),
+  ])]
+  const emailsJson = JSON.stringify(allEmails)
+
+  const existingConfig = await getSiteConfig('admin_emails')
+
+  if (existingConfig) {
+    const mutation = /* GraphQL */ `
+      mutation UpdateSiteConfig($input: UpdateSiteConfigInput!) {
+        updateSiteConfig(input: $input) {
+          ${SITE_CONFIG_FIELDS}
+        }
+      }
+    `
+    const result = await client.graphql({
+      query: mutation,
+      variables: { input: { id: existingConfig.id, configValue: emailsJson, updatedBy } },
+      authMode: 'apiKey'
+    }) as any
+    if (result.errors) throw new Error(result.errors[0]?.message || '管理者メール更新エラー')
+  } else {
+    const mutation = /* GraphQL */ `
+      mutation CreateSiteConfig($input: CreateSiteConfigInput!) {
+        createSiteConfig(input: $input) {
+          ${SITE_CONFIG_FIELDS}
+        }
+      }
+    `
+    const result = await client.graphql({
+      query: mutation,
+      variables: { input: { configKey: 'admin_emails', configValue: emailsJson, updatedBy } },
+      authMode: 'apiKey'
+    }) as any
+    if (result.errors) throw new Error(result.errors[0]?.message || '管理者メール作成エラー')
+  }
+
+  // キャッシュ更新
+  _cachedAdminEmails = allEmails
+  _adminEmailsCacheTime = Date.now()
+}
+
+/**
+ * 管理者キャッシュをクリア（管理者変更時に使用）
+ */
+export function clearAdminEmailsCache(): void {
+  _cachedAdminEmails = null
+  _adminEmailsCacheTime = 0
+}
 
 /**
  * 管理者固定ID/パスワードでログイン
@@ -3251,6 +3347,7 @@ export function isAdminLoggedIn(): boolean {
 /**
  * 現在のユーザーがシステム管理者かどうかを判定
  * 固定ID/パスワードでのログイン、またはCognitoメールアドレスで判定
+ * SiteConfigから動的に管理者リストを取得
  */
 export async function isSystemAdmin(): Promise<boolean> {
   // 固定ログインセッションがあればOK
@@ -3258,14 +3355,17 @@ export async function isSystemAdmin(): Promise<boolean> {
   // Cognitoメールでの判定
   const email = await getCurrentUserEmail()
   if (!email) return false
-  return ADMIN_EMAILS.includes(email.toLowerCase().trim())
+  const adminEmails = await getAdminEmails()
+  return adminEmails.includes(email.toLowerCase().trim())
 }
 
 /**
  * メールアドレスがシステム管理者かどうかを判定（同期版）
+ * 注意: キャッシュが未取得の場合はデフォルト管理者のみで判定
  */
 export function isAdminEmail(email: string): boolean {
-  return ADMIN_EMAILS.includes(email.toLowerCase().trim())
+  const emails = _cachedAdminEmails || DEFAULT_ADMIN_EMAILS
+  return emails.includes(email.toLowerCase().trim())
 }
 
 /**

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   Users, Trophy, Shield, MessageCircle, BarChart3, Megaphone, LayoutDashboard,
-  Loader2, ShieldAlert, ChevronRight, Lock, LogOut
+  Loader2, ShieldAlert, ChevronRight, Lock, LogOut, UserCog
 } from "lucide-react"
 import {
   isSystemAdmin, adminLogin, adminLogout, isAdminLoggedIn,
@@ -215,6 +215,14 @@ export default function AdminDashboardPage() {
       count: null,
       color: "from-gray-600 to-gray-700",
       desc: "登録推移・利用状況の確認",
+    },
+    {
+      href: "/admin/admins",
+      icon: UserCog,
+      label: "管理者管理",
+      count: null,
+      color: "from-red-500 to-red-600",
+      desc: "管理者権限の追加・削除",
     },
   ]
 
