@@ -32,7 +32,7 @@ function ImageWithRefresh({ imageUrl }: { imageUrl: string }) {
       }
 
       try {
-        const newUrl = await refreshS3Url(imageUrl, true)
+        const newUrl = await refreshS3Url(imageUrl)
         setRefreshedUrl(newUrl || imageUrl)
         setIsLoading(false)
       } catch (error) {
@@ -95,7 +95,7 @@ function AvatarWithRefresh({ avatarUrl, fallbackText, className }: { avatarUrl: 
       }
 
       try {
-        const newUrl = await refreshS3Url(avatarUrl, true)
+        const newUrl = await refreshS3Url(avatarUrl)
         setRefreshedUrl(newUrl || avatarUrl)
       } catch (error) {
         console.error('Failed to refresh avatar URL:', error)
@@ -132,7 +132,7 @@ function PdfViewer({ pdfUrl, pdfName }: { pdfUrl: string; pdfName?: string | nul
       }
 
       try {
-        const newUrl = await refreshS3Url(pdfUrl, true)
+        const newUrl = await refreshS3Url(pdfUrl)
         setRefreshedUrl(newUrl || pdfUrl)
       } catch (error) {
         console.error('Failed to refresh PDF URL:', error)

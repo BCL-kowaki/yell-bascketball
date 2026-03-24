@@ -55,14 +55,14 @@ export default function FavoriteTournamentsPage() {
           const updatedTournament = { ...tournament }
           if (updatedTournament.iconUrl && !updatedTournament.iconUrl.startsWith('data:') && !updatedTournament.iconUrl.startsWith('blob:')) {
             try {
-              updatedTournament.iconUrl = await refreshS3Url(updatedTournament.iconUrl, true) || updatedTournament.iconUrl
+              updatedTournament.iconUrl = await refreshS3Url(updatedTournament.iconUrl) || updatedTournament.iconUrl
             } catch (error) {
               console.error('Failed to refresh icon URL:', error)
             }
           }
           if (updatedTournament.coverImage && !updatedTournament.coverImage.startsWith('data:') && !updatedTournament.coverImage.startsWith('blob:')) {
             try {
-              updatedTournament.coverImage = await refreshS3Url(updatedTournament.coverImage, true) || updatedTournament.coverImage
+              updatedTournament.coverImage = await refreshS3Url(updatedTournament.coverImage) || updatedTournament.coverImage
             } catch (error) {
               console.error('Failed to refresh cover image URL:', error)
             }

@@ -1116,10 +1116,22 @@ export async function getS3UrlFromKey(key: string, expiresIn: number = 3600 * 24
 }
 
 /**
+ * S3のオブジェクトキーからパブリック直アクセスURLを構築
+ * 署名付きURLが失敗した場合のフォールバック用
+ */
+function buildS3PublicUrl(key: string): string {
+  const bucket = 'yellc34dfecaeb3545229f8a541d9a04a2aec8ef5-main'
+  const region = 'ap-northeast-1'
+  // public/プレフィックスを追加（Amplify Storageのデフォルト）
+  const fullKey = key.startsWith('public/') ? key : `public/${key}`
+  return `https://${bucket}.s3.${region}.amazonaws.com/${fullKey}`
+}
+
+/**
  * S3のURLを更新する（期限切れの場合に新しいURLを生成）
  * @param url 現在のS3のURL（署名付きURLまたは通常のURL）
- * @param useDownload trueの場合、downloadDataを使ってBlob URLを生成
- * @returns 新しい署名付きURL、Blob URL、または元のURL（Base64データURLなどの場合）
+ * @param useDownload trueの場合、downloadDataを使ってBlob URLを生成（非推奨：署名付きURLを優先）
+ * @returns 新しい署名付きURL、パブリックURL、または元のURL
  */
 export async function refreshS3Url(url: string | null | undefined, useDownload: boolean = false): Promise<string | null> {
   if (!url) return null
@@ -1127,15 +1139,14 @@ export async function refreshS3Url(url: string | null | undefined, useDownload: 
   // Base64データURLの場合はそのまま返す
   if (url.startsWith('data:')) return url
 
-  // blob: URLの場合はnullを返す（一時的なURL）
+  // blob: URLの場合はキーを再抽出できないのでnullを返す
   if (url.startsWith('blob:')) return null
 
   // S3のオブジェクトキーを抽出
   const key = extractS3KeyFromUrl(url)
   if (!key) return url
 
-  // 戦略: まず署名付きURL（軽量）を試み、失敗したらダウンロードモードにフォールバック
-  // useDownload=trueでも署名付きURLを先に試行（パフォーマンス向上）
+  // 戦略1: 署名付きURLを試行
   try {
     const signedUrl = await getS3UrlFromKey(key, 3600 * 24 * 365, false)
     return signedUrl
@@ -1143,16 +1154,11 @@ export async function refreshS3Url(url: string | null | undefined, useDownload: 
     console.warn('refreshS3Url: Signed URL failed for key:', key)
   }
 
-  // フォールバック: ダウンロードモード（Blob URL生成）
-  try {
-    const blobUrl = await getS3UrlFromKey(key, 3600 * 24 * 365, true)
-    return blobUrl
-  } catch (downloadError) {
-    console.error('refreshS3Url: Download mode also failed for key:', key)
-  }
-
-  // 最終手段: 元のURLを返す
-  return url
+  // 戦略2: パブリック直アクセスURLにフォールバック
+  // Blob URLは一時的で管理困難なので使わない
+  const publicUrl = buildS3PublicUrl(key)
+  console.log('refreshS3Url: Falling back to public URL:', publicUrl)
+  return publicUrl
 }
 
 /**

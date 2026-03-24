@@ -82,7 +82,7 @@ function PdfViewer({ pdfUrl, pdfName }: { pdfUrl: string; pdfName?: string }) {
       
       // S3のURLを更新（ダウンロードモードを使用）
       try {
-        const newUrl = await refreshS3Url(pdfUrl, true) // ダウンロードモードを強制
+        const newUrl = await refreshS3Url(pdfUrl) // ダウンロードモードを強制
         setRefreshedUrl(newUrl || pdfUrl)
       } catch (error) {
         console.error('Failed to refresh PDF URL:', error)
@@ -283,7 +283,7 @@ export default function TeamDetailPage() {
           let avatarUrl = userData.avatar || "/placeholder.svg"
           if (avatarUrl && !avatarUrl.startsWith('data:') && !avatarUrl.startsWith('blob:') && !avatarUrl.startsWith('/placeholder')) {
             try {
-              avatarUrl = await refreshS3Url(avatarUrl, true) || avatarUrl
+              avatarUrl = await refreshS3Url(avatarUrl) || avatarUrl
             } catch (error) {
               console.error('Failed to refresh avatar URL:', error)
             }
@@ -329,7 +329,7 @@ export default function TeamDetailPage() {
             // アイコン画像のURLを更新
             if (updatedTournament.iconUrl && !updatedTournament.iconUrl.startsWith('data:') && !updatedTournament.iconUrl.startsWith('blob:')) {
               try {
-                updatedTournament.iconUrl = await refreshS3Url(updatedTournament.iconUrl, true) || updatedTournament.iconUrl
+                updatedTournament.iconUrl = await refreshS3Url(updatedTournament.iconUrl) || updatedTournament.iconUrl
               } catch (error) {
                 console.error('Failed to refresh icon URL:', error)
               }
@@ -338,7 +338,7 @@ export default function TeamDetailPage() {
             // カバー画像のURLを更新
             if (updatedTournament.coverImage && !updatedTournament.coverImage.startsWith('data:') && !updatedTournament.coverImage.startsWith('blob:')) {
               try {
-                updatedTournament.coverImage = await refreshS3Url(updatedTournament.coverImage, true) || updatedTournament.coverImage
+                updatedTournament.coverImage = await refreshS3Url(updatedTournament.coverImage) || updatedTournament.coverImage
               } catch (error) {
                 console.error('Failed to refresh cover image URL:', error)
               }
@@ -368,14 +368,14 @@ export default function TeamDetailPage() {
           // ロゴとカバー画像のS3 URLを更新
           if (teamData.logoUrl && !teamData.logoUrl.startsWith('data:') && !teamData.logoUrl.startsWith('blob:')) {
             try {
-              teamData.logoUrl = await refreshS3Url(teamData.logoUrl, true) || teamData.logoUrl
+              teamData.logoUrl = await refreshS3Url(teamData.logoUrl) || teamData.logoUrl
             } catch (error) {
               console.error('Failed to refresh logo URL:', error)
             }
           }
           if (teamData.coverImageUrl && !teamData.coverImageUrl.startsWith('data:') && !teamData.coverImageUrl.startsWith('blob:')) {
             try {
-              teamData.coverImageUrl = await refreshS3Url(teamData.coverImageUrl, true) || teamData.coverImageUrl
+              teamData.coverImageUrl = await refreshS3Url(teamData.coverImageUrl) || teamData.coverImageUrl
             } catch (error) {
               console.error('Failed to refresh cover image URL:', error)
             }
@@ -396,7 +396,7 @@ export default function TeamDetailPage() {
                   let avatarUrl = userData.avatar || "/placeholder.svg"
                   if (avatarUrl && !avatarUrl.startsWith('data:') && !avatarUrl.startsWith('blob:') && !avatarUrl.startsWith('/placeholder')) {
                     try {
-                      avatarUrl = await refreshS3Url(avatarUrl, true) || avatarUrl
+                      avatarUrl = await refreshS3Url(avatarUrl) || avatarUrl
                     } catch (error) {
                       console.error('Failed to refresh avatar URL:', error)
                     }
@@ -445,7 +445,7 @@ export default function TeamDetailPage() {
         setLogoPreview(team.logoUrl)
       } else {
         try {
-          const refreshedLogo = await refreshS3Url(team.logoUrl, true)
+          const refreshedLogo = await refreshS3Url(team.logoUrl)
           setLogoPreview(refreshedLogo || team.logoUrl)
         } catch (error) {
           console.error('Failed to refresh logo URL for edit:', error)
@@ -458,7 +458,7 @@ export default function TeamDetailPage() {
         setCoverImagePreview(team.coverImageUrl)
       } else {
         try {
-          const refreshedCover = await refreshS3Url(team.coverImageUrl, true)
+          const refreshedCover = await refreshS3Url(team.coverImageUrl)
           setCoverImagePreview(refreshedCover || team.coverImageUrl)
         } catch (error) {
           console.error('Failed to refresh cover image URL for edit:', error)
@@ -699,7 +699,7 @@ export default function TeamDetailPage() {
           // S3のURLが期限切れの場合に新しいURLを生成
           if (imageUrl && !imageUrl.startsWith('data:') && !imageUrl.startsWith('blob:')) {
             try {
-              imageUrl = await refreshS3Url(imageUrl, true) || undefined
+              imageUrl = await refreshS3Url(imageUrl) || undefined
             } catch (error) {
               console.error('Failed to refresh image URL:', error)
             }
@@ -707,7 +707,7 @@ export default function TeamDetailPage() {
           
           if (pdfUrl && !pdfUrl.startsWith('data:') && !pdfUrl.startsWith('blob:')) {
             try {
-              pdfUrl = await refreshS3Url(pdfUrl, true) || undefined
+              pdfUrl = await refreshS3Url(pdfUrl) || undefined
             } catch (error) {
               console.error('Failed to refresh PDF URL:', error)
             }
@@ -734,7 +734,7 @@ export default function TeamDetailPage() {
               let avatarUrl = user.avatar || "/placeholder.svg"
               if (avatarUrl && !avatarUrl.startsWith('data:') && !avatarUrl.startsWith('blob:') && !avatarUrl.startsWith('/placeholder')) {
                 try {
-                  avatarUrl = await refreshS3Url(avatarUrl, true) || avatarUrl
+                  avatarUrl = await refreshS3Url(avatarUrl) || avatarUrl
                 } catch (error) {
                   console.error('Failed to refresh avatar URL:', error)
                 }
@@ -823,7 +823,7 @@ export default function TeamDetailPage() {
                   userName = `${user.lastName} ${user.firstName}`
                   if (user.avatar) {
                     try {
-                      userAvatar = await refreshS3Url(user.avatar, true) || user.avatar
+                      userAvatar = await refreshS3Url(user.avatar) || user.avatar
                     } catch (e) {
                       console.error('Failed to refresh avatar URL:', e)
                     }
@@ -912,7 +912,7 @@ export default function TeamDetailPage() {
                   userName = `${user.lastName} ${user.firstName}`
                   if (user.avatar) {
                     try {
-                      userAvatar = await refreshS3Url(user.avatar, true) || user.avatar
+                      userAvatar = await refreshS3Url(user.avatar) || user.avatar
                     } catch (e) {
                       console.error('Failed to refresh avatar URL:', e)
                     }

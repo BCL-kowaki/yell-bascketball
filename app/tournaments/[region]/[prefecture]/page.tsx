@@ -134,14 +134,14 @@ export default function PrefectureTournamentsPage() {
           const updatedTournament = { ...tournament }
           if (updatedTournament.iconUrl && !updatedTournament.iconUrl.startsWith('data:') && !updatedTournament.iconUrl.startsWith('blob:')) {
             try {
-              updatedTournament.iconUrl = await refreshS3Url(updatedTournament.iconUrl, true) || updatedTournament.iconUrl
+              updatedTournament.iconUrl = await refreshS3Url(updatedTournament.iconUrl) || updatedTournament.iconUrl
             } catch (error) {
               console.error('Failed to refresh icon URL:', error)
             }
           }
           if (updatedTournament.coverImage && !updatedTournament.coverImage.startsWith('data:') && !updatedTournament.coverImage.startsWith('blob:')) {
             try {
-              updatedTournament.coverImage = await refreshS3Url(updatedTournament.coverImage, true) || updatedTournament.coverImage
+              updatedTournament.coverImage = await refreshS3Url(updatedTournament.coverImage) || updatedTournament.coverImage
             } catch (error) {
               console.error('Failed to refresh cover image URL:', error)
             }
@@ -233,7 +233,7 @@ export default function PrefectureTournamentsPage() {
   if (!regionName || !prefectureName) {
     return (
       <Layout>
-        <div className="max-w-7xl mx-auto px-2 py-6">
+        <div className="max-w-7xl mx-auto py-6">
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg">都道府県が見つかりません</p>
             <Link href="/tournaments">
@@ -247,7 +247,7 @@ export default function PrefectureTournamentsPage() {
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto px-2 py-6">
+      <div className="max-w-7xl mx-auto py-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 mb-2 text-sm flex-wrap">
           {getBreadcrumbItems().map((item, i, arr) => (

@@ -98,7 +98,7 @@ export function Layout({ children, isLoggedIn: propIsLoggedIn = false, currentUs
           if (avatarUrl && !avatarUrl.startsWith('/') && !avatarUrl.startsWith('data:')) {
             try {
               const { refreshS3Url } = await import('@/lib/storage')
-              const refreshed = await refreshS3Url(avatarUrl, true)
+              const refreshed = await refreshS3Url(avatarUrl)
               if (refreshed) avatarUrl = refreshed
             } catch { /* アバターURL更新失敗は無視 */ }
           }

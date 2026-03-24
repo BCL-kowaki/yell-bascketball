@@ -137,25 +137,13 @@ function ImageWithRefresh({ imageUrl }: { imageUrl: string }) {
         return
       }
 
-      // S3のURLを更新（まず署名付きURLで試行、失敗したらダウンロードモード）
+      // S3のURLを更新（署名付きURL → パブリックURLフォールバック）
       try {
         console.log('🔄 ImageWithRefresh: Refreshing image URL...')
-        const newUrl = await refreshS3Url(imageUrl, false)
-        if (newUrl) {
-          setRefreshedUrl(newUrl)
-          setIsLoading(false)
-          return
-        }
+        const newUrl = await refreshS3Url(imageUrl)
+        setRefreshedUrl(newUrl || imageUrl)
       } catch (error) {
-        console.warn('⚠️ ImageWithRefresh: Signed URL failed, trying download mode...')
-      }
-
-      // フォールバック: ダウンロードモード（Blob URL生成）
-      try {
-        const blobUrl = await refreshS3Url(imageUrl, true)
-        setRefreshedUrl(blobUrl || imageUrl)
-      } catch (error) {
-        console.error('❌ ImageWithRefresh: All methods failed:', error)
+        console.error('❌ ImageWithRefresh: Failed to refresh URL:', error)
         setRefreshedUrl(imageUrl)
       }
       setIsLoading(false)
@@ -238,12 +226,10 @@ function PdfViewer({ pdfUrl, pdfName }: { pdfUrl: string; pdfName?: string }) {
         return
       }
       
-      // S3のURLを更新（ダウンロードモードを使用）
+      // S3のURLを更新（署名付きURL → パブリックURLフォールバック）
       try {
-        console.log('🔄 PdfViewer: Refreshing PDF URL with download mode...')
-        const newUrl = await refreshS3Url(pdfUrl, true) // ダウンロードモードを強制
-        console.log('✅ PdfViewer: PDF URL refreshed successfully!')
-        console.log('🔗 PdfViewer: New URL type:', newUrl?.startsWith('blob:') ? 'Blob URL' : 'Other')
+        console.log('🔄 PdfViewer: Refreshing PDF URL...')
+        const newUrl = await refreshS3Url(pdfUrl)
         setRefreshedUrl(newUrl || pdfUrl)
       } catch (error) {
         console.error('❌ PdfViewer: Failed to refresh PDF URL:', error)
@@ -362,7 +348,7 @@ export default function TimelinePage() {
             let avatarUrl = userData.avatar || undefined
             if (avatarUrl && !avatarUrl.startsWith('data:') && !avatarUrl.startsWith('blob:') && !avatarUrl.startsWith('/placeholder')) {
               try {
-                avatarUrl = await refreshS3Url(avatarUrl, true) || avatarUrl
+                avatarUrl = await refreshS3Url(avatarUrl) || avatarUrl
               } catch (error) {
                 console.error('Failed to refresh current user avatar URL:', error)
               }
@@ -445,7 +431,7 @@ export default function TimelinePage() {
                   let avatarUrl = author.avatar || "/placeholder.svg?height=40&width=40"
                   if (avatarUrl && !avatarUrl.startsWith('data:') && !avatarUrl.startsWith('blob:') && !avatarUrl.startsWith('/placeholder')) {
                     try {
-                      avatarUrl = await refreshS3Url(avatarUrl, true) || avatarUrl
+                      avatarUrl = await refreshS3Url(avatarUrl) || avatarUrl
                     } catch (error) {
                       console.error('Failed to refresh avatar URL:', error)
                     }
@@ -483,7 +469,7 @@ export default function TimelinePage() {
             // S3のURLが期限切れの場合に新しいURLを生成
             if (imageUrl && !imageUrl.startsWith('data:') && !imageUrl.startsWith('blob:')) {
               try {
-                imageUrl = await refreshS3Url(imageUrl, true) || undefined  // ダウンロードモードを使用
+                imageUrl = await refreshS3Url(imageUrl) || undefined  // ダウンロードモードを使用
               } catch (error) {
                 console.error('Failed to refresh image URL:', error)
                 // エラーが発生した場合は、元のURLを使用
@@ -492,7 +478,7 @@ export default function TimelinePage() {
             
             if (pdfUrl && !pdfUrl.startsWith('data:') && !pdfUrl.startsWith('blob:')) {
               try {
-                pdfUrl = await refreshS3Url(pdfUrl, true) || undefined  // ダウンロードモードを使用
+                pdfUrl = await refreshS3Url(pdfUrl) || undefined  // ダウンロードモードを使用
               } catch (error) {
                 console.error('Failed to refresh PDF URL:', error)
                 // エラーが発生した場合は、元のURLを使用
@@ -639,7 +625,7 @@ export default function TimelinePage() {
                   userName = `${user.lastName} ${user.firstName}`
                   if (user.avatar) {
                     try {
-                      userAvatar = await refreshS3Url(user.avatar, true) || user.avatar
+                      userAvatar = await refreshS3Url(user.avatar) || user.avatar
                     } catch (e) {
                       console.error('Failed to refresh avatar URL:', e)
                     }
@@ -816,7 +802,7 @@ export default function TimelinePage() {
                       userName = `${user.lastName} ${user.firstName}`
                       if (user.avatar) {
                         try {
-                          userAvatar = await refreshS3Url(user.avatar, true) || user.avatar
+                          userAvatar = await refreshS3Url(user.avatar) || user.avatar
                         } catch (e) {
                           console.error('Failed to refresh avatar URL:', e)
                         }
@@ -1205,7 +1191,7 @@ export default function TimelinePage() {
                       let avatarUrl = author.avatar || "/placeholder.svg?height=40&width=40"
                       if (avatarUrl && !avatarUrl.startsWith('data:') && !avatarUrl.startsWith('blob:') && !avatarUrl.startsWith('/placeholder')) {
                         try {
-                          avatarUrl = await refreshS3Url(avatarUrl, true) || avatarUrl
+                          avatarUrl = await refreshS3Url(avatarUrl) || avatarUrl
                         } catch (error) {
                           console.error('Failed to refresh avatar URL:', error)
                         }
@@ -1852,7 +1838,7 @@ export default function TimelinePage() {
                       // S3のURLが期限切れの場合に新しいURLを生成
                       if (imageUrl && !imageUrl.startsWith('data:') && !imageUrl.startsWith('blob:')) {
                         try {
-                          imageUrl = await refreshS3Url(imageUrl, true) || undefined  // ダウンロードモードを使用
+                          imageUrl = await refreshS3Url(imageUrl) || undefined  // ダウンロードモードを使用
                         } catch (error) {
                           console.error('Failed to refresh image URL:', error)
                           // エラーが発生した場合は、元のURLを使用
@@ -1861,7 +1847,7 @@ export default function TimelinePage() {
 
                       if (pdfUrl && !pdfUrl.startsWith('data:') && !pdfUrl.startsWith('blob:')) {
                         try {
-                          pdfUrl = await refreshS3Url(pdfUrl, true) || undefined  // ダウンロードモードを使用
+                          pdfUrl = await refreshS3Url(pdfUrl) || undefined  // ダウンロードモードを使用
                         } catch (error) {
                           console.error('Failed to refresh PDF URL:', error)
                           // エラーが発生した場合は、元のURLを使用

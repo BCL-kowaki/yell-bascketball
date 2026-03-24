@@ -120,7 +120,7 @@ export default function RegionTournamentsPage() {
   if (!regionName) {
     return (
       <Layout>
-        <div className="max-w-7xl mx-auto px-2 py-4">
+        <div className="max-w-7xl mx-auto py-4">
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg">地域が見つかりません</p>
             <Link href="/tournaments">
@@ -136,7 +136,7 @@ export default function RegionTournamentsPage() {
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto px-2 py-4">
+      <div className="max-w-7xl mx-auto py-4">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 mb-2 text-sm">
           <Link href="/tournaments" className="text-gray-500 hover:text-gray-700">

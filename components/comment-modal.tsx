@@ -74,12 +74,12 @@ export function CommentModal({
 
   useEffect(() => {
     if (post?.image) {
-      refreshS3Url(post.image, true).then((url) => {
+      refreshS3Url(post.image).then((url) => {
         setRefreshedPostImage(url || post.image || null)
       })
     }
     if (post?.video) {
-      refreshS3Url(post.video, true).then((url) => {
+      refreshS3Url(post.video).then((url) => {
         setRefreshedPostVideo(url || post.video || null)
       })
     }

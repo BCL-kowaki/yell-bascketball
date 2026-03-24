@@ -218,7 +218,7 @@ export default function ProfilePage() {
       let avatarUrl = userData.avatar || "/placeholder.svg"
       if (avatarUrl && !avatarUrl.startsWith('data:') && !avatarUrl.startsWith('blob:') && !avatarUrl.startsWith('/placeholder')) {
         try {
-          avatarUrl = await refreshS3Url(avatarUrl, true) || avatarUrl
+          avatarUrl = await refreshS3Url(avatarUrl) || avatarUrl
         } catch (e) {
           console.error('Failed to refresh avatar URL:', e)
         }
@@ -233,7 +233,7 @@ export default function ProfilePage() {
       // アバター画像とカバー画像のS3 URLを更新（ダウンロードモードを使用）
       if (userData.avatar && !userData.avatar.startsWith('data:') && !userData.avatar.startsWith('blob:')) {
         try {
-          const refreshedAvatar = await refreshS3Url(userData.avatar, true)
+          const refreshedAvatar = await refreshS3Url(userData.avatar)
           userData.avatar = refreshedAvatar || userData.avatar
         } catch (error) {
           console.error('Failed to refresh avatar URL:', error)
@@ -242,7 +242,7 @@ export default function ProfilePage() {
 
       if (userData.coverImage && !userData.coverImage.startsWith('data:') && !userData.coverImage.startsWith('blob:')) {
         try {
-          const refreshedCover = await refreshS3Url(userData.coverImage, true)
+          const refreshedCover = await refreshS3Url(userData.coverImage)
           userData.coverImage = refreshedCover || userData.coverImage
         } catch (error) {
           console.error('Failed to refresh cover image URL:', error)
@@ -467,7 +467,7 @@ export default function ProfilePage() {
                   userName = `${commentUser.lastName} ${commentUser.firstName}`
                   if (commentUser.avatar) {
                     try {
-                      userAvatar = await refreshS3Url(commentUser.avatar, true) || commentUser.avatar
+                      userAvatar = await refreshS3Url(commentUser.avatar) || commentUser.avatar
                     } catch (e) {
                       console.error('Failed to refresh avatar URL:', e)
                     }
@@ -557,7 +557,7 @@ export default function ProfilePage() {
                   userName = `${commentUser.lastName} ${commentUser.firstName}`
                   if (commentUser.avatar) {
                     try {
-                      userAvatar = await refreshS3Url(commentUser.avatar, true) || commentUser.avatar
+                      userAvatar = await refreshS3Url(commentUser.avatar) || commentUser.avatar
                     } catch (e) {
                       console.error('Failed to refresh avatar URL:', e)
                     }
@@ -1048,7 +1048,7 @@ export default function ProfilePage() {
     if (user.avatar && (user.avatar.startsWith('http://') || user.avatar.startsWith('https://'))) {
       try {
         console.log('Avatar image failed to load, attempting to refresh S3 URL...')
-        const refreshed = await refreshS3Url(user.avatar, true)
+        const refreshed = await refreshS3Url(user.avatar)
         if (refreshed) {
           setRefreshedAvatarUrl(refreshed)
           target.src = refreshed
@@ -1074,7 +1074,7 @@ export default function ProfilePage() {
     if (user.coverImage && (user.coverImage.startsWith('http://') || user.coverImage.startsWith('https://'))) {
       try {
         console.log('Cover image failed to load, attempting to refresh S3 URL...')
-        const refreshed = await refreshS3Url(user.coverImage, true)
+        const refreshed = await refreshS3Url(user.coverImage)
         if (refreshed) {
           setRefreshedCoverUrl(refreshed)
           target.src = refreshed
@@ -1576,7 +1576,7 @@ export default function ProfilePage() {
                                       onError={async (e) => {
                                         if (tournament.iconUrl && !tournament.iconUrl.startsWith('data:')) {
                                           try {
-                                            const refreshed = await refreshS3Url(tournament.iconUrl, true)
+                                            const refreshed = await refreshS3Url(tournament.iconUrl)
                                             if (refreshed) (e.target as HTMLImageElement).src = refreshed
                                           } catch {}
                                         }
@@ -1644,7 +1644,7 @@ export default function ProfilePage() {
                                       onError={async (e) => {
                                         if (tournament.iconUrl && !tournament.iconUrl.startsWith('data:')) {
                                           try {
-                                            const refreshed = await refreshS3Url(tournament.iconUrl, true)
+                                            const refreshed = await refreshS3Url(tournament.iconUrl)
                                             if (refreshed) (e.target as HTMLImageElement).src = refreshed
                                           } catch {}
                                         }
@@ -1723,7 +1723,7 @@ export default function ProfilePage() {
                                       onError={async (e) => {
                                         if (tournament.iconUrl && !tournament.iconUrl.startsWith('data:')) {
                                           try {
-                                            const refreshed = await refreshS3Url(tournament.iconUrl, true)
+                                            const refreshed = await refreshS3Url(tournament.iconUrl)
                                             if (refreshed) {
                                               (e.target as HTMLImageElement).src = refreshed
                                             }
@@ -1791,7 +1791,7 @@ export default function ProfilePage() {
                                       onError={async (e) => {
                                         if (team.logoUrl && !team.logoUrl.startsWith('data:')) {
                                           try {
-                                            const refreshed = await refreshS3Url(team.logoUrl, true)
+                                            const refreshed = await refreshS3Url(team.logoUrl)
                                             if (refreshed) {
                                               (e.target as HTMLImageElement).src = refreshed
                                             }

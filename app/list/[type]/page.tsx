@@ -110,14 +110,14 @@ export default function ListPage() {
                 const updatedTeam = { ...team }
                 if (updatedTeam.logoUrl && !updatedTeam.logoUrl.startsWith('data:') && !updatedTeam.logoUrl.startsWith('blob:')) {
                   try {
-                    updatedTeam.logoUrl = await refreshS3Url(updatedTeam.logoUrl, true) || updatedTeam.logoUrl
+                    updatedTeam.logoUrl = await refreshS3Url(updatedTeam.logoUrl) || updatedTeam.logoUrl
                   } catch (error) {
                     console.error('Failed to refresh logo URL:', error)
                   }
                 }
                 if (updatedTeam.coverImageUrl && !updatedTeam.coverImageUrl.startsWith('data:') && !updatedTeam.coverImageUrl.startsWith('blob:')) {
                   try {
-                    updatedTeam.coverImageUrl = await refreshS3Url(updatedTeam.coverImageUrl, true) || updatedTeam.coverImageUrl
+                    updatedTeam.coverImageUrl = await refreshS3Url(updatedTeam.coverImageUrl) || updatedTeam.coverImageUrl
                   } catch (error) {
                     console.error('Failed to refresh cover image URL:', error)
                   }
@@ -138,14 +138,14 @@ export default function ListPage() {
                 const updatedTournament = { ...tournament }
                 if (updatedTournament.iconUrl && !updatedTournament.iconUrl.startsWith('data:') && !updatedTournament.iconUrl.startsWith('blob:')) {
                   try {
-                    updatedTournament.iconUrl = await refreshS3Url(updatedTournament.iconUrl, true) || updatedTournament.iconUrl
+                    updatedTournament.iconUrl = await refreshS3Url(updatedTournament.iconUrl) || updatedTournament.iconUrl
                   } catch (error) {
                     console.error('Failed to refresh icon URL:', error)
                   }
                 }
                 if (updatedTournament.coverImage && !updatedTournament.coverImage.startsWith('data:') && !updatedTournament.coverImage.startsWith('blob:')) {
                   try {
-                    updatedTournament.coverImage = await refreshS3Url(updatedTournament.coverImage, true) || updatedTournament.coverImage
+                    updatedTournament.coverImage = await refreshS3Url(updatedTournament.coverImage) || updatedTournament.coverImage
                   } catch (error) {
                     console.error('Failed to refresh cover image URL:', error)
                   }
@@ -182,7 +182,7 @@ export default function ListPage() {
             const updatedUser = { ...user }
             if (updatedUser.avatar && !updatedUser.avatar.startsWith('data:') && !updatedUser.avatar.startsWith('blob:')) {
               try {
-                updatedUser.avatar = await refreshS3Url(updatedUser.avatar, true) || updatedUser.avatar
+                updatedUser.avatar = await refreshS3Url(updatedUser.avatar) || updatedUser.avatar
               } catch (error) {
                 console.error('Failed to refresh avatar URL:', error)
               }
@@ -203,14 +203,14 @@ export default function ListPage() {
             const updatedTeam = { ...team }
             if (updatedTeam.logoUrl && !updatedTeam.logoUrl.startsWith('data:') && !updatedTeam.logoUrl.startsWith('blob:')) {
               try {
-                updatedTeam.logoUrl = await refreshS3Url(updatedTeam.logoUrl, true) || updatedTeam.logoUrl
+                updatedTeam.logoUrl = await refreshS3Url(updatedTeam.logoUrl) || updatedTeam.logoUrl
               } catch (error) {
                 console.error('Failed to refresh logo URL:', error)
               }
             }
             if (updatedTeam.coverImageUrl && !updatedTeam.coverImageUrl.startsWith('data:') && !updatedTeam.coverImageUrl.startsWith('blob:')) {
               try {
-                updatedTeam.coverImageUrl = await refreshS3Url(updatedTeam.coverImageUrl, true) || updatedTeam.coverImageUrl
+                updatedTeam.coverImageUrl = await refreshS3Url(updatedTeam.coverImageUrl) || updatedTeam.coverImageUrl
               } catch (error) {
                 console.error('Failed to refresh cover image URL:', error)
               }
@@ -231,14 +231,14 @@ export default function ListPage() {
             const updatedTournament = { ...tournament }
             if (updatedTournament.iconUrl && !updatedTournament.iconUrl.startsWith('data:') && !updatedTournament.iconUrl.startsWith('blob:')) {
               try {
-                updatedTournament.iconUrl = await refreshS3Url(updatedTournament.iconUrl, true) || updatedTournament.iconUrl
+                updatedTournament.iconUrl = await refreshS3Url(updatedTournament.iconUrl) || updatedTournament.iconUrl
               } catch (error) {
                 console.error('Failed to refresh icon URL:', error)
               }
             }
             if (updatedTournament.coverImage && !updatedTournament.coverImage.startsWith('data:') && !updatedTournament.coverImage.startsWith('blob:')) {
               try {
-                updatedTournament.coverImage = await refreshS3Url(updatedTournament.coverImage, true) || updatedTournament.coverImage
+                updatedTournament.coverImage = await refreshS3Url(updatedTournament.coverImage) || updatedTournament.coverImage
               } catch (error) {
                 console.error('Failed to refresh cover image URL:', error)
               }

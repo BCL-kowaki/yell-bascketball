@@ -296,7 +296,7 @@ export default function TeamsPage() {
           // ロゴ画像のURLを更新
           if (updatedTeam.logoUrl && !updatedTeam.logoUrl.startsWith('data:') && !updatedTeam.logoUrl.startsWith('blob:')) {
             try {
-              updatedTeam.logoUrl = await refreshS3Url(updatedTeam.logoUrl, true) || updatedTeam.logoUrl
+              updatedTeam.logoUrl = await refreshS3Url(updatedTeam.logoUrl) || updatedTeam.logoUrl
             } catch (error) {
               console.error('Failed to refresh logo URL:', error)
             }
@@ -305,7 +305,7 @@ export default function TeamsPage() {
           // カバー画像のURLを更新
           if (updatedTeam.coverImageUrl && !updatedTeam.coverImageUrl.startsWith('data:') && !updatedTeam.coverImageUrl.startsWith('blob:')) {
             try {
-              updatedTeam.coverImageUrl = await refreshS3Url(updatedTeam.coverImageUrl, true) || updatedTeam.coverImageUrl
+              updatedTeam.coverImageUrl = await refreshS3Url(updatedTeam.coverImageUrl) || updatedTeam.coverImageUrl
             } catch (error) {
               console.error('Failed to refresh cover image URL:', error)
             }
