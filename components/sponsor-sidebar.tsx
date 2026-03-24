@@ -129,7 +129,7 @@ export default function SponsorSidebar({
       <div className="sticky top-0 space-y-4">
         {/* デフォルトSNSリンク */}
         {showDefaultSns && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 mt-2">
             <SnsLinksContent />
           </div>
         )}
