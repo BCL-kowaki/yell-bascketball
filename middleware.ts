@@ -24,6 +24,23 @@ export async function middleware(request: NextRequest) {
 
   // 公開ルートは即座にリターン（JWT検証を完全スキップ）
   if (isPublicRoute(pathname)) {
+    // ルートページ（/）: ログイン済みならプロフィールにリダイレクト
+    if (pathname === '/') {
+      const token = request.cookies.get('accessToken')?.value
+      if (token) {
+        try {
+          await jose.jwtVerify(token, JWT_SECRET, {
+            issuer: 'urn:example:issuer',
+            audience: 'urn:example:audience',
+          })
+          // JWT有効 → プロフィールページへリダイレクト
+          return NextResponse.redirect(new URL('/profile', request.url))
+        } catch {
+          // JWT無効 → そのままランディングページを表示
+        }
+      }
+    }
+
     // /tournaments/[UUID] のパターンチェック
     if (pathname.startsWith('/tournaments/')) {
       const slug = pathname.split('/')[2]

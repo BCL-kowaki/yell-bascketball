@@ -2,7 +2,7 @@
   "name": "YeLL Basketball",
   "short_name": "YeLL",
   "description": "YeLL Basketball公式アプリ - バスケットボールコミュニティ",
-  "start_url": "/profile",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#e84b8a",
