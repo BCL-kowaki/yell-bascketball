@@ -2321,8 +2321,8 @@ export default function TournamentDetailPage() {
           <div className="w-full max-w-[720px] px-0 overflow-hidden box-border">
             {/* タイムラインタブ */}
             <TabsContent value="timeline" className="mt-2 space-y-2 w-full overflow-hidden box-border">
-              {/* 投稿作成カード - トップページと同じUI */}
-              {currentUserEmail && (
+              {/* 投稿作成カード - 大会運営者のみ表示 */}
+              {currentUserEmail && canEdit && (
                 <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-2">
                   <CardHeader className="px-3 py-3">
                     <div className="flex items-center gap-2">

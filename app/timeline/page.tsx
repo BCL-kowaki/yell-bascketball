@@ -1292,7 +1292,8 @@ export default function TimelinePage() {
           {/* メインコンテンツ */}
           <div className="w-full max-w-[720px] px-0 overflow-hidden box-border">
           <div className="space-y-2 pb-4 w-full overflow-hidden box-border">
-            {/* Create Post */}
+            {/* Create Post - ログインユーザーのみ表示 */}
+            {currentUserEmail && (
             <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-2">
           <CardHeader className="px-3 py-3">
             <div className="flex items-center gap-2">
@@ -1458,6 +1459,7 @@ export default function TimelinePage() {
             </div>
           </CardContent>
         </Card>
+            )}
 
         {/* Timeline Posts */}
         {posts.length === 0 ? (
