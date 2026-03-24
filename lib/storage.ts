@@ -406,53 +406,44 @@ export async function uploadPdfToS3(file: File, userId?: string): Promise<string
   try {
     // Amplify Storageが利用可能かチェック
     const { uploadData, getUrl } = await import('aws-amplify/storage')
+    const { fetchAuthSession, getCurrentUser } = await import('aws-amplify/auth')
+    const { Amplify } = await import('aws-amplify')
 
-    // 認証情報を取得（画像アップロードと同じ構造）
+    // Amplify設定を確認
+    const amplifyConfig = Amplify.getConfig()
+    const identityPoolId = amplifyConfig.Auth?.Cognito?.identityPoolId
+    if (!identityPoolId) {
+      throw new Error('Identity Pool IDが設定されていません。Amplify設定を確認してください。')
+    }
+
+    // S3バケット確認
+    const storageBucket = amplifyConfig.Storage?.S3?.bucket
+    if (!storageBucket) {
+      throw new Error('S3バケットが設定されていません。')
+    }
+
+    // 現在のユーザーが認証されているか確認
+    const currentUser = await getCurrentUser()
+    cognitoUserId = currentUser.userId
+    console.log('PDF upload - authenticated user:', currentUser.userId)
+
+    // Identity Poolの認証情報を取得
+    let authSession
     try {
-      const { fetchAuthSession, getCurrentUser } = await import('aws-amplify/auth')
-      const { Amplify } = await import('aws-amplify')
+      authSession = await fetchAuthSession({ forceRefresh: false })
+    } catch (refreshError: any) {
+      console.warn('Initial fetchAuthSession failed, retrying:', refreshError?.message)
+      authSession = await fetchAuthSession({ forceRefresh: true })
+    }
 
-      // Amplify設定を確認
-      const amplifyConfig = Amplify.getConfig()
-      const identityPoolId = amplifyConfig.Auth?.Cognito?.identityPoolId
-      if (!identityPoolId) {
-        throw new Error('Identity Pool IDが設定されていません。Amplify設定を確認してください。')
-      }
-
-      // 現在のユーザーが認証されているか確認
-      const currentUser = await getCurrentUser()
-      cognitoUserId = currentUser.userId
-      console.log('PDF upload - authenticated user:', currentUser.userId)
-
-      // Identity Poolの認証情報を取得
-      let authSession
-      try {
-        authSession = await fetchAuthSession({ forceRefresh: false })
-      } catch (refreshError: any) {
-        console.warn('Initial fetchAuthSession failed, retrying:', refreshError?.message)
-        authSession = await fetchAuthSession({ forceRefresh: true })
-      }
-
-      if (!authSession.credentials && !authSession.identityId) {
-        throw new Error('Cognito Identity Poolの認証情報が取得できませんでした。')
-      }
-    } catch (authError: any) {
-      console.error('PDF upload auth failed:', authError?.message)
-      throw authError
+    if (!authSession.credentials && !authSession.identityId) {
+      throw new Error('Cognito Identity Poolの認証情報が取得できませんでした。')
     }
 
     const timestamp = Date.now()
     const fileName = `${cognitoUserId || 'anonymous'}/pdfs/${timestamp}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
 
-    console.log('Uploading PDF to S3:', { fileName, fileSize: `${fileSizeMB.toFixed(2)}MB` })
-
-    // S3バケット確認
-    const { Amplify } = await import('aws-amplify')
-    const amplifyConfig = Amplify.getConfig()
-    const storageBucket = amplifyConfig.Storage?.S3?.bucket
-    if (!storageBucket) {
-      throw new Error('S3バケットが設定されていません。')
-    }
+    console.log('Uploading PDF to S3:', { fileName, fileSize: `${fileSizeMB.toFixed(2)}MB`, bucket: storageBucket })
 
     // ファイルをS3にアップロード
     await uploadData({
