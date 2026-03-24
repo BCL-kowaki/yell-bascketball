@@ -383,298 +383,78 @@ export async function uploadImageToS3(file: File, userId?: string): Promise<stri
 }
 
 /**
- * PDFをS3にアップロードしてURLを取得（Storageが利用可能な場合）
- * Storageが利用できない場合は、Base64データURLを返す
+ * PDFをS3にアップロードしてURLを取得
+ * 画像アップロードと同じシンプルな構造で認証→アップロード→URL取得
  * @param file アップロードするPDFファイル
  * @param userId ユーザーID（オプション）
- * @returns アップロードされたファイルの公開URL、またはBase64データURL
+ * @returns アップロードされたファイルの公開URL
  */
 export async function uploadPdfToS3(file: File, userId?: string): Promise<string> {
   ensureAmplifyConfigured()
 
   // PDFファイルサイズチェック（500MB制限）
-  const maxSize = 500 * 1024 * 1024 // 500MB
+  const maxSize = 500 * 1024 * 1024
   const fileSizeMB = file.size / 1024 / 1024
 
   if (file.size > maxSize) {
     throw new Error(`PDFファイルが大きすぎます。最大サイズは500MBです。現在のサイズ: ${fileSizeMB.toFixed(2)}MB`)
   }
 
-  // Cognito User IDを格納する変数（関数全体で使用）
+  // Cognito User IDを格納する変数
   let cognitoUserId: string | null = null
-  
-  // 大きなファイル（10MB以上）の場合は警告を表示
-  if (fileSizeMB > 10) {
-    console.warn(`Large PDF file detected: ${fileSizeMB.toFixed(2)}MB. Upload may take some time.`)
-  }
-  
-  // 認証状態を確認（セッションから確認）
-  let isAuthenticated = false
-  try {
-    // セッションからメールアドレスを取得して認証状態を確認
-    const sessionRes = await fetch('/api/session')
-    if (sessionRes.ok) {
-      const sessionData = await sessionRes.json()
-      if (sessionData.email) {
-        isAuthenticated = true
-        console.log('User is authenticated (via session), attempting S3 upload')
-      }
-    }
-  } catch (e) {
-    console.warn('Could not verify authentication via session:', e)
-  }
-  
-  // Cognito認証も試行（オプション）
-  if (!isAuthenticated) {
-    try {
-      const { getCurrentUser } = await import('aws-amplify/auth')
-      await getCurrentUser()
-      isAuthenticated = true
-      console.log('User is authenticated (via Cognito), attempting S3 upload')
-    } catch (e) {
-      console.warn('User is not authenticated via Cognito, S3 upload may fail. Will use Base64 fallback if needed.')
-    }
-  }
-  
-  // 認証されていない場合、小さなPDFの場合はBase64フォールバックを先に試行
-  const maxSizeForBase64 = 300 * 1024 // 300KB
-  if (!isAuthenticated && file.size <= maxSizeForBase64) {
-    console.warn('User not authenticated and PDF is small, using Base64 fallback directly')
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        const base64Result = reader.result as string
-        if (!base64Result || !base64Result.startsWith('data:')) {
-          reject(new Error('PDFファイルのBase64変換に失敗しました'))
-          return
-        }
-        const base64Size = base64Result.length
-        const maxSafeBase64Size = 400 * 1024 // 400KB
-        if (base64Size > maxSafeBase64Size) {
-          reject(new Error(`PDFのBase64データが大きすぎます（${(base64Size / 1024).toFixed(2)}KB）。ログインしてS3にアップロードしてください。`))
-          return
-        }
-        console.log('PDF converted to Base64 successfully (data: URL)')
-        resolve(base64Result)
-      }
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
-  }
-  
-  // 認証されていない場合、大きいPDFはエラー
-  if (!isAuthenticated && file.size > maxSizeForBase64) {
-    const errorMsg = `PDFのアップロードにはログインが必要です。\n\n現在のPDFサイズ: ${(file.size / 1024 / 1024).toFixed(2)}MB\n\n解決方法:\n- ログインしてから再度お試しください\n- または、300KB以下のPDFを使用してください（自動的にBase64形式で保存されます）`
-    console.error('⚠️ Authentication Required:', errorMsg)
-    throw new Error(errorMsg)
-  }
-  
+
   try {
     // Amplify Storageが利用可能かチェック
     const { uploadData, getUrl } = await import('aws-amplify/storage')
-    
-    // 認証情報を明示的に取得（Cognito User PoolからIdentity Poolへ）
-    // S3アップロードにはIdentity Poolの認証情報が必要
-    let authSession: any = null
+
+    // 認証情報を取得（画像アップロードと同じ構造）
     try {
       const { fetchAuthSession, getCurrentUser } = await import('aws-amplify/auth')
-      
-      // まず、現在のユーザーが認証されているか確認
-      let currentUser: any = null
-      try {
-        currentUser = await getCurrentUser()
-        cognitoUserId = currentUser.userId  // 関数スコープの変数に代入
-        console.log('Current user authenticated:', {
-          username: currentUser.username,
-          userId: currentUser.userId
-        })
-        console.log('Using Cognito User ID for PDF S3 path:', cognitoUserId)
-      } catch (userError: any) {
-        console.warn('⚠️ getCurrentUser() failed:', {
-          message: userError?.message,
-          name: userError?.name,
-          code: userError?.code
-        })
-        
-        // セッション認証を確認（JWT cookie）
-        try {
-          const sessionRes = await fetch('/api/session')
-          if (sessionRes.ok) {
-            const sessionData = await sessionRes.json()
-            if (sessionData.email) {
-              console.warn('⚠️ Cognito認証は失敗しましたが、セッション認証は有効です。')
-              console.warn('⚠️ セッション認証のみではS3アップロードはできません。')
-              console.warn('⚠️ 一度ログアウトしてから、再度ログインしてください。')
-              
-              // 小さなPDFはBase64フォールバックを使用
-              const maxSizeForBase64 = 300 * 1024 // 300KB
-              if (file.size <= maxSizeForBase64) {
-                console.warn('User not authenticated with Cognito, but PDF is small. Using Base64 fallback.')
-                return new Promise((resolve, reject) => {
-                  const reader = new FileReader()
-                  reader.onloadend = () => {
-                    const base64Result = reader.result as string
-                    if (!base64Result || !base64Result.startsWith('data:')) {
-                      reject(new Error('PDFファイルのBase64変換に失敗しました'))
-                      return
-                    }
-                    const base64Size = base64Result.length
-                    const maxSafeBase64Size = 400 * 1024 // 400KB
-                    if (base64Size > maxSafeBase64Size) {
-                      reject(new Error(`PDFのBase64データが大きすぎます（${(base64Size / 1024).toFixed(2)}KB）。ログインしてS3にアップロードしてください。`))
-                      return
-                    }
-                    console.log('PDF converted to Base64 successfully (data: URL)')
-                    resolve(base64Result)
-                  }
-                  reader.onerror = reject
-                  reader.readAsDataURL(file)
-                })
-              } else {
-                throw new Error('Cognito認証が必要です。一度ログアウトしてから、再度ログインしてください。')
-              }
-            }
-          }
-        } catch (sessionError) {
-          console.warn('Session check also failed:', sessionError)
-        }
-        
-        // セッション認証も失敗した場合
-        const maxSizeForBase64 = 300 * 1024 // 300KB
-        if (file.size <= maxSizeForBase64) {
-          console.warn('User not authenticated, but PDF is small. Using Base64 fallback.')
-          return new Promise((resolve, reject) => {
-            const reader = new FileReader()
-            reader.onloadend = () => {
-              const base64Result = reader.result as string
-              if (!base64Result || !base64Result.startsWith('data:')) {
-                reject(new Error('PDFファイルのBase64変換に失敗しました'))
-                return
-              }
-              const base64Size = base64Result.length
-              const maxSafeBase64Size = 400 * 1024 // 400KB
-              if (base64Size > maxSafeBase64Size) {
-                reject(new Error(`PDFのBase64データが大きすぎます（${(base64Size / 1024).toFixed(2)}KB）。ログインしてS3にアップロードしてください。`))
-                return
-              }
-              console.log('PDF converted to Base64 successfully (data: URL)')
-              resolve(base64Result)
-            }
-            reader.onerror = reject
-            reader.readAsDataURL(file)
-          })
-        } else {
-          throw new Error('ログインが必要です。Cognito User Poolで認証してください。一度ログアウトしてから、再度ログインしてください。')
-        }
+      const { Amplify } = await import('aws-amplify')
+
+      // Amplify設定を確認
+      const amplifyConfig = Amplify.getConfig()
+      const identityPoolId = amplifyConfig.Auth?.Cognito?.identityPoolId
+      if (!identityPoolId) {
+        throw new Error('Identity Pool IDが設定されていません。Amplify設定を確認してください。')
       }
-      
+
+      // 現在のユーザーが認証されているか確認
+      const currentUser = await getCurrentUser()
+      cognitoUserId = currentUser.userId
+      console.log('PDF upload - authenticated user:', currentUser.userId)
+
       // Identity Poolの認証情報を取得
-      // forceRefresh: trueで、最新の認証情報を取得
-      authSession = await fetchAuthSession({ 
-        forceRefresh: true,
-        // 明示的にIdentity Poolの認証情報を要求
-      })
-      console.log('Auth session fetched for S3 upload:', {
-        hasCredentials: !!authSession.credentials,
-        identityId: authSession.identityId || 'NOT SET',
-        hasTokens: !!authSession.tokens,
-        userSub: authSession.userSub || 'NOT SET',
-        accessToken: authSession.tokens?.accessToken ? 'PRESENT' : 'NOT SET',
-        idToken: authSession.tokens?.idToken ? 'PRESENT' : 'NOT SET'
-      })
-      
+      let authSession
+      try {
+        authSession = await fetchAuthSession({ forceRefresh: false })
+      } catch (refreshError: any) {
+        console.warn('Initial fetchAuthSession failed, retrying:', refreshError?.message)
+        authSession = await fetchAuthSession({ forceRefresh: true })
+      }
+
       if (!authSession.credentials && !authSession.identityId) {
-        console.error('⚠️ No credentials or identityId in session after fetchAuthSession')
-        console.error('This usually means:')
-        console.error('1. Cognito Identity Pool is not configured to accept authenticated users from User Pool')
-        console.error('2. Identity Pool authentication provider is not linked to User Pool')
-        console.error('3. IAM roles for authenticated users are not properly configured')
-        
-        // 小さなPDFはBase64フォールバックを使用
-        const maxSizeForBase64 = 300 * 1024 // 300KB
-        if (file.size <= maxSizeForBase64) {
-          console.warn('No Identity Pool credentials, but PDF is small. Using Base64 fallback.')
-          return new Promise((resolve, reject) => {
-            const reader = new FileReader()
-            reader.onloadend = () => {
-              const base64Result = reader.result as string
-              if (!base64Result || !base64Result.startsWith('data:')) {
-                reject(new Error('PDFファイルのBase64変換に失敗しました'))
-                return
-              }
-              const base64Size = base64Result.length
-              const maxSafeBase64Size = 400 * 1024 // 400KB
-              if (base64Size > maxSafeBase64Size) {
-                reject(new Error(`PDFのBase64データが大きすぎます（${(base64Size / 1024).toFixed(2)}KB）。ログインしてS3にアップロードしてください。`))
-                return
-              }
-              console.log('PDF converted to Base64 successfully (data: URL)')
-              resolve(base64Result)
-            }
-            reader.onerror = reject
-            reader.readAsDataURL(file)
-          })
-        } else {
-          throw new Error('Cognito Identity Poolの認証情報が取得できませんでした。AWSコンソールでIdentity Poolの設定を確認してください。')
-        }
+        throw new Error('Cognito Identity Poolの認証情報が取得できませんでした。')
       }
     } catch (authError: any) {
-      console.error('⚠️ Could not fetch auth session for S3 upload:', {
-        message: authError?.message,
-        name: authError?.name,
-        code: authError?.code
-      })
-      
-      // 認証エラーの場合でも、小さなPDFはBase64フォールバックを使用
-      const maxSizeForBase64 = 300 * 1024 // 300KB
-      if (file.size <= maxSizeForBase64) {
-        console.warn('Auth session fetch failed, but PDF is small. Using Base64 fallback.')
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader()
-          reader.onloadend = () => {
-            const base64Result = reader.result as string
-            if (!base64Result || !base64Result.startsWith('data:')) {
-              reject(new Error('PDFファイルのBase64変換に失敗しました'))
-              return
-            }
-            const base64Size = base64Result.length
-            const maxSafeBase64Size = 400 * 1024 // 400KB
-            if (base64Size > maxSafeBase64Size) {
-              reject(new Error(`PDFのBase64データが大きすぎます（${(base64Size / 1024).toFixed(2)}KB）。ログインしてS3にアップロードしてください。`))
-              return
-            }
-            console.log('PDF converted to Base64 successfully (data: URL)')
-            resolve(base64Result)
-          }
-          reader.onerror = reject
-          reader.readAsDataURL(file)
-        })
-      } else {
-        // 大きいPDFの場合はエラー
-        const errorMsg = `認証情報の取得に失敗しました。\n\nエラー: ${authError?.message || '不明なエラー'}\n\n解決方法:\n- 一度ログアウトしてから、再度ログインしてください\n- または、300KB以下のPDFを使用してください（自動的にBase64形式で保存されます）`
-        throw new Error(errorMsg)
-      }
+      console.error('PDF upload auth failed:', authError?.message)
+      throw authError
     }
-    
-    // 認証情報が取得できなかった場合の最終チェック
-    if (!authSession?.credentials && !authSession?.identityId && file.size > 300 * 1024) {
-      const errorMsg = `認証情報が取得できませんでした。\n\n現在のPDFサイズ: ${(file.size / 1024 / 1024).toFixed(2)}MB\n\n解決方法:\n- 一度ログアウトしてから、再度ログインしてください\n- または、300KB以下のPDFを使用してください（自動的にBase64形式で保存されます）`
-      throw new Error(errorMsg)
-    }
-    
+
     const timestamp = Date.now()
-    // Cognito User ID（sub）を使用してパスを生成（URLエンコード不要）
     const fileName = `${cognitoUserId || 'anonymous'}/pdfs/${timestamp}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
 
-    console.log('Attempting to upload PDF to S3:', {
-      fileName,
-      fileSize: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
-      cognitoUserId: cognitoUserId || 'anonymous',
-      isAuthenticated
-    })
-    
+    console.log('Uploading PDF to S3:', { fileName, fileSize: `${fileSizeMB.toFixed(2)}MB` })
+
+    // S3バケット確認
+    const { Amplify } = await import('aws-amplify')
+    const amplifyConfig = Amplify.getConfig()
+    const storageBucket = amplifyConfig.Storage?.S3?.bucket
+    if (!storageBucket) {
+      throw new Error('S3バケットが設定されていません。')
+    }
+
     // ファイルをS3にアップロード
-    // 認証情報はAmplifyが自動的に取得する
     await uploadData({
       key: fileName,
       data: file,
@@ -685,86 +465,24 @@ export async function uploadPdfToS3(file: File, userId?: string): Promise<string
         }
       },
     }).result
-    
+
     // 公開URLを取得
     const url = await getUrl({
       key: fileName,
       options: {
-        expiresIn: 3600 * 24 * 365, // 1年間有効
+        expiresIn: 3600 * 24 * 365,
       },
     })
-    
+
     console.log('PDF uploaded to S3 successfully:', url.url.toString())
     return url.url.toString()
   } catch (error: any) {
-    console.error('PDF S3 upload failed:', error)
-    console.error('PDF S3 upload error details:', {
-      message: error?.message,
-      name: error?.name,
-      code: error?.code,
-      stack: error?.stack
-    })
-    
-    // 認証エラーを確認
-    const isAuthError = error?.message?.includes('Unauthenticated') ||
-                       error?.message?.includes('NotAuthorized') ||
-                       error?.name === 'NotAuthorizedException' ||
-                       error?.code === 'NotAuthorizedException'
-    
-    if (isAuthError) {
-      // 認証エラーの場合、小さなPDFはBase64フォールバックを使用
-      const maxSizeForBase64 = 300 * 1024 // 300KB
-      if (file.size <= maxSizeForBase64) {
-        console.warn('Authentication error, but PDF is small. Using Base64 fallback.')
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader()
-          reader.onloadend = () => {
-            const base64Result = reader.result as string
-            if (!base64Result || !base64Result.startsWith('data:')) {
-              reject(new Error('PDFファイルのBase64変換に失敗しました'))
-              return
-            }
-            const base64Size = base64Result.length
-            const maxSafeBase64Size = 400 * 1024 // 400KB
-            if (base64Size > maxSafeBase64Size) {
-              reject(new Error(`PDFのBase64データが大きすぎます（${(base64Size / 1024).toFixed(2)}KB）。ログインしてS3にアップロードしてください。`))
-              return
-            }
-            console.log('PDF converted to Base64 successfully (data: URL)')
-            resolve(base64Result)
-          }
-          reader.onerror = reject
-          reader.readAsDataURL(file)
-        })
-      } else {
-        // 大きいPDFの場合はログインが必要
-        const errorMsg = `PDFのアップロードにはログインが必要です。\n\n現在のPDFサイズ: ${(file.size / 1024 / 1024).toFixed(2)}MB\n\n解決方法:\n- ログインしてから再度お試しください\n- または、300KB以下のPDFを使用してください（自動的にBase64形式で保存されます）`
-        console.error('⚠️ Authentication Required:', errorMsg)
-        throw new Error(errorMsg)
-      }
-    }
-    
-    // S3エラーの詳細を確認
-    const isS3ConfigError = error?.message?.includes('bucket') || 
-                            error?.message?.includes('Bucket') ||
-                            error?.name === 'NoBucket' ||
-                            error?.code === 'NoBucket'
-    
-    if (isS3ConfigError) {
-      // S3が設定されていない場合の明確なエラーメッセージ
-      const errorMsg = `S3ストレージが設定されていません。PDFをアップロードするには、AWS AmplifyでS3ストレージを設定する必要があります。\n\n設定方法:\n1. AWS Amplifyコンソールでストレージを追加\n2. または、amplify add storage コマンドを実行\n\nエラー詳細: ${error?.message || '不明なエラー'}`
-      console.error('⚠️ S3 Configuration Error:', errorMsg)
-      throw new Error(errorMsg)
-    }
-    
-    // 小さなPDF（300KB以下）の場合はBase64フォールバックを使用
-    // DynamoDBの400KB制限を考慮（Base64は約1.33倍になるため、元のファイルサイズで約300KB以下が安全）
+    console.error('PDF S3 upload failed:', error?.message)
+
+    // S3が失敗した場合、小さなPDFはBase64フォールバック
     const maxSizeForBase64 = 300 * 1024 // 300KB
     if (file.size <= maxSizeForBase64) {
-      console.warn('S3 upload failed, attempting Base64 fallback for small PDF:', {
-        fileSize: `${(file.size / 1024).toFixed(2)}KB`,
-        maxSizeForBase64: `${(maxSizeForBase64 / 1024).toFixed(2)}KB`
-      })
+      console.warn('S3 upload failed, using Base64 fallback for small PDF')
       return new Promise((resolve, reject) => {
         const reader = new FileReader()
         reader.onloadend = () => {
@@ -773,35 +491,19 @@ export async function uploadPdfToS3(file: File, userId?: string): Promise<string
             reject(new Error('PDFファイルのBase64変換に失敗しました'))
             return
           }
-          
-          const base64Size = base64Result.length
-          const base64SizeKB = (base64Size / 1024).toFixed(2)
-          console.log(`PDF Base64 data size: ${base64SizeKB}KB`)
-          
-          // DynamoDBの400KB制限を考慮
-          const maxSafeBase64Size = 400 * 1024 // 400KB
-          if (base64Size > maxSafeBase64Size) {
-            const errorMsg = `PDFのBase64データが大きすぎます（${base64SizeKB}KB）。DynamoDBの制限（400KB）を超えるため、S3へのアップロードが必要です。S3ストレージの設定を確認してください。`
-            console.error(errorMsg)
-            reject(new Error(errorMsg))
+          const maxSafeBase64Size = 400 * 1024
+          if (base64Result.length > maxSafeBase64Size) {
+            reject(new Error('PDFのBase64データが大きすぎます。'))
             return
           }
-          console.log('PDF converted to Base64 successfully (data: URL)')
-          resolve(base64Result) // data:application/pdf;base64,...形式のURLを返す
+          resolve(base64Result)
         }
-        reader.onerror = (e) => {
-          console.error('FileReader error:', e)
-          reject(new Error('PDFファイルの読み込みに失敗しました'))
-        }
-        reader.readAsDataURL(file) // data: URLを生成
+        reader.onerror = reject
+        reader.readAsDataURL(file)
       })
     }
-    
-    // 大きいPDFの場合はエラーを投げる
-    const fileSizeMB = (file.size / 1024 / 1024).toFixed(2)
-    const errorMsg = `PDFのアップロードに失敗しました（${fileSizeMB}MB）。\n\n原因: ${error?.message || '不明なエラー'}\n\n解決方法:\n- S3ストレージが設定されているか確認してください\n- PDFファイルが300KB以下の場合は自動的にBase64形式で保存されます\n- 300KBを超えるPDFはS3へのアップロードが必要です`
-    console.error(errorMsg)
-    throw new Error(errorMsg)
+
+    throw new Error(`PDFのアップロードに失敗しました（${fileSizeMB.toFixed(2)}MB）。\n原因: ${error?.message || '不明なエラー'}`)
   }
 }
 
