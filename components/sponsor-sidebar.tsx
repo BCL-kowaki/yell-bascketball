@@ -126,7 +126,7 @@ export default function SponsorSidebar({
 }: SponsorSidebarProps) {
   return (
     <aside className="hidden lg:block w-[300px] shrink-0">
-      <div className="sticky top-[100px] space-y-4">
+      <div className="sticky top-0 space-y-4">
         {/* デフォルトSNSリンク */}
         {showDefaultSns && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
