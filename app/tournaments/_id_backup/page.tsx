@@ -75,7 +75,7 @@ import {
 } from "@/lib/api"
 import SponsorBannerEditor from "@/components/sponsor-banner-editor"
 import SponsorBannerDisplay from "@/components/sponsor-banner-display"
-import SponsorSidebar from "@/components/sponsor-sidebar"
+import SponsorSidebar, { MobileSnsCard } from "@/components/sponsor-sidebar"
 import { notifyNewTournamentPost } from "@/lib/push-sender"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
 import { useToast } from "@/hooks/use-toast"
@@ -3282,6 +3282,8 @@ export default function TournamentDetailPage() {
             </TabsContent>
 
 
+        {/* モバイル用 公式SNSリンク（lg未満で表示） */}
+        <MobileSnsCard />
         </div>
         {/* スポンサーサイドバー（デスクトップのみ） */}
         <SponsorSidebar sponsors={parseSponsors(tournament?.sponsors)} title="スポンサー" />

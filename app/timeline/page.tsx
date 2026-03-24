@@ -11,7 +11,7 @@ import Link from "next/link"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
 import { listPosts, getTimelinePosts, createPost as createDbPost, toggleLike as toggleDbLike, addComment as addDbComment, updatePostCounts, getCurrentUserEmail, getUserByEmail, updatePost, deletePost, getCommentsByPost, getSiteSponsors, type SponsorBanner } from "@/lib/api"
 import SponsorBannerDisplay from "@/components/sponsor-banner-display"
-import SponsorSidebar from "@/components/sponsor-sidebar"
+import SponsorSidebar, { MobileSnsCard } from "@/components/sponsor-sidebar"
 import { uploadImageToS3, uploadPdfToS3, uploadVideoToS3, refreshS3Url } from "@/lib/storage"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input as DialogInput } from "@/components/ui/input"
@@ -1724,6 +1724,8 @@ export default function TimelinePage() {
             />
           </Card>
         </div>
+          {/* モバイル用 公式SNSリンク（lg未満で表示） */}
+          <MobileSnsCard />
           </div>
           </div>
           {/* スポンサーサイドバー（デスクトップのみ） */}

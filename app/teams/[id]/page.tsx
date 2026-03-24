@@ -59,7 +59,7 @@ import {
 import { getTeam, getCurrentUserEmail, updateTeam, type DbTeam, getPostsByTeam, createPost, type DbPost, toggleFavoriteTeam, checkFavoriteTeam, getUserByEmail, deletePost, toggleLike as toggleDbLike, addComment as addDbComment, getCommentsByPost, updatePostCounts, checkLikeStatus, searchUsers, getTeamTournaments, type DbUser, type DbTournamentTeam, type DbTournament, createChatThread, checkTournamentAdminPermission, listTournaments, parseSponsors, stringifySponsors, type SponsorBanner } from "@/lib/api"
 import SponsorBannerEditor from "@/components/sponsor-banner-editor"
 import SponsorBannerDisplay from "@/components/sponsor-banner-display"
-import SponsorSidebar from "@/components/sponsor-sidebar"
+import SponsorSidebar, { MobileSnsCard } from "@/components/sponsor-sidebar"
 import { notifyNewTeamPost } from "@/lib/push-sender"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { uploadImageToS3, uploadPdfToS3, uploadVideoToS3, refreshS3Url } from "@/lib/storage"
@@ -2420,7 +2420,7 @@ export default function TeamDetailPage() {
                 </CardContent>
               </Card>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-2 sm:gap-2">
                   {participatingTournaments.map((tt) => {
                     if (!tt.tournament) return null
                     const tournament = tt.tournament
@@ -2503,6 +2503,8 @@ export default function TeamDetailPage() {
                 </Card>
               </div>
             </TabsContent>
+        {/* モバイル用 公式SNSリンク（lg未満で表示） */}
+        <MobileSnsCard />
         </div>
         {/* スポンサーサイドバー（デスクトップのみ） */}
         <SponsorSidebar sponsors={parseSponsors(team?.sponsors)} title="スポンサー" />
