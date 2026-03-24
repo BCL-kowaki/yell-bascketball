@@ -1146,19 +1146,25 @@ export async function refreshS3Url(url: string | null | undefined, useDownload: 
   const key = extractS3KeyFromUrl(url)
   if (!key) return url
 
-  // 戦略1: 署名付きURLを試行
+  // 認証状態を確認し、認証済みなら署名付きURLを試行
   try {
-    const signedUrl = await getS3UrlFromKey(key, 3600 * 24 * 365, false)
-    return signedUrl
-  } catch (signedError) {
-    console.warn('refreshS3Url: Signed URL failed for key:', key)
+    const { fetchAuthSession } = await import('aws-amplify/auth')
+    const session = await fetchAuthSession()
+    if (session.credentials) {
+      // 認証済み: 署名付きURLを試行
+      try {
+        const signedUrl = await getS3UrlFromKey(key, 3600 * 24 * 365, false)
+        return signedUrl
+      } catch (signedError) {
+        // 署名付きURL失敗時はパブリックURLにフォールバック
+      }
+    }
+  } catch {
+    // 認証情報取得失敗: パブリックURLにフォールバック
   }
 
-  // 戦略2: パブリック直アクセスURLにフォールバック
-  // Blob URLは一時的で管理困難なので使わない
-  const publicUrl = buildS3PublicUrl(key)
-  console.log('refreshS3Url: Falling back to public URL:', publicUrl)
-  return publicUrl
+  // パブリック直アクセスURL（認証不要）
+  return buildS3PublicUrl(key)
 }
 
 /**
