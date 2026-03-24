@@ -1069,9 +1069,10 @@ export default function TimelinePage() {
             
             // その他のエラーの場合
             const fileSizeMB = selectedPdf ? (selectedPdf.size / 1024 / 1024).toFixed(2) : '不明'
+            const errorDetail = error?.message || '不明なエラー'
             toast({
               title: "PDFのアップロードに失敗しました",
-              description: `PDFファイル（${fileSizeMB}MB）のアップロードに失敗しました。300KB以下のPDFは自動的に保存されますが、それ以上のサイズはS3ストレージの設定が必要です。`,
+              description: `PDFファイル（${fileSizeMB}MB）: ${errorDetail}`,
               variant: "destructive",
             })
             // PDFのアップロードに失敗した場合は、PDFなしで投稿を続行
@@ -1294,7 +1295,7 @@ export default function TimelinePage() {
           <div className="space-y-2 pb-4 w-full overflow-hidden box-border">
             {/* Create Post - ログインユーザーのみ表示 */}
             {currentUserEmail && (
-            <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-2">
+            <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-2 mt-2">
           <CardHeader className="px-3 py-3">
             <div className="flex items-center gap-2">
               <Avatar className="w-10 h-10 shrink-0">

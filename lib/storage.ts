@@ -400,80 +400,128 @@ export async function uploadPdfToS3(file: File, userId?: string): Promise<string
     throw new Error(`PDFファイルが大きすぎます。最大サイズは500MBです。現在のサイズ: ${fileSizeMB.toFixed(2)}MB`)
   }
 
-  // Cognito User IDを格納する変数
+  console.log('uploadPdfToS3 開始:', { name: file.name, size: `${fileSizeMB.toFixed(2)}MB`, type: file.type })
+
+  // Cognito User IDを格納する変数（関数全体で使用）
   let cognitoUserId: string | null = null
 
   try {
     // Amplify Storageが利用可能かチェック
     const { uploadData, getUrl } = await import('aws-amplify/storage')
-    const { fetchAuthSession, getCurrentUser } = await import('aws-amplify/auth')
-    const { Amplify } = await import('aws-amplify')
+    console.log('uploadPdfToS3 - aws-amplify/storage インポート成功')
 
-    // Amplify設定を確認
-    const amplifyConfig = Amplify.getConfig()
-    const identityPoolId = amplifyConfig.Auth?.Cognito?.identityPoolId
-    if (!identityPoolId) {
-      throw new Error('Identity Pool IDが設定されていません。Amplify設定を確認してください。')
-    }
-
-    // S3バケット確認
-    const storageBucket = amplifyConfig.Storage?.S3?.bucket
-    if (!storageBucket) {
-      throw new Error('S3バケットが設定されていません。')
-    }
-
-    // 現在のユーザーが認証されているか確認
-    const currentUser = await getCurrentUser()
-    cognitoUserId = currentUser.userId
-    console.log('PDF upload - authenticated user:', currentUser.userId)
-
-    // Identity Poolの認証情報を取得
-    let authSession
+    // 認証情報を明示的に取得（uploadImageToS3と同じパターン）
     try {
-      authSession = await fetchAuthSession({ forceRefresh: false })
-    } catch (refreshError: any) {
-      console.warn('Initial fetchAuthSession failed, retrying:', refreshError?.message)
-      authSession = await fetchAuthSession({ forceRefresh: true })
-    }
+      const { fetchAuthSession, getCurrentUser } = await import('aws-amplify/auth')
+      const { Amplify } = await import('aws-amplify')
 
-    if (!authSession.credentials && !authSession.identityId) {
-      throw new Error('Cognito Identity Poolの認証情報が取得できませんでした。')
+      // Amplify設定を確認
+      const amplifyConfig = Amplify.getConfig()
+      const identityPoolId = amplifyConfig.Auth?.Cognito?.identityPoolId
+      console.log('uploadPdfToS3 - Amplify config:', {
+        hasIdentityPoolConfig: !!identityPoolId,
+        identityPoolId: identityPoolId || 'NOT SET',
+      })
+
+      if (!identityPoolId) {
+        throw new Error('Identity Pool IDが設定されていません。Amplify設定を確認してください。')
+      }
+
+      // まず、現在のユーザーが認証されているか確認
+      const currentUser = await getCurrentUser()
+      console.log('uploadPdfToS3 - 認証ユーザー:', {
+        username: currentUser.username,
+        userId: currentUser.userId
+      })
+
+      // Cognito User IDを使用
+      cognitoUserId = currentUser.userId
+      console.log('uploadPdfToS3 - Cognito User ID:', cognitoUserId)
+
+      // Identity Poolの認証情報を取得
+      let authSession
+      try {
+        authSession = await fetchAuthSession({ forceRefresh: false })
+      } catch (refreshError: any) {
+        console.warn('uploadPdfToS3 - fetchAuthSession(false)失敗、リトライ:', refreshError?.message)
+        authSession = await fetchAuthSession({ forceRefresh: true })
+      }
+
+      console.log('uploadPdfToS3 - Auth session:', {
+        hasCredentials: !!authSession.credentials,
+        identityId: authSession.identityId || 'NOT SET',
+        tokens: {
+          idToken: !!authSession.tokens?.idToken,
+          accessToken: !!authSession.tokens?.accessToken,
+        },
+      })
+
+      if (!authSession.credentials && !authSession.identityId) {
+        console.error('uploadPdfToS3 - 認証情報なし')
+        throw new Error('Cognito Identity Poolの認証情報が取得できませんでした。')
+      }
+    } catch (authError: any) {
+      console.error('uploadPdfToS3 - 認証エラー:', {
+        message: authError?.message,
+        name: authError?.name,
+        code: authError?.code,
+        stack: authError?.stack,
+      })
+      throw authError
     }
 
     const timestamp = Date.now()
     const fileName = `${cognitoUserId || 'anonymous'}/pdfs/${timestamp}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
 
-    console.log('Uploading PDF to S3:', { fileName, fileSize: `${fileSizeMB.toFixed(2)}MB`, bucket: storageBucket })
+    // S3バケット確認
+    const { Amplify: Amp } = await import('aws-amplify')
+    const amplifyConfig2 = Amp.getConfig()
+    const storageBucket = amplifyConfig2.Storage?.S3?.bucket
 
-    // ファイルをS3にアップロード
+    if (!storageBucket) {
+      throw new Error('S3バケットが設定されていません。')
+    }
+
+    console.log('uploadPdfToS3 - S3アップロード開始:', { fileName, fileSize: `${fileSizeMB.toFixed(2)}MB`, bucket: storageBucket })
+
+    // ファイルをS3にアップロード（uploadImageToS3と同じパターン）
     await uploadData({
       key: fileName,
       data: file,
       options: {
-        contentType: 'application/pdf',
+        contentType: file.type || 'application/pdf',
         onProgress: (progress) => {
-          console.log(`PDF upload progress: ${((progress.transferredBytes / progress.totalBytes) * 100).toFixed(1)}%`)
+          const pct = ((progress.transferredBytes / progress.totalBytes) * 100).toFixed(1)
+          console.log(`uploadPdfToS3 - progress: ${pct}%`)
         }
       },
     }).result
+
+    console.log('uploadPdfToS3 - uploadData完了、URL取得中...')
 
     // 公開URLを取得
     const url = await getUrl({
       key: fileName,
       options: {
-        expiresIn: 3600 * 24 * 365,
+        expiresIn: 3600 * 24 * 365, // 1年間有効
       },
     })
 
-    console.log('PDF uploaded to S3 successfully:', url.url.toString())
+    console.log('uploadPdfToS3 - S3アップロード成功:', url.url.toString())
     return url.url.toString()
   } catch (error: any) {
-    console.error('PDF S3 upload failed:', error?.message)
+    console.error('uploadPdfToS3 - S3アップロード失敗:', error)
+    console.error('uploadPdfToS3 - エラー詳細:', {
+      message: error?.message,
+      name: error?.name,
+      code: error?.code,
+      stack: error?.stack,
+    })
 
     // S3が失敗した場合、小さなPDFはBase64フォールバック
     const maxSizeForBase64 = 300 * 1024 // 300KB
     if (file.size <= maxSizeForBase64) {
-      console.warn('S3 upload failed, using Base64 fallback for small PDF')
+      console.warn('uploadPdfToS3 - S3失敗、Base64フォールバック試行')
       return new Promise((resolve, reject) => {
         const reader = new FileReader()
         reader.onloadend = () => {
@@ -487,6 +535,7 @@ export async function uploadPdfToS3(file: File, userId?: string): Promise<string
             reject(new Error('PDFのBase64データが大きすぎます。'))
             return
           }
+          console.log('uploadPdfToS3 - Base64フォールバック成功:', base64Result.length, 'bytes')
           resolve(base64Result)
         }
         reader.onerror = reject
