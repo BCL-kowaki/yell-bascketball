@@ -197,7 +197,7 @@ export default function AdminStatsPage() {
         </div>
 
         {/* サマリーカード */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
           {[
             { label: "ユーザー", value: stats.totalUsers, icon: Users, color: "text-blue-500", sub: `+${stats.newUsersWeek} 今週` },
             { label: "チーム", value: stats.totalTeams, icon: Shield, color: "text-green-500", sub: `${stats.pendingTeams}件未承認` },

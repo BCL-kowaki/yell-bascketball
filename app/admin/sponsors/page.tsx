@@ -125,7 +125,7 @@ export default function AdminSponsorsPage() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+      <div className="max-w-4xl mx-auto px-2 py-6 space-y-6">
         {/* 保存メッセージ */}
         {saveMessage && (
           <div className={`p-3 rounded-lg text-sm text-center ${
