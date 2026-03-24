@@ -1245,7 +1245,6 @@ export default function ProfilePage() {
 
           {/* タブメニュー */}
           <div className="mt-6 border-t border-border border-b border-border">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-4 bg-transparent h-auto p-0 gap-0">
               <TabsTrigger
                 value="tournaments"
@@ -1272,7 +1271,6 @@ export default function ProfilePage() {
                 基本情報
               </TabsTrigger>
               </TabsList>
-            </Tabs>
           </div>
           </div>
         </div>
