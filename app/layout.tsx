@@ -21,6 +21,15 @@ export const metadata: Metadata = {
   title: "YeLL Bascketball【公式】",
   description: "YeLL Bascketball公式サイト - バスケットボールコミュニティ",
   generator: "v0.app",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "YeLL",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
 }
 
 export const viewport = {
@@ -38,6 +47,9 @@ export default function RootLayout({
   return (
     <html lang="ja" className={`${playfairDisplay.variable} ${sourceSans.variable} antialiased overflow-x-hidden w-full max-w-full`} suppressHydrationWarning>
       <head>
+        {/* PWA: iOS Safari用アイコン・スプラッシュ */}
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <meta name="theme-color" content="#e84b8a" />
         {/* ダークモード初期化（FOUC防止のためインラインスクリプト） */}
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
@@ -48,6 +60,14 @@ export default function RootLayout({
               }
             } catch(e) {}
           })();
+        `}} />
+        {/* PWA: Service Worker登録 */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+              navigator.serviceWorker.register('/sw.js').catch(function() {});
+            });
+          }
         `}} />
       </head>
       <body className="overflow-x-hidden w-full max-w-full m-0 p-0" suppressHydrationWarning={true}>
