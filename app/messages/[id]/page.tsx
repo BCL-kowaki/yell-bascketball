@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { Layout } from "@/components/layout"
+import { notifyNewChatMessage } from "@/lib/push-sender"
 import {
   getCurrentUserEmail,
   getChatThread,
@@ -27,6 +28,7 @@ import {
   updateChatThreadStatus,
   markChatThreadAsRead,
   getTeam,
+  getPushSubscriptionsByUser,
   type DbChatThread,
   type DbChatMessage,
   type DbTeam
@@ -117,6 +119,23 @@ export default function ChatDetailPage() {
         messageType: 'text',
       })
       setMessages(prev => [...prev, msg])
+
+      // プッシュ通知: 相手側に通知（非同期・エラーは無視）
+      if (thread && currentUserEmail) {
+        const isSender = currentUserEmail === thread.senderEmail
+        // 送信者なら→チーム運営者に通知、チーム運営者なら→送信者に通知
+        const recipientEmails = isSender
+          ? (team ? [team.ownerEmail, ...(team.editorEmails || [])].filter(Boolean) as string[] : [])
+          : [thread.senderEmail]
+        const filteredRecipients = recipientEmails.filter(e => e !== currentUserEmail)
+        notifyNewChatMessage(
+          filteredRecipients,
+          thread.senderName || '送信者',
+          newMessage.trim(),
+          thread.id
+        ).catch(() => {})
+      }
+
       setNewMessage("")
       // テキストエリアの高さをリセット
       if (textareaRef.current) {

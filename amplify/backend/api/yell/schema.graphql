@@ -319,3 +319,15 @@ type SiteConfig @model @auth(rules: [{allow: public}]) {
   createdAt: AWSDateTime
   updatedAt: AWSDateTime
 }
+
+# ==================== PushSubscription ====================
+# Web Pushプッシュ通知の購読情報
+type PushSubscription @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  userEmail: String! @index(name: "byUser", queryField: "pushSubscriptionsByUser")
+  endpoint: String!
+  p256dh: String!
+  auth: String!
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+}

@@ -242,6 +242,16 @@ export type DbSiteConfig = {
   updatedAt?: string | null
 }
 
+export type DbPushSubscription = {
+  id: string
+  userEmail: string
+  endpoint: string
+  p256dh: string
+  auth: string
+  createdAt?: string | null
+  updatedAt?: string | null
+}
+
 /**
  * スポンサーJSON文字列をパースしてSponsorBanner配列に変換
  */
@@ -3626,5 +3636,174 @@ export async function updateSiteSponsors(sponsors: SponsorBanner[], updatedBy: s
     if (result.errors) {
       throw new Error(result.errors[0]?.message || 'SiteConfig作成エラー')
     }
+  }
+}
+
+// ==================== PushSubscription（プッシュ通知購読） ====================
+
+const PUSH_SUBSCRIPTION_FIELDS = 'id userEmail endpoint p256dh auth createdAt updatedAt'
+
+/**
+ * プッシュ通知購読を保存
+ */
+export async function savePushSubscription(input: {
+  userEmail: string
+  endpoint: string
+  p256dh: string
+  auth: string
+}): Promise<DbPushSubscription> {
+  // 同じendpointの既存レコードがあれば更新不要（重複防止）
+  const existing = await getPushSubscriptionsByUser(input.userEmail)
+  const dup = existing.find(s => s.endpoint === input.endpoint)
+  if (dup) return dup
+
+  const mutation = /* GraphQL */ `
+    mutation CreatePushSubscription($input: CreatePushSubscriptionInput!) {
+      createPushSubscription(input: $input) {
+        ${PUSH_SUBSCRIPTION_FIELDS}
+      }
+    }
+  `
+
+  const result = await client.graphql({
+    query: mutation,
+    variables: { input },
+    authMode: 'apiKey'
+  }) as any
+
+  if (result.errors) {
+    throw new Error(result.errors[0]?.message || 'PushSubscription作成エラー')
+  }
+
+  return result.data.createPushSubscription
+}
+
+/**
+ * ユーザーのプッシュ通知購読一覧を取得
+ */
+export async function getPushSubscriptionsByUser(userEmail: string): Promise<DbPushSubscription[]> {
+  const query = /* GraphQL */ `
+    query PushSubscriptionsByUser($userEmail: String!) {
+      pushSubscriptionsByUser(userEmail: $userEmail) {
+        items {
+          ${PUSH_SUBSCRIPTION_FIELDS}
+        }
+      }
+    }
+  `
+
+  try {
+    const result = await client.graphql({
+      query,
+      variables: { userEmail },
+      authMode: 'apiKey'
+    }) as any
+
+    return result?.data?.pushSubscriptionsByUser?.items ?? []
+  } catch (error: any) {
+    console.error('getPushSubscriptionsByUser error:', error?.message)
+    return []
+  }
+}
+
+/**
+ * プッシュ通知購読を削除
+ */
+export async function deletePushSubscription(id: string): Promise<void> {
+  const mutation = /* GraphQL */ `
+    mutation DeletePushSubscription($input: DeletePushSubscriptionInput!) {
+      deletePushSubscription(input: $input) { id }
+    }
+  `
+
+  try {
+    await client.graphql({
+      query: mutation,
+      variables: { input: { id } },
+      authMode: 'apiKey'
+    })
+  } catch (error: any) {
+    console.error('deletePushSubscription error:', error?.message)
+  }
+}
+
+/**
+ * 全ユーザーのプッシュ通知購読一覧を取得（通知送信APIで使用）
+ */
+export async function getAllPushSubscriptions(limit = 1000): Promise<DbPushSubscription[]> {
+  const query = /* GraphQL */ `
+    query ListPushSubscriptions($limit: Int, $nextToken: String) {
+      listPushSubscriptions(limit: $limit, nextToken: $nextToken) {
+        items {
+          ${PUSH_SUBSCRIPTION_FIELDS}
+        }
+        nextToken
+      }
+    }
+  `
+
+  const allItems: DbPushSubscription[] = []
+  let nextToken: string | null = null
+
+  try {
+    do {
+      const result = await client.graphql({
+        query,
+        variables: { limit: 200, nextToken },
+        authMode: 'apiKey'
+      }) as any
+
+      const items = result?.data?.listPushSubscriptions?.items ?? []
+      allItems.push(...items)
+      nextToken = result?.data?.listPushSubscriptions?.nextToken || null
+    } while (nextToken && allItems.length < limit)
+
+    return allItems
+  } catch (error: any) {
+    console.error('getAllPushSubscriptions error:', error?.message)
+    return []
+  }
+}
+
+/**
+ * お気に入りにこの大会/チームを登録しているユーザーのメールアドレスを取得
+ */
+export async function getFavoriteUserEmails(targetId: string, targetType: 'tournament' | 'team'): Promise<string[]> {
+  const filterField = targetType === 'tournament' ? 'tournamentId' : 'teamId'
+  const query = /* GraphQL */ `
+    query ListFavorites($filter: ModelFavoriteFilterInput, $limit: Int, $nextToken: String) {
+      listFavorites(filter: $filter, limit: $limit, nextToken: $nextToken) {
+        items {
+          userEmail
+        }
+        nextToken
+      }
+    }
+  `
+
+  const allEmails: string[] = []
+  let nextToken: string | null = null
+
+  try {
+    do {
+      const result = await client.graphql({
+        query,
+        variables: {
+          filter: { [filterField]: { eq: targetId } },
+          limit: 200,
+          nextToken
+        },
+        authMode: 'apiKey'
+      }) as any
+
+      const items = result?.data?.listFavorites?.items ?? []
+      allEmails.push(...items.map((i: any) => i.userEmail))
+      nextToken = result?.data?.listFavorites?.nextToken || null
+    } while (nextToken)
+
+    return [...new Set(allEmails)]
+  } catch (error: any) {
+    console.error('getFavoriteUserEmails error:', error?.message)
+    return []
   }
 }

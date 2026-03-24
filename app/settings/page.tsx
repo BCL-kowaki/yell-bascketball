@@ -23,7 +23,9 @@ import {
   Eye,
   EyeOff,
   Mail,
+  Bell,
 } from "lucide-react"
+import PushNotificationToggle from "@/components/push-notification-toggle"
 
 export default function SettingsPage() {
   ensureAmplifyConfigured()
@@ -278,6 +280,22 @@ export default function SettingsPage() {
                 />
               </div>
             </button>
+          </CardContent>
+        </Card>
+
+        {/* 通知設定 */}
+        <Card className="mb-4">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Bell className="w-5 h-5" style={{ color: "#f06a4e" }} />
+              通知設定
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PushNotificationToggle />
+            <p className="text-xs text-gray-400 mt-2 px-1">
+              お気に入りの大会・チームの新着投稿やチャットメッセージをプッシュ通知で受け取れます
+            </p>
           </CardContent>
         </Card>
 

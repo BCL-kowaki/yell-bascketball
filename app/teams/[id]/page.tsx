@@ -60,6 +60,7 @@ import { getTeam, getCurrentUserEmail, updateTeam, type DbTeam, getPostsByTeam, 
 import SponsorBannerEditor from "@/components/sponsor-banner-editor"
 import SponsorBannerDisplay from "@/components/sponsor-banner-display"
 import SponsorSidebar from "@/components/sponsor-sidebar"
+import { notifyNewTeamPost } from "@/lib/push-sender"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { uploadImageToS3, uploadPdfToS3, uploadVideoToS3, refreshS3Url } from "@/lib/storage"
 
@@ -1113,6 +1114,18 @@ export default function TeamDetailPage() {
         title: "投稿しました",
         description: "チームタイムラインに投稿されました",
       })
+
+      // プッシュ通知: お気に入り登録者に通知（非同期・エラーは無視）
+      const teamId = typeof params.id === 'string' ? params.id : ''
+      if (teamId && team?.name) {
+        notifyNewTeamPost(
+          teamId,
+          team.name,
+          currentUser ? `${currentUser.lastName}${currentUser.firstName}` : '投稿者',
+          newPostContent.trim(),
+          currentUserEmail || undefined
+        ).catch(() => {})
+      }
 
       setNewPostContent("")
       clearAttachments()

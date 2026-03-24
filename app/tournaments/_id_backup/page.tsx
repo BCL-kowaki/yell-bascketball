@@ -76,6 +76,7 @@ import {
 import SponsorBannerEditor from "@/components/sponsor-banner-editor"
 import SponsorBannerDisplay from "@/components/sponsor-banner-display"
 import SponsorSidebar from "@/components/sponsor-sidebar"
+import { notifyNewTournamentPost } from "@/lib/push-sender"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
 import { useToast } from "@/hooks/use-toast"
 import { uploadImageToS3, uploadPdfToS3, refreshS3Url } from "@/lib/storage"
@@ -830,6 +831,17 @@ export default function TournamentDetailPage() {
         title: "成功",
         description: "投稿が作成されました",
       })
+
+      // プッシュ通知: お気に入り登録者に通知（非同期・エラーは無視）
+      if (tournamentId && tournament?.name) {
+        notifyNewTournamentPost(
+          tournamentId,
+          tournament.name,
+          currentUser ? `${currentUser.lastName}${currentUser.firstName}` : '投稿者',
+          postContent,
+          currentUserEmail || undefined
+        ).catch(() => {})
+      }
 
       setPostContent("")
       setSelectedImage(null)
