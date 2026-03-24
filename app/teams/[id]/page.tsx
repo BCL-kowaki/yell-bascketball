@@ -2352,6 +2352,18 @@ export default function TeamDetailPage() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* スポンサーバナー（モバイルのみ・基本データタブ下部） */}
+              <div className="lg:hidden mt-2">
+                <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-3 px-4">
+                  <SponsorBannerDisplay
+                    sponsors={parseSponsors(team?.sponsors)}
+                    title="スポンサー"
+                    showPlaceholder={true}
+                    layout="horizontal"
+                  />
+                </Card>
+              </div>
             </TabsContent>
 
             {/* 写真タブ */}
@@ -2370,6 +2382,18 @@ export default function TeamDetailPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* スポンサーバナー（モバイルのみ・写真タブ下部） */}
+              <div className="lg:hidden mt-2">
+                <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-3 px-4">
+                  <SponsorBannerDisplay
+                    sponsors={parseSponsors(team?.sponsors)}
+                    title="スポンサー"
+                    showPlaceholder={true}
+                    layout="horizontal"
+                  />
+                </Card>
+              </div>
             </TabsContent>
 
             {/* 参加大会タブ */}
@@ -2466,6 +2490,18 @@ export default function TeamDetailPage() {
                   })}
                 </div>
               )}
+
+              {/* スポンサーバナー（モバイルのみ・参加大会タブ下部） */}
+              <div className="lg:hidden mt-2">
+                <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-3 px-4">
+                  <SponsorBannerDisplay
+                    sponsors={parseSponsors(team?.sponsors)}
+                    title="スポンサー"
+                    showPlaceholder={true}
+                    layout="horizontal"
+                  />
+                </Card>
+              </div>
             </TabsContent>
         </div>
         {/* スポンサーサイドバー（デスクトップのみ） */}

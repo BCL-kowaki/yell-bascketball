@@ -2837,6 +2837,18 @@ export default function TournamentDetailPage() {
                   </div>
                 </DialogContent>
               </Dialog>
+
+              {/* スポンサーバナー（モバイルのみ・参加チームタブ下部） */}
+              <div className="lg:hidden mt-2">
+                <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-3 px-4">
+                  <SponsorBannerDisplay
+                    sponsors={parseSponsors(tournament?.sponsors)}
+                    title="スポンサー"
+                    showPlaceholder={true}
+                    layout="horizontal"
+                  />
+                </Card>
+              </div>
             </TabsContent>
 
             {/* 過去大会結果タブ */}
@@ -3259,6 +3271,18 @@ export default function TournamentDetailPage() {
                   </div>
                 </DialogContent>
               </Dialog>
+
+              {/* スポンサーバナー（モバイルのみ・過去大会結果タブ下部） */}
+              <div className="lg:hidden mt-2">
+                <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-3 px-4">
+                  <SponsorBannerDisplay
+                    sponsors={parseSponsors(tournament?.sponsors)}
+                    title="スポンサー"
+                    showPlaceholder={true}
+                    layout="horizontal"
+                  />
+                </Card>
+              </div>
             </TabsContent>
 
 
