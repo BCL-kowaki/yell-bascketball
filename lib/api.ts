@@ -2436,6 +2436,8 @@ export async function searchTournaments(searchTerm: string): Promise<DbTournamen
 
 const CHAT_THREAD_FIELDS = 'id senderEmail senderName teamId teamName tournamentId tournamentName threadType status lastMessage lastMessageAt teamUnreadCount senderUnreadCount createdAt updatedAt'
 const CHAT_MESSAGE_FIELDS = 'id threadId senderEmail senderName content messageType imageUrl videoUrl pdfUrl pdfName isRead createdAt updatedAt'
+// メディアフィールドなしバージョン（スキーマが未更新の場合のフォールバック用）
+const CHAT_MESSAGE_FIELDS_BASIC = 'id threadId senderEmail senderName content messageType isRead createdAt updatedAt'
 
 /**
  * チャットスレッドを作成（大会運営者からチームへのオファー）
@@ -2568,10 +2570,19 @@ export async function createChatMessage(input: {
   const currentUser = await getUserByEmail(currentEmail)
   const senderName = currentUser ? `${currentUser.lastName} ${currentUser.firstName}` : currentEmail
 
-  const mutation = /* GraphQL */ `
+  // メディアフィールド付きmutation
+  const mutationWithMedia = /* GraphQL */ `
     mutation CreateChatMessage($input: CreateChatMessageInput!) {
       createChatMessage(input: $input) {
         ${CHAT_MESSAGE_FIELDS}
+      }
+    }
+  `
+  // メディアフィールドなしmutation（フォールバック用）
+  const mutationBasic = /* GraphQL */ `
+    mutation CreateChatMessage($input: CreateChatMessageInput!) {
+      createChatMessage(input: $input) {
+        ${CHAT_MESSAGE_FIELDS_BASIC}
       }
     }
   `
@@ -2590,15 +2601,38 @@ export async function createChatMessage(input: {
   if (input.pdfUrl) messageInput.pdfUrl = input.pdfUrl
   if (input.pdfName) messageInput.pdfName = input.pdfName
 
+  // メディアなしの基本inputを準備（フォールバック用）
+  const basicInput: any = {
+    threadId: input.threadId,
+    senderEmail: currentEmail,
+    senderName,
+    content: input.content,
+    messageType: input.messageType,
+    isRead: false,
+  }
+
   try {
     const result = await client.graphql({
-      query: mutation,
+      query: mutationWithMedia,
       variables: { input: messageInput },
       authMode: 'apiKey'
     }) as any
 
     if (result.errors) {
-      throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
+      console.warn('createChatMessage - メディアフィールド付きmutation失敗、フォールバック:', result.errors[0]?.message)
+      // メディアフィールドなしで再試行
+      const fallbackResult = await client.graphql({
+        query: mutationBasic,
+        variables: { input: basicInput },
+        authMode: 'apiKey'
+      }) as any
+      if (fallbackResult.errors) {
+        throw new Error(fallbackResult.errors[0]?.message || 'GraphQL error occurred')
+      }
+      // スレッドの最終メッセージを更新
+      const lastMsg = input.content
+      await updateChatThreadLastMessage(input.threadId, lastMsg, currentEmail)
+      return fallbackResult.data.createChatMessage
     }
 
     // スレッドの最終メッセージを更新
@@ -2608,7 +2642,24 @@ export async function createChatMessage(input: {
     return result.data.createChatMessage
   } catch (error: any) {
     console.error('createChatMessage error:', error?.message)
-    throw error
+    // catchでもフォールバック試行
+    try {
+      console.warn('createChatMessage - フォールバック試行（メディアフィールドなし）')
+      const fallbackResult = await client.graphql({
+        query: mutationBasic,
+        variables: { input: basicInput },
+        authMode: 'apiKey'
+      }) as any
+      if (fallbackResult.errors) {
+        throw new Error(fallbackResult.errors[0]?.message || 'GraphQL error occurred')
+      }
+      const lastMsg = input.content
+      await updateChatThreadLastMessage(input.threadId, lastMsg, currentEmail)
+      return fallbackResult.data.createChatMessage
+    } catch (fallbackError: any) {
+      console.error('createChatMessage fallback error:', fallbackError?.message)
+      throw fallbackError
+    }
   }
 }
 
@@ -2846,7 +2897,8 @@ export async function getMyTeams(email: string): Promise<DbTeam[]> {
  * チャットスレッドのメッセージ一覧を取得
  */
 export async function getChatMessages(threadId: string): Promise<DbChatMessage[]> {
-  const query = /* GraphQL */ `
+  // メディアフィールド付きクエリをまず試行
+  const queryWithMedia = /* GraphQL */ `
     query ChatMessagesByThreadIdAndCreatedAt($threadId: ID!) {
       chatMessagesByThreadIdAndCreatedAt(threadId: $threadId, sortDirection: ASC) {
         items {
@@ -2855,22 +2907,54 @@ export async function getChatMessages(threadId: string): Promise<DbChatMessage[]
       }
     }
   `
+  // メディアフィールドなしクエリ（フォールバック用）
+  const queryBasic = /* GraphQL */ `
+    query ChatMessagesByThreadIdAndCreatedAt($threadId: ID!) {
+      chatMessagesByThreadIdAndCreatedAt(threadId: $threadId, sortDirection: ASC) {
+        items {
+          ${CHAT_MESSAGE_FIELDS_BASIC}
+        }
+      }
+    }
+  `
 
   try {
     const result = await client.graphql({
-      query,
+      query: queryWithMedia,
       variables: { threadId },
       authMode: 'apiKey'
     }) as any
 
     if (result.errors) {
-      return []
+      console.warn('getChatMessages - メディアフィールド付きクエリ失敗、フォールバック:', result.errors[0]?.message)
+      // メディアフィールドなしで再試行
+      const fallbackResult = await client.graphql({
+        query: queryBasic,
+        variables: { threadId },
+        authMode: 'apiKey'
+      }) as any
+      if (fallbackResult.errors) {
+        console.error('getChatMessages - フォールバックも失敗:', fallbackResult.errors[0]?.message)
+        return []
+      }
+      return fallbackResult?.data?.chatMessagesByThreadIdAndCreatedAt?.items ?? []
     }
 
     return result?.data?.chatMessagesByThreadIdAndCreatedAt?.items ?? []
   } catch (error: any) {
     console.error('getChatMessages error:', error?.message)
-    return []
+    // catchでもフォールバック試行
+    try {
+      const fallbackResult = await client.graphql({
+        query: queryBasic,
+        variables: { threadId },
+        authMode: 'apiKey'
+      }) as any
+      return fallbackResult?.data?.chatMessagesByThreadIdAndCreatedAt?.items ?? []
+    } catch (fallbackError: any) {
+      console.error('getChatMessages fallback error:', fallbackError?.message)
+      return []
+    }
   }
 }
 
