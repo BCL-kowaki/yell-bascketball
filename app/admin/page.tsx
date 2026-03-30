@@ -228,7 +228,7 @@ export default function AdminDashboardPage() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="max-w-4xl mx-auto px-2 py-6">
         {/* ヘッダー */}
         <div className="mb-6">
           <div className="flex items-center justify-between">
@@ -244,7 +244,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* サマリーカード */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
           {[
             { label: "ユーザー", value: stats.users, icon: Users },
             { label: "大会", value: stats.tournaments, icon: Trophy },

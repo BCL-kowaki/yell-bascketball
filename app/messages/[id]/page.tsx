@@ -149,10 +149,12 @@ export default function ChatDetailPage() {
           } catch { /* ロゴ取得失敗は無視 */ }
         }
 
-        // チーム運営者かチェック
+        // チーム管理者かチェック（ownerEmail + editorEmails統合）
         if (teamData) {
-          const isAdmin = teamData.ownerEmail === email || teamData.editorEmails?.includes(email) || false
-          setIsTeamAdmin(isAdmin)
+          const adminEmails = new Set<string>()
+          if (teamData.ownerEmail) adminEmails.add(teamData.ownerEmail)
+          if (teamData.editorEmails) teamData.editorEmails.forEach((e: string) => { if (e) adminEmails.add(e) })
+          setIsTeamAdmin(adminEmails.has(email))
         }
 
         // メッセージ一覧を取得
@@ -262,19 +264,24 @@ export default function ChatDetailPage() {
       })
       setMessages(prev => [...prev, msg])
 
-      // プッシュ通知: 相手側に通知（非同期・エラーは無視）
+      // プッシュ通知: チャット参加者全員に通知（自分以外）
+      // 大会管理者（送信者側）+ チーム管理者（受信側）全員が通知対象
       if (thread && currentUserEmail) {
-        const isSenderUser = currentUserEmail === thread.senderEmail
-        const recipientEmails = isSenderUser
-          ? (team ? [team.ownerEmail, ...(team.editorEmails || [])].filter(Boolean) as string[] : [])
-          : [thread.senderEmail]
-        const filteredRecipients = recipientEmails.filter(e => e !== currentUserEmail)
+        // チーム管理者全員を取得（ownerEmail + editorEmails統合）
+        const teamAdmins: string[] = []
+        if (team) {
+          if (team.ownerEmail) teamAdmins.push(team.ownerEmail)
+          if (team.editorEmails) teamAdmins.push(...team.editorEmails.filter(Boolean) as string[])
+        }
+        // 大会管理者を取得するために送信者も含める
+        const allParticipants = [...new Set([thread.senderEmail, ...teamAdmins])]
+        const filteredRecipients = allParticipants.filter(e => e !== currentUserEmail)
         notifyNewChatMessage(
           filteredRecipients,
           thread.senderName || '送信者',
           content,
           thread.id
-        ).catch(() => {})
+        ).catch((err) => console.error('通知送信エラー:', err))
       }
 
       setNewMessage("")

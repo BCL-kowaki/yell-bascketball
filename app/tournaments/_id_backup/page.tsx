@@ -248,7 +248,7 @@ export default function TournamentDetailPage() {
 
   const [tournament, setTournament] = useState<DbTournament | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [owner, setOwner] = useState<DbUser | null>(null)
+
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null)
   const [canEdit, setCanEdit] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -380,9 +380,11 @@ export default function TournamentDetailPage() {
 
   useEffect(() => {
     if (tournament && currentUserEmail) {
-      const isOwner = tournament.ownerEmail === currentUserEmail
-      const isCoAdmin = tournament.coAdminEmails?.includes(currentUserEmail) || false
-      setCanEdit(isOwner || isCoAdmin)
+      // 管理者判定: ownerEmail + coAdminEmails を統合
+      const adminEmails = new Set<string>()
+      if (tournament.ownerEmail) adminEmails.add(tournament.ownerEmail)
+      if (tournament.coAdminEmails) tournament.coAdminEmails.forEach(e => { if (e) adminEmails.add(e) })
+      setCanEdit(adminEmails.has(currentUserEmail))
       checkFavorite()
     }
   }, [tournament, currentUserEmail])
@@ -515,8 +517,11 @@ export default function TournamentDetailPage() {
         subArea: tournamentData.subArea || "",
       })
 
-      // 大会管理者の情報を取得
-      const managerEmails = [tournamentData.ownerEmail, ...(tournamentData.coAdminEmails || [])]
+      // 大会管理者の情報を取得（ownerEmail + coAdminEmails統合、重複排除）
+      const adminEmailSet = new Set<string>()
+      if (tournamentData.ownerEmail) adminEmailSet.add(tournamentData.ownerEmail)
+      if (tournamentData.coAdminEmails) tournamentData.coAdminEmails.forEach((e: string) => { if (e) adminEmailSet.add(e) })
+      const managerEmails = [...adminEmailSet]
       const managers: Array<{ email: string; name: string; avatar: string }> = []
       
       for (const email of managerEmails) {
@@ -546,36 +551,24 @@ export default function TournamentDetailPage() {
       
       setTournamentManagers(managers)
 
-      // 編集用の管理者リストを初期化（オーナーを除く）
-      if (tournamentData.coAdminEmails && tournamentData.coAdminEmails.length > 0) {
-        const coAdminUsers: DbUser[] = []
-        for (const email of tournamentData.coAdminEmails) {
-          try {
-            const userData = await getUserByEmail(email)
-            if (userData) {
-              coAdminUsers.push(userData)
-            }
-          } catch (error) {
-            console.error(`Failed to load co-admin ${email}:`, error)
-          }
-        }
-        setSelectedCoAdmins(coAdminUsers)
-      }
+      // 編集用の管理者リストを初期化（ownerEmail + coAdminEmails統合）
+      const allAdminEmails = new Set<string>()
+      if (tournamentData.ownerEmail) allAdminEmails.add(tournamentData.ownerEmail)
+      if (tournamentData.coAdminEmails) tournamentData.coAdminEmails.forEach((e: string) => { if (e) allAdminEmails.add(e) })
 
-      // 主催者の情報を取得
-      try {
-        console.log('TournamentDetailPage: Loading owner:', tournamentData.ownerEmail)
-        const ownerData = await getUserByEmail(tournamentData.ownerEmail)
-        console.log('TournamentDetailPage: Owner data received:', ownerData)
-        // アバターURLをS3から更新
-        if (ownerData && ownerData.avatar) {
-          const refreshedAvatar = await refreshS3Url(ownerData.avatar)
-          ownerData.avatar = refreshedAvatar || ownerData.avatar
+      const coAdminUsers: DbUser[] = []
+      for (const email of allAdminEmails) {
+        try {
+          const userData = await getUserByEmail(email)
+          if (userData) {
+            coAdminUsers.push(userData)
+          }
+        } catch (error) {
+          console.error(`Failed to load admin ${email}:`, error)
         }
-        setOwner(ownerData)
-      } catch (error) {
-        console.error('TournamentDetailPage: Failed to load owner:', error)
       }
+      setSelectedCoAdmins(coAdminUsers)
+
     } catch (error) {
       console.error('TournamentDetailPage: Failed to load tournament:', error)
       toast({
@@ -901,10 +894,9 @@ export default function TournamentDetailPage() {
     setIsSearchingCoAdmins(true)
     try {
       const results = await searchUsers(coAdminSearchTerm)
-      // オーナーと既に選択されている管理者を除外
+      // 既に選択されている管理者を除外
       const filtered = results.filter(
-        user => user.email !== tournament?.ownerEmail &&
-          !selectedCoAdmins.some(admin => admin.email === user.email)
+        user => !selectedCoAdmins.some(admin => admin.email === user.email)
       )
       setCoAdminSearchResults(filtered)
     } catch (error) {
@@ -921,21 +913,29 @@ export default function TournamentDetailPage() {
 
   // 管理者追加
   const handleAddCoAdmin = (user: DbUser) => {
-    if (selectedCoAdmins.length < 5 && !selectedCoAdmins.some(admin => admin.email === user.email)) {
+    if (selectedCoAdmins.length < 10 && !selectedCoAdmins.some(admin => admin.email === user.email)) {
       setSelectedCoAdmins([...selectedCoAdmins, user])
       setCoAdminSearchTerm("")
       setCoAdminSearchResults([])
-    } else if (selectedCoAdmins.length >= 5) {
+    } else if (selectedCoAdmins.length >= 10) {
       toast({
         title: "エラー",
-        description: "管理者は最大5名まで追加できます",
+        description: "管理者は最大10名まで追加できます",
         variant: "destructive",
       })
     }
   }
 
-  // 管理者削除
+  // 管理者削除（最低1人は必須）
   const handleRemoveCoAdmin = (userEmail: string) => {
+    if (selectedCoAdmins.length <= 1) {
+      toast({
+        title: "エラー",
+        description: "管理者は最低1人必要です。削除する前に新しい管理者を追加してください。",
+        variant: "destructive",
+      })
+      return
+    }
     setSelectedCoAdmins(selectedCoAdmins.filter(admin => admin.email !== userEmail))
   }
 
@@ -943,8 +943,16 @@ export default function TournamentDetailPage() {
     if (!tournamentId || !tournament) return
 
     try {
-      // 管理者のメールアドレスリストを作成
+      // 管理者のメールアドレスリストを作成（最低1人チェック）
       const coAdminEmails = selectedCoAdmins.map(admin => admin.email)
+      if (coAdminEmails.length === 0) {
+        toast({
+          title: "エラー",
+          description: "管理者は最低1人必要です",
+          variant: "destructive",
+        })
+        return
+      }
 
       // アイコン画像をアップロード
       let iconUrl = tournament.iconUrl
@@ -989,7 +997,8 @@ export default function TournamentDetailPage() {
         subArea: editForm.tournamentType === "official" ? (editForm.subArea || null) : null,
         district: editForm.district,
         instagramUrl: editForm.instagramUrl || null,
-        coAdminEmails: coAdminEmails.length > 0 ? coAdminEmails : null,
+        ownerEmail: coAdminEmails[0], // 最初の管理者をownerEmailに設定
+        coAdminEmails: coAdminEmails, // 全管理者をcoAdminEmailsに保存
         iconUrl: iconUrl || null,
         coverImage: coverImage || null,
         sponsors: editSponsors.length > 0 ? stringifySponsors(editSponsors) : null,
@@ -1703,7 +1712,7 @@ export default function TournamentDetailPage() {
   }
 
   const coverImageUrl = getCoverImageUrl()
-  const ownerName = owner ? `${owner.lastName} ${owner.firstName}` : tournament.ownerEmail
+
 
   return (
     <Layout>
@@ -2183,67 +2192,40 @@ export default function TournamentDetailPage() {
         </div>
               )}
 
-        {/* 主催者情報 */}
-              <div className="mt-6 pt-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <Users className="w-5 h-5 text-gray-600" />
-                  <p className="font-medium text-sm text-gray-700">主催者情報</p>
-                </div>
-              <div className="flex items-center gap-4">
-                {owner ? (
-                    <Link href={`/users/${encodeURIComponent(tournament.ownerEmail)}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                      <Avatar className="w-10 h-10">
-                      <AvatarImage src={owner.avatar || undefined} alt={ownerName} />
-                      <AvatarFallback>
-                        {owner.firstName[0]}{owner.lastName[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                        <p className="font-medium text-sm">{ownerName}</p>
-                    </div>
-                    </Link>
-                ) : (
-                  <div>
-                      <p className="font-medium text-sm">主催者</p>
-                  </div>
-                )}
-              </div>
-
-                {/* Instagram */}
-                {tournament.instagramUrl && (() => {
-                  const getInstagramAccountId = (url: string): string => {
-                    if (!url) return ''
-                    let accountId = url.replace(/^@/, '')
-                    const match = accountId.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^\/\?]+)/)
-                    if (match) {
-                      accountId = match[1]
-                    }
-                    accountId = accountId.split('/')[0].split('?')[0]
-                    return accountId
+        {/* Instagram */}
+              {tournament.instagramUrl && (() => {
+                const getInstagramAccountId = (url: string): string => {
+                  if (!url) return ''
+                  let accountId = url.replace(/^@/, '')
+                  const match = accountId.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^\/\?]+)/)
+                  if (match) {
+                    accountId = match[1]
                   }
-                  const accountId = getInstagramAccountId(tournament.instagramUrl)
-                  const instagramUrl = tournament.instagramUrl.startsWith('http') ? tournament.instagramUrl : `https://instagram.com/${accountId}`
-                  return (
-                    <div className="mt-4 pt-4">
-                      <a
-                        href={instagramUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 transition-colors"
-                        style={{
-                          background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
-                          WebkitBackgroundClip: 'text',
-                          WebkitTextFillColor: 'transparent',
-                          backgroundClip: 'text'
-                        }}
-                      >
-                        <Instagram className="w-5 h-5" style={{ color: '#E4405F' }} />
-                        <span className="text-sm font-medium">{accountId}</span>
-                      </a>
-                    </div>
-                  )
-                })()}
-              </div>
+                  accountId = accountId.split('/')[0].split('?')[0]
+                  return accountId
+                }
+                const accountId = getInstagramAccountId(tournament.instagramUrl)
+                const instagramUrl = tournament.instagramUrl.startsWith('http') ? tournament.instagramUrl : `https://instagram.com/${accountId}`
+                return (
+                  <div className="mt-4 pt-4">
+                    <a
+                      href={instagramUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 transition-colors"
+                      style={{
+                        background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text'
+                      }}
+                    >
+                      <Instagram className="w-5 h-5" style={{ color: '#E4405F' }} />
+                      <span className="text-sm font-medium">{accountId}</span>
+                    </a>
+                  </div>
+                )
+              })()}
 
             </div>
 

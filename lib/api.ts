@@ -278,22 +278,54 @@ export function stringifySponsors(sponsors: SponsorBanner[]): string {
 }
 
 /**
- * 大会の運営者（ownerEmail または coAdminEmails）であるかチェックする
- * @param tournamentId 大会ID
- * @param userEmail 確認するユーザーのメールアドレス
- * @returns 権限がある場合はtrue
+ * 大会の管理者一覧を取得する
+ * ownerEmailとcoAdminEmailsを統合して返す（重複排除）
+ */
+export function getTournamentAdminEmails(tournament: DbTournament): string[] {
+  const admins = new Set<string>()
+  if (tournament.ownerEmail) admins.add(tournament.ownerEmail)
+  if (tournament.coAdminEmails) {
+    tournament.coAdminEmails.forEach(e => { if (e) admins.add(e) })
+  }
+  return [...admins]
+}
+
+/**
+ * チームの管理者一覧を取得する
+ * ownerEmailとeditorEmailsを統合して返す（重複排除）
+ */
+export function getTeamAdminEmails(team: DbTeam): string[] {
+  const admins = new Set<string>()
+  if (team.ownerEmail) admins.add(team.ownerEmail)
+  if (team.editorEmails) {
+    team.editorEmails.forEach(e => { if (e) admins.add(e) })
+  }
+  return [...admins]
+}
+
+/**
+ * 大会の管理者であるかチェックする
+ * ownerEmail または coAdminEmails に含まれているかを確認
  */
 export async function checkTournamentAdminPermission(tournamentId: string, userEmail: string): Promise<boolean> {
   try {
     const tournament = await getTournament(tournamentId)
     if (!tournament) return false
-    const isOwner = tournament.ownerEmail === userEmail
-    const isCoAdmin = tournament.coAdminEmails?.includes(userEmail) || false
-    return isOwner || isCoAdmin
+    const admins = getTournamentAdminEmails(tournament)
+    return admins.includes(userEmail)
   } catch (error) {
     console.error('checkTournamentAdminPermission error:', error?.message)
     return false
   }
+}
+
+/**
+ * チームの管理者であるかチェックする
+ * ownerEmail または editorEmails に含まれているかを確認
+ */
+export function checkTeamAdminPermission(team: DbTeam, userEmail: string): boolean {
+  const admins = getTeamAdminEmails(team)
+  return admins.includes(userEmail)
 }
 
 /**
@@ -2979,9 +3011,9 @@ export async function updateChatThreadStatus(threadId: string, status: 'accepted
     throw new Error('チームが見つかりません')
   }
 
-  const isTeamAdmin = team.ownerEmail === currentEmail || team.editorEmails?.includes(currentEmail) || false
+  const isTeamAdmin = checkTeamAdminPermission(team, currentEmail)
   if (!isTeamAdmin) {
-    throw new Error('オファーの承認/辞退はチーム運営者のみ実行できます')
+    throw new Error('オファーの承認/辞退はチーム管理者のみ実行できます')
   }
 
   const mutation = /* GraphQL */ `
@@ -3163,9 +3195,8 @@ export async function notifyTeamAdmins(teamId: string, notification: {
     const team = await getTeam(teamId)
     if (!team) return
 
-    // オーナーとエディター全員のメールアドレスを収集
-    const adminEmails = [team.ownerEmail, ...(team.editorEmails || [])]
-    const uniqueEmails = [...new Set(adminEmails.filter(Boolean))]
+    // 管理者全員のメールアドレスを収集（ownerEmail + editorEmails統合）
+    const uniqueEmails = getTeamAdminEmails(team)
 
     // 各管理者に通知を送信
     await Promise.all(
@@ -3269,7 +3300,7 @@ export async function getMyManagedTournaments(email: string): Promise<DbTourname
   try {
     const allTournaments = await listTournaments(200)
     return allTournaments.filter(
-      (t: DbTournament) => t.ownerEmail === email || t.coAdminEmails?.includes(email)
+      (t: DbTournament) => getTournamentAdminEmails(t).includes(email)
     )
   } catch (error: any) {
     console.error('getMyManagedTournaments error:', error?.message)

@@ -187,7 +187,7 @@ export default function AdminStatsPage() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="max-w-4xl mx-auto px-2 py-6">
         <div className="flex items-center gap-3 mb-4">
           <Link href="/admin"><Button variant="ghost" size="sm"><ArrowLeft className="w-4 h-4 mr-1" />管理者パネル</Button></Link>
         </div>
@@ -216,7 +216,7 @@ export default function AdminStatsPage() {
         </div>
 
         {/* 新規ユーザー推移 */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
           {[
             { label: "今日", value: stats.newUsersToday, icon: "24h" },
             { label: "今週", value: stats.newUsersWeek, icon: "7d" },

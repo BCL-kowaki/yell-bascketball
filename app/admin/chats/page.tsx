@@ -83,7 +83,7 @@ export default function AdminChatsPage() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="max-w-4xl mx-auto px-2 py-6">
         <div className="flex items-center gap-3 mb-4">
           <Link href="/admin"><Button variant="ghost" size="sm"><ArrowLeft className="w-4 h-4 mr-1" />管理者パネル</Button></Link>
         </div>

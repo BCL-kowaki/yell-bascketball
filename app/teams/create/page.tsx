@@ -199,6 +199,12 @@ export default function CreateTeamPage() {
         console.log('Cover image uploaded:', coverImageUrl)
       }
 
+      // 管理者一覧を作成（作成者を必ず含める）
+      const editorEmailList = formData.editors.map(e => e.email)
+      if (!editorEmailList.includes(currentUserEmail)) {
+        editorEmailList.unshift(currentUserEmail) // 作成者を先頭に追加
+      }
+
       // チームをデータベースに作成
       const teamData = {
         name: formData.name,
@@ -214,7 +220,7 @@ export default function CreateTeamPage() {
         website: formData.website || undefined,
         instagramUrl: formData.instagramUrl || undefined,
         ownerEmail: currentUserEmail,
-        editorEmails: formData.editors.length > 0 ? formData.editors.map(e => e.email) : undefined,
+        editorEmails: editorEmailList, // 作成者を含む全管理者
         isApproved: true,
       }
 

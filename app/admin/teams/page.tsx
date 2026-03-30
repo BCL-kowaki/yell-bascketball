@@ -113,7 +113,7 @@ export default function AdminTeamsPage() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="max-w-4xl mx-auto px-2 py-6">
         <div className="flex items-center gap-3 mb-4">
           <Link href="/admin"><Button variant="ghost" size="sm"><ArrowLeft className="w-4 h-4 mr-1" />管理者パネル</Button></Link>
         </div>
@@ -162,7 +162,7 @@ export default function AdminTeamsPage() {
                       <Badge variant="outline" className="text-yellow-600 border-yellow-400 bg-yellow-50 text-[10px] px-1 py-0"><XCircle className="w-2.5 h-2.5 mr-0.5" />未承認</Badge>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500 truncate">{t.ownerEmail} | {t.prefecture || '-'}</p>
+                  <p className="text-xs text-gray-500 truncate">管理者: {[t.ownerEmail, ...(t.editorEmails || [])].filter((v, i, a) => v && a.indexOf(v) === i).join(', ') || '-'} | {t.prefecture || '-'}</p>
                 </div>
                 <div className="text-right flex-shrink-0 hidden sm:block">
                   <p className="text-xs text-gray-400">{t.headcount ? `${t.headcount}人` : '-'}</p>
@@ -200,8 +200,23 @@ export default function AdminTeamsPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-600">オーナーメール</label>
-                    <Input value={editingData.ownerEmail || ''} onChange={e => setEditingData({...editingData, ownerEmail: e.target.value})} />
+                    <label className="text-xs font-medium text-gray-600">管理者メール（カンマ区切りで複数指定可）</label>
+                    <Input
+                      value={(() => {
+                        const admins = new Set<string>()
+                        if (editingData.ownerEmail) admins.add(editingData.ownerEmail)
+                        if (editingData.editorEmails) editingData.editorEmails.forEach((e: string) => { if (e) admins.add(e) })
+                        return [...admins].join(', ')
+                      })()}
+                      onChange={e => {
+                        const emails = e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean)
+                        setEditingData({
+                          ...editingData,
+                          ownerEmail: emails[0] || editingData.ownerEmail,
+                          editorEmails: emails.length > 0 ? emails : editingData.editorEmails
+                        })
+                      }}
+                    />
                   </div>
                   <div>
                     <label className="text-xs font-medium text-gray-600">説明</label>

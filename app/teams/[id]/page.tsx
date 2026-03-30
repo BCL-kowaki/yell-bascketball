@@ -236,9 +236,11 @@ export default function TeamDetailPage() {
 
   useEffect(() => {
     if (team && currentUserEmail) {
-      const isOwner = team.ownerEmail === currentUserEmail
-      const isEditor = team.editorEmails?.includes(currentUserEmail) || false
-      setCanEdit(isOwner || isEditor)
+      // 管理者判定: ownerEmail + editorEmails を統合
+      const adminEmails = new Set<string>()
+      if (team.ownerEmail) adminEmails.add(team.ownerEmail)
+      if (team.editorEmails) team.editorEmails.forEach(e => { if (e) adminEmails.add(e) })
+      setCanEdit(adminEmails.has(currentUserEmail))
     }
   }, [team, currentUserEmail])
 
@@ -384,8 +386,11 @@ export default function TeamDetailPage() {
           setTeam(teamData)
           setEditedTeam(teamData)
           
-          // チーム管理者（オーナーと編集者）のユーザー情報を取得
-          const managerEmails = [teamData.ownerEmail, ...(teamData.editorEmails || [])]
+          // チーム管理者一覧を取得（ownerEmail + editorEmails統合、重複排除）
+          const adminEmailSet = new Set<string>()
+          if (teamData.ownerEmail) adminEmailSet.add(teamData.ownerEmail)
+          if (teamData.editorEmails) teamData.editorEmails.forEach((e: string) => { if (e) adminEmailSet.add(e) })
+          const managerEmails = [...adminEmailSet]
           const managers: Array<{ email: string; name: string; avatar: string }> = []
           
           for (const email of managerEmails) {
@@ -477,23 +482,23 @@ export default function TeamDetailPage() {
     }
     // スポンサーデータを初期化
     setEditSponsors(parseSponsors(team?.sponsors))
-    // 編集用の管理者リストを初期化（オーナーを除く）
-    if (team?.editorEmails && team.editorEmails.length > 0) {
-      const editorUsers: DbUser[] = []
-      for (const email of team.editorEmails) {
-        try {
-          const userData = await getUserByEmail(email)
-          if (userData) {
-            editorUsers.push(userData)
-          }
-        } catch (error) {
-          console.error(`Failed to load editor ${email}:`, error)
+    // 編集用の管理者リストを初期化（ownerEmail + editorEmailsを統合）
+    const allAdminEmails = new Set<string>()
+    if (team?.ownerEmail) allAdminEmails.add(team.ownerEmail)
+    if (team?.editorEmails) team.editorEmails.forEach(e => { if (e) allAdminEmails.add(e) })
+
+    const editorUsers: DbUser[] = []
+    for (const email of allAdminEmails) {
+      try {
+        const userData = await getUserByEmail(email)
+        if (userData) {
+          editorUsers.push(userData)
         }
+      } catch (error) {
+        console.error(`Failed to load admin ${email}:`, error)
       }
-      setSelectedEditors(editorUsers)
-    } else {
-      setSelectedEditors([])
     }
+    setSelectedEditors(editorUsers)
   }
 
   async function handleCancelEdit() {
@@ -507,23 +512,23 @@ export default function TeamDetailPage() {
     setAvailableDistricts([])
     setEditorSearchTerm("")
     setEditorSearchResults([])
-    // 管理者リストをリセット
-    if (team?.editorEmails && team.editorEmails.length > 0) {
-      const editorUsers: DbUser[] = []
-      for (const email of team.editorEmails) {
-        try {
-          const userData = await getUserByEmail(email)
-          if (userData) {
-            editorUsers.push(userData)
-          }
-        } catch (error) {
-          console.error(`Failed to load editor ${email}:`, error)
+    // 管理者リストをリセット（ownerEmail + editorEmailsを統合）
+    const allAdminEmails = new Set<string>()
+    if (team?.ownerEmail) allAdminEmails.add(team.ownerEmail)
+    if (team?.editorEmails) team.editorEmails.forEach(e => { if (e) allAdminEmails.add(e) })
+
+    const editorUsers: DbUser[] = []
+    for (const email of allAdminEmails) {
+      try {
+        const userData = await getUserByEmail(email)
+        if (userData) {
+          editorUsers.push(userData)
         }
+      } catch (error) {
+        console.error(`Failed to load admin ${email}:`, error)
       }
-      setSelectedEditors(editorUsers)
-    } else {
-      setSelectedEditors([])
     }
+    setSelectedEditors(editorUsers)
   }
 
   function handleLogoSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -560,10 +565,9 @@ export default function TeamDetailPage() {
     setIsSearchingEditors(true)
     try {
       const results = await searchUsers(editorSearchTerm)
-      // オーナーと既に選択されている管理者を除外
+      // 既に選択されている管理者を除外
       const filtered = results.filter(
-        user => user.email !== team?.ownerEmail &&
-          !selectedEditors.some(editor => editor.email === user.email)
+        user => !selectedEditors.some(editor => editor.email === user.email)
       )
       setEditorSearchResults(filtered)
     } catch (error) {
@@ -580,21 +584,29 @@ export default function TeamDetailPage() {
 
   // 管理者追加
   const handleAddEditor = (user: DbUser) => {
-    if (selectedEditors.length < 5 && !selectedEditors.some(editor => editor.email === user.email)) {
+    if (selectedEditors.length < 10 && !selectedEditors.some(editor => editor.email === user.email)) {
       setSelectedEditors([...selectedEditors, user])
       setEditorSearchTerm("")
       setEditorSearchResults([])
-    } else if (selectedEditors.length >= 5) {
+    } else if (selectedEditors.length >= 10) {
       toast({
         title: "エラー",
-        description: "管理者は最大5名まで追加できます",
+        description: "管理者は最大10名まで追加できます",
         variant: "destructive",
       })
     }
   }
 
-  // 管理者削除
+  // 管理者削除（最低1人は必須）
   const handleRemoveEditor = (userEmail: string) => {
+    if (selectedEditors.length <= 1) {
+      toast({
+        title: "エラー",
+        description: "管理者は最低1人必要です。削除する前に新しい管理者を追加してください。",
+        variant: "destructive",
+      })
+      return
+    }
     setSelectedEditors(selectedEditors.filter(editor => editor.email !== userEmail))
   }
 
@@ -634,9 +646,19 @@ export default function TeamDetailPage() {
         }
       }
 
-      // 管理者のメールアドレスリストを作成
-      const editorEmails = selectedEditors.map(editor => editor.email)
+      // 管理者のメールアドレスリストを作成（最低1人チェック）
+      const allAdminEmails = selectedEditors.map(editor => editor.email)
+      if (allAdminEmails.length === 0) {
+        toast({
+          title: "エラー",
+          description: "管理者は最低1人必要です",
+          variant: "destructive",
+        })
+        setIsSaving(false)
+        return
+      }
 
+      // ownerEmailは最初の管理者、editorEmailsには全管理者を保存
       const updatedData: Partial<DbTeam> = {
         name: editedTeam.name,
         shortName: editedTeam.shortName,
@@ -649,7 +671,8 @@ export default function TeamDetailPage() {
         instagramUrl: editedTeam.instagramUrl,
         logoUrl: logoUrl || undefined,
         coverImageUrl: coverImageUrl || undefined,
-        editorEmails: editorEmails.length > 0 ? editorEmails : null,
+        ownerEmail: allAdminEmails[0], // 最初の管理者をownerEmailに設定
+        editorEmails: allAdminEmails,   // 全管理者をeditorEmailsに保存
         sponsors: editSponsors.length > 0 ? stringifySponsors(editSponsors) : null
       }
 
@@ -2038,9 +2061,9 @@ export default function TeamDetailPage() {
 
                       {/* チーム管理者 */}
                       <div>
-                        <Label>チーム管理者（最大5名まで）</Label>
+                        <Label>チーム管理者（最低1名必須・最大10名まで）</Label>
                         <p className="text-sm text-muted-foreground mb-2 mt-1">
-                          オーナー以外の管理者を追加できます。現在: {selectedEditors.length}/5名
+                          管理者はチーム情報の編集、オファーの管理が可能です。現在: {selectedEditors.length}名
                         </p>
 
                         {/* 選択済み管理者 */}
@@ -2062,7 +2085,7 @@ export default function TeamDetailPage() {
                         )}
 
                         {/* 管理者検索 */}
-                        {selectedEditors.length < 5 && (
+                        {selectedEditors.length < 10 && (
                           <div className="flex gap-2 mb-3">
                             <Input
                               placeholder="ユーザー名またはメールアドレスで検索..."

@@ -9,13 +9,30 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import {
   Trophy, ArrowLeft, Search, Loader2, ShieldAlert,
-  Trash2, MapPin, Calendar, ChevronDown, ChevronUp, Save, X, Shield, Flag
+  Trash2, MapPin, Calendar, ChevronDown, ChevronUp, Save, X, Shield, Flag, Plus
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import {
   isSystemAdmin, adminListAllTournaments, updateTournament, adminDeleteTournament,
+  createTournament, getCurrentUserEmail,
   type DbTournament
 } from "@/lib/api"
+import {
+  REGION_BLOCKS, PREFECTURES_BY_REGION, CATEGORIES,
+  OFFICIAL_AREAS_BY_PREFECTURE
+} from "@/lib/regionData"
+
+// 公式戦の新規登録フォームの初期値
+const INITIAL_OFFICIAL_FORM = {
+  name: "",
+  category: "",
+  regionBlock: "",
+  prefecture: "",
+  area: "",
+  subArea: "",
+  description: "",
+  adminEmails: "", // カンマ区切り
+}
 
 export default function AdminTournamentsPage() {
   const { toast } = useToast()
@@ -27,6 +44,11 @@ export default function AdminTournamentsPage() {
   const [editingData, setEditingData] = useState<Partial<DbTournament> | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [filterType, setFilterType] = useState<string>("all")
+
+  // 公式戦新規登録用
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [createForm, setCreateForm] = useState(INITIAL_OFFICIAL_FORM)
+  const [isCreating, setIsCreating] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -42,6 +64,21 @@ export default function AdminTournamentsPage() {
     }
     load()
   }, [])
+
+  // 公式戦の連動セレクト用データ
+  const availablePrefectures = createForm.regionBlock
+    ? (PREFECTURES_BY_REGION[createForm.regionBlock] || [])
+    : []
+
+  const areaHierarchy = createForm.prefecture
+    ? (OFFICIAL_AREAS_BY_PREFECTURE[createForm.prefecture] || null)
+    : null
+
+  const availableAreas = areaHierarchy ? Object.keys(areaHierarchy) : []
+
+  const availableSubAreas = (areaHierarchy && createForm.area)
+    ? (areaHierarchy[createForm.area] || [])
+    : []
 
   const filteredTournaments = tournaments.filter(t => {
     if (filterType === "official" && t.tournamentType !== "official") return false
@@ -89,6 +126,65 @@ export default function AdminTournamentsPage() {
     }
   }
 
+  // 公式戦の新規登録
+  const handleCreateOfficial = async () => {
+    if (!createForm.name.trim()) {
+      toast({ title: "大会名を入力してください", variant: "destructive" })
+      return
+    }
+    if (!createForm.regionBlock) {
+      toast({ title: "地域ブロックを選択してください", variant: "destructive" })
+      return
+    }
+    if (!createForm.prefecture) {
+      toast({ title: "都道府県を選択してください", variant: "destructive" })
+      return
+    }
+
+    setIsCreating(true)
+    try {
+      const currentEmail = await getCurrentUserEmail()
+      if (!currentEmail) {
+        toast({ title: "ログインが必要です", variant: "destructive" })
+        return
+      }
+
+      // 管理者メールを解析
+      const adminEmails = createForm.adminEmails
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean)
+
+      // ownerEmailは最初の管理者、なければ現在のユーザー
+      const ownerEmail = adminEmails[0] || currentEmail
+      const coAdminEmails = adminEmails.length > 0 ? adminEmails : [currentEmail]
+
+      const tournamentData: Partial<DbTournament> = {
+        name: createForm.name.trim(),
+        tournamentType: "official",
+        category: createForm.category || null,
+        regionBlock: createForm.regionBlock,
+        prefecture: createForm.prefecture,
+        area: createForm.area || null,
+        subArea: createForm.subArea || null,
+        district: null,
+        description: createForm.description.trim() || null,
+        ownerEmail,
+        coAdminEmails,
+      }
+
+      const created = await createTournament(tournamentData)
+      setTournaments(prev => [created, ...prev])
+      setCreateForm(INITIAL_OFFICIAL_FORM)
+      setShowCreateForm(false)
+      toast({ title: "公式戦を登録しました" })
+    } catch (error: any) {
+      toast({ title: "エラー", description: error?.message, variant: "destructive" })
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
   const formatDate = (d?: string | null) => d ? new Date(d).toLocaleDateString('ja-JP') : '-'
 
   if (isLoading) return <Layout><div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div></Layout>
@@ -96,7 +192,7 @@ export default function AdminTournamentsPage() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="max-w-4xl mx-auto px-2 py-6">
         <div className="flex items-center gap-3 mb-4">
           <Link href="/admin"><Button variant="ghost" size="sm"><ArrowLeft className="w-4 h-4 mr-1" />管理者パネル</Button></Link>
         </div>
@@ -106,7 +202,174 @@ export default function AdminTournamentsPage() {
             <h1 className="text-xl font-bold">大会管理</h1>
             <Badge variant="secondary">{tournaments.length}件</Badge>
           </div>
+          <Button
+            size="sm"
+            onClick={() => setShowCreateForm(!showCreateForm)}
+            className="bg-gradient-to-r from-[#f7931e] to-[#e84b8a] hover:from-[#e8841a] hover:to-[#d44080] text-white"
+          >
+            <Plus className="w-4 h-4 mr-1" />公式戦を登録
+          </Button>
         </div>
+
+        {/* 公式戦 新規登録フォーム */}
+        {showCreateForm && (
+          <Card className="mb-4 border-2 border-[#f06a4e] overflow-hidden">
+            <div className="bg-gradient-to-r from-[#f7931e] to-[#e84b8a] px-4 py-2">
+              <div className="flex items-center gap-2 text-white">
+                <Shield className="w-4 h-4" />
+                <span className="font-bold text-sm">公式戦の新規登録</span>
+              </div>
+            </div>
+            <div className="p-4 space-y-3">
+              {/* 大会名 */}
+              <div>
+                <label className="text-xs font-medium text-gray-600">大会名 *</label>
+                <Input
+                  value={createForm.name}
+                  onChange={e => setCreateForm({ ...createForm, name: e.target.value })}
+                  placeholder="例: 福岡県ミニバスケットボール大会"
+                />
+              </div>
+
+              {/* カテゴリ */}
+              <div>
+                <label className="text-xs font-medium text-gray-600">カテゴリ</label>
+                <select
+                  className="w-full h-10 rounded-md border border-gray-200 bg-white px-3 text-sm"
+                  value={createForm.category}
+                  onChange={e => setCreateForm({ ...createForm, category: e.target.value })}
+                >
+                  <option value="">選択してください</option>
+                  {CATEGORIES.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 地域ブロック */}
+              <div>
+                <label className="text-xs font-medium text-gray-600">地域ブロック *</label>
+                <select
+                  className="w-full h-10 rounded-md border border-gray-200 bg-white px-3 text-sm"
+                  value={createForm.regionBlock}
+                  onChange={e => setCreateForm({
+                    ...createForm,
+                    regionBlock: e.target.value,
+                    prefecture: "",
+                    area: "",
+                    subArea: "",
+                  })}
+                >
+                  <option value="">選択してください</option>
+                  {REGION_BLOCKS.map(r => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 都道府県 */}
+              {availablePrefectures.length > 0 && (
+                <div>
+                  <label className="text-xs font-medium text-gray-600">都道府県 *</label>
+                  <select
+                    className="w-full h-10 rounded-md border border-gray-200 bg-white px-3 text-sm"
+                    value={createForm.prefecture}
+                    onChange={e => setCreateForm({
+                      ...createForm,
+                      prefecture: e.target.value,
+                      area: "",
+                      subArea: "",
+                    })}
+                  >
+                    <option value="">選択してください</option>
+                    {availablePrefectures.map(p => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* エリア（公式戦の階層データがある場合） */}
+              {availableAreas.length > 0 && (
+                <div>
+                  <label className="text-xs font-medium text-gray-600">エリア</label>
+                  <select
+                    className="w-full h-10 rounded-md border border-gray-200 bg-white px-3 text-sm"
+                    value={createForm.area}
+                    onChange={e => setCreateForm({
+                      ...createForm,
+                      area: e.target.value,
+                      subArea: "",
+                    })}
+                  >
+                    <option value="">選択してください</option>
+                    {availableAreas.map(a => (
+                      <option key={a} value={a}>{a}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* サブエリア */}
+              {availableSubAreas.length > 0 && (
+                <div>
+                  <label className="text-xs font-medium text-gray-600">サブエリア</label>
+                  <select
+                    className="w-full h-10 rounded-md border border-gray-200 bg-white px-3 text-sm"
+                    value={createForm.subArea}
+                    onChange={e => setCreateForm({ ...createForm, subArea: e.target.value })}
+                  >
+                    <option value="">選択してください</option>
+                    {availableSubAreas.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* 管理者メール */}
+              <div>
+                <label className="text-xs font-medium text-gray-600">管理者メール（カンマ区切りで複数指定可）</label>
+                <Input
+                  value={createForm.adminEmails}
+                  onChange={e => setCreateForm({ ...createForm, adminEmails: e.target.value })}
+                  placeholder="admin@example.com, sub@example.com"
+                />
+                <p className="text-[10px] text-gray-400 mt-1">※ 未入力の場合、現在のログインユーザーが管理者になります</p>
+              </div>
+
+              {/* 説明 */}
+              <div>
+                <label className="text-xs font-medium text-gray-600">説明</label>
+                <Input
+                  value={createForm.description}
+                  onChange={e => setCreateForm({ ...createForm, description: e.target.value })}
+                  placeholder="大会の説明（任意）"
+                />
+              </div>
+
+              {/* ボタン */}
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setShowCreateForm(false); setCreateForm(INITIAL_OFFICIAL_FORM) }}
+                >
+                  <X className="w-3 h-3 mr-1" />キャンセル
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleCreateOfficial}
+                  disabled={isCreating}
+                  className="bg-[#f06a4e] hover:bg-[#e05a3e] text-white"
+                >
+                  {isCreating ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Shield className="w-3 h-3 mr-1" />}
+                  {isCreating ? '登録中...' : '公式戦を登録'}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* フィルタータブ */}
         <div className="flex gap-2 mb-3">
@@ -143,7 +406,7 @@ export default function AdminTournamentsPage() {
                     {t.tournamentType === 'official' && <Badge className="bg-[#f06a4e] text-white text-[10px] px-1 py-0">公式</Badge>}
                   </div>
                   <p className="text-xs text-gray-500 truncate">
-                    {[t.prefecture, t.district || t.area].filter(Boolean).join(' / ')} | {t.ownerEmail}
+                    {[t.prefecture, t.district || t.area].filter(Boolean).join(' / ')} | 管理者: {[t.ownerEmail, ...(t.coAdminEmails || [])].filter((v, i, a) => v && a.indexOf(v) === i).join(', ') || '-'}
                   </p>
                 </div>
                 <div className="text-right flex-shrink-0 hidden sm:block">
@@ -183,9 +446,37 @@ export default function AdminTournamentsPage() {
                       <Input value={editingData.district || ''} onChange={e => setEditingData({...editingData, district: e.target.value})} />
                     </div>
                   </div>
+                  {/* 公式戦のエリア編集 */}
+                  {editingData.tournamentType === 'official' && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-medium text-gray-600">エリア</label>
+                        <Input value={editingData.area || ''} onChange={e => setEditingData({...editingData, area: e.target.value})} />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-600">サブエリア</label>
+                        <Input value={editingData.subArea || ''} onChange={e => setEditingData({...editingData, subArea: e.target.value})} />
+                      </div>
+                    </div>
+                  )}
                   <div>
-                    <label className="text-xs font-medium text-gray-600">主催者メール</label>
-                    <Input value={editingData.ownerEmail || ''} onChange={e => setEditingData({...editingData, ownerEmail: e.target.value})} />
+                    <label className="text-xs font-medium text-gray-600">管理者メール（カンマ区切りで複数指定可）</label>
+                    <Input
+                      value={(() => {
+                        const admins = new Set<string>()
+                        if (editingData.ownerEmail) admins.add(editingData.ownerEmail)
+                        if (editingData.coAdminEmails) editingData.coAdminEmails.forEach((e: string) => { if (e) admins.add(e) })
+                        return [...admins].join(', ')
+                      })()}
+                      onChange={e => {
+                        const emails = e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean)
+                        setEditingData({
+                          ...editingData,
+                          ownerEmail: emails[0] || editingData.ownerEmail,
+                          coAdminEmails: emails.length > 0 ? emails : editingData.coAdminEmails
+                        })
+                      }}
+                    />
                   </div>
                   <div>
                     <label className="text-xs font-medium text-gray-600">説明</label>

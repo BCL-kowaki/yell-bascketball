@@ -113,7 +113,7 @@ export default function AdminUsersPage() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="max-w-4xl mx-auto px-2 py-6">
         {/* ヘッダー */}
         <div className="flex items-center gap-3 mb-4">
           <Link href="/admin">
