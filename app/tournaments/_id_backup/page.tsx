@@ -1871,28 +1871,13 @@ export default function TournamentDetailPage() {
               {/* 編集時の追加フィールド */}
               {isEditing && (
                 <div className="space-y-4 mb-4">
-                  {/* 大会タイプ */}
+                  {/* 大会タイプ（変更不可） */}
                   <div>
                     <label className="text-sm font-medium mb-2 block">大会タイプ</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { value: "official", label: "オフィシャル" },
-                        { value: "cup", label: "カップ" },
-                      ].map((type) => (
-                        <button
-                          key={type.value}
-                          type="button"
-                          onClick={() => setEditForm({ ...editForm, tournamentType: type.value, area: "", subArea: "", district: "" })}
-                          className={`p-3 rounded-lg border-2 text-center font-medium text-sm transition-all ${
-                            editForm.tournamentType === type.value
-                              ? "border-[#f06a4e] bg-[#fcf4e7] text-[#f06a4e]"
-                              : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
-                          }`}
-                        >
-                          {type.label}
-                        </button>
-                      ))}
+                    <div className="p-3 rounded-lg border-2 border-gray-200 bg-gray-50 text-center font-medium text-sm text-gray-600">
+                      {editForm.tournamentType === "official" ? "公式戦" : "カップ戦"}
                     </div>
+                    <p className="text-xs text-gray-400 mt-1">※ 大会タイプは変更できません</p>
                   </div>
 
                   <div>
