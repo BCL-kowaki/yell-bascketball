@@ -20,7 +20,12 @@ async function sendPushToUsers(
     tag?: string
   }
 ): Promise<void> {
-  if (userEmails.length === 0) return
+  if (userEmails.length === 0) {
+    console.log('[push-sender] sendPushToUsers: 対象ユーザーなし、スキップ')
+    return
+  }
+
+  console.log('[push-sender] sendPushToUsers: 対象ユーザー数:', userEmails.length, 'emails:', userEmails)
 
   try {
     // 対象ユーザーの購読情報を取得
@@ -34,7 +39,12 @@ async function sendPushToUsers(
       auth: s.auth
     }))
 
-    if (subscriptions.length === 0) return
+    console.log('[push-sender] sendPushToUsers: 購読数:', subscriptions.length)
+
+    if (subscriptions.length === 0) {
+      console.log('[push-sender] sendPushToUsers: プッシュ購読なし（通知設定OFFの可能性）')
+      return
+    }
 
     // APIルートへ送信リクエスト
     const response = await fetch('/api/push-notify', {
@@ -47,10 +57,12 @@ async function sendPushToUsers(
     })
 
     if (!response.ok) {
-      console.error('プッシュ通知送信失敗:', await response.text())
+      console.error('[push-sender] プッシュ通知送信失敗:', await response.text())
+    } else {
+      console.log('[push-sender] プッシュ通知送信成功')
     }
   } catch (error) {
-    console.error('プッシュ通知送信エラー:', error)
+    console.error('[push-sender] プッシュ通知送信エラー:', error)
   }
 }
 
@@ -68,10 +80,15 @@ async function createNotificationsForUsers(
     relatedType?: string
   }
 ): Promise<void> {
-  if (userEmails.length === 0) return
+  if (userEmails.length === 0) {
+    console.log('[push-sender] createNotificationsForUsers: 対象ユーザーなし、スキップ')
+    return
+  }
+
+  console.log('[push-sender] createNotificationsForUsers: 対象ユーザー数:', userEmails.length, 'type:', notification.type)
 
   try {
-    await Promise.all(
+    const results = await Promise.all(
       userEmails.map(email =>
         createNotification({
           recipientEmail: email,
@@ -81,13 +98,19 @@ async function createNotificationsForUsers(
           senderName: notification.senderName,
           relatedId: notification.relatedId,
           relatedType: notification.relatedType,
+        }).then(result => {
+          console.log('[push-sender] DB通知作成成功:', email, result?.id)
+          return result
         }).catch(err => {
-          console.error('DB通知作成失敗:', email, err?.message)
+          console.error('[push-sender] DB通知作成失敗:', email, err?.message, err)
+          return null
         })
       )
     )
+    const successCount = results.filter(r => r !== null).length
+    console.log('[push-sender] DB通知作成結果:', successCount, '/', userEmails.length, '件成功')
   } catch (error) {
-    console.error('DB通知作成エラー:', error)
+    console.error('[push-sender] DB通知作成エラー:', error)
   }
 }
 
@@ -101,6 +124,8 @@ export async function notifyNewChatMessage(
   messagePreview: string,
   threadId: string
 ): Promise<void> {
+  console.log('[push-sender] notifyNewChatMessage: recipients:', recipientEmails.length, 'sender:', senderName)
+
   const title = `${senderName}からメッセージ`
   const body = messagePreview.length > 50 ? messagePreview.slice(0, 50) + '...' : messagePreview
 
@@ -134,30 +159,51 @@ export async function notifyNewTournamentPost(
   postPreview: string,
   excludeEmail?: string
 ): Promise<void> {
-  const emails = await getFavoriteUserEmails(tournamentId, 'tournament')
-  // 投稿者自身は除外
-  const filtered = excludeEmail ? emails.filter(e => e !== excludeEmail) : emails
-
-  const title = `${tournamentName}に新しい投稿`
-  const body = `${authorName}: ${postPreview.length > 40 ? postPreview.slice(0, 40) + '...' : postPreview}`
-
-  // プッシュ通知送信
-  await sendPushToUsers(filtered, {
-    title,
-    body,
-    url: `/tournaments/${tournamentId}`,
-    tag: `tournament-post-${tournamentId}`
+  console.log('[push-sender] notifyNewTournamentPost 開始:', {
+    tournamentId,
+    tournamentName,
+    authorName,
+    excludeEmail
   })
 
-  // Notification DBレコード作成（お知らせ一覧用）
-  await createNotificationsForUsers(filtered, {
-    type: 'tournament_post',
-    title,
-    message: body,
-    senderName: authorName,
-    relatedId: tournamentId,
-    relatedType: 'tournament',
-  })
+  try {
+    const emails = await getFavoriteUserEmails(tournamentId, 'tournament')
+    console.log('[push-sender] notifyNewTournamentPost - お気に入りユーザー数:', emails.length, 'emails:', emails)
+
+    // 投稿者自身は除外
+    const filtered = excludeEmail ? emails.filter(e => e !== excludeEmail) : emails
+    console.log('[push-sender] notifyNewTournamentPost - 除外後:', filtered.length, '件')
+
+    if (filtered.length === 0) {
+      console.log('[push-sender] notifyNewTournamentPost: 通知対象者がいません')
+      return
+    }
+
+    const title = `${tournamentName}に新しい投稿`
+    const body = `${authorName}: ${postPreview.length > 40 ? postPreview.slice(0, 40) + '...' : postPreview}`
+
+    // プッシュ通知送信
+    await sendPushToUsers(filtered, {
+      title,
+      body,
+      url: `/tournaments/${tournamentId}`,
+      tag: `tournament-post-${tournamentId}`
+    })
+
+    // Notification DBレコード作成（お知らせ一覧用）
+    await createNotificationsForUsers(filtered, {
+      type: 'tournament_post',
+      title,
+      message: body,
+      senderName: authorName,
+      relatedId: tournamentId,
+      relatedType: 'tournament',
+    })
+
+    console.log('[push-sender] notifyNewTournamentPost 完了')
+  } catch (error: any) {
+    console.error('[push-sender] notifyNewTournamentPost エラー:', error?.message, error)
+  }
 }
 
 /**
@@ -171,28 +217,49 @@ export async function notifyNewTeamPost(
   postPreview: string,
   excludeEmail?: string
 ): Promise<void> {
-  const emails = await getFavoriteUserEmails(teamId, 'team')
-  // 投稿者自身は除外
-  const filtered = excludeEmail ? emails.filter(e => e !== excludeEmail) : emails
-
-  const title = `${teamName}に新しい投稿`
-  const body = `${authorName}: ${postPreview.length > 40 ? postPreview.slice(0, 40) + '...' : postPreview}`
-
-  // プッシュ通知送信
-  await sendPushToUsers(filtered, {
-    title,
-    body,
-    url: `/teams/${teamId}`,
-    tag: `team-post-${teamId}`
+  console.log('[push-sender] notifyNewTeamPost 開始:', {
+    teamId,
+    teamName,
+    authorName,
+    excludeEmail
   })
 
-  // Notification DBレコード作成（お知らせ一覧用）
-  await createNotificationsForUsers(filtered, {
-    type: 'team_post',
-    title,
-    message: body,
-    senderName: authorName,
-    relatedId: teamId,
-    relatedType: 'team',
-  })
+  try {
+    const emails = await getFavoriteUserEmails(teamId, 'team')
+    console.log('[push-sender] notifyNewTeamPost - お気に入りユーザー数:', emails.length, 'emails:', emails)
+
+    // 投稿者自身は除外
+    const filtered = excludeEmail ? emails.filter(e => e !== excludeEmail) : emails
+    console.log('[push-sender] notifyNewTeamPost - 除外後:', filtered.length, '件')
+
+    if (filtered.length === 0) {
+      console.log('[push-sender] notifyNewTeamPost: 通知対象者がいません')
+      return
+    }
+
+    const title = `${teamName}に新しい投稿`
+    const body = `${authorName}: ${postPreview.length > 40 ? postPreview.slice(0, 40) + '...' : postPreview}`
+
+    // プッシュ通知送信
+    await sendPushToUsers(filtered, {
+      title,
+      body,
+      url: `/teams/${teamId}`,
+      tag: `team-post-${teamId}`
+    })
+
+    // Notification DBレコード作成（お知らせ一覧用）
+    await createNotificationsForUsers(filtered, {
+      type: 'team_post',
+      title,
+      message: body,
+      senderName: authorName,
+      relatedId: teamId,
+      relatedType: 'team',
+    })
+
+    console.log('[push-sender] notifyNewTeamPost 完了')
+  } catch (error: any) {
+    console.error('[push-sender] notifyNewTeamPost エラー:', error?.message, error)
+  }
 }

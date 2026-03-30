@@ -1121,8 +1121,9 @@ export default function TeamDetailPage() {
         description: "チームタイムラインに投稿されました",
       })
 
-      // プッシュ通知: お気に入り登録者に通知（非同期・エラーは無視）
+      // プッシュ通知 + DB通知: お気に入り登録者に通知（非同期）
       const teamId = typeof params.id === 'string' ? params.id : ''
+      console.log('[teams/[id]] 通知送信開始 - teamId:', teamId, 'teamName:', team?.name, 'email:', currentUserEmail)
       if (teamId && team?.name) {
         notifyNewTeamPost(
           teamId,
@@ -1130,7 +1131,11 @@ export default function TeamDetailPage() {
           currentUser ? `${currentUser.lastName}${currentUser.firstName}` : '投稿者',
           newPostContent.trim(),
           currentUserEmail || undefined
-        ).catch(() => {})
+        ).catch((err) => {
+          console.error('[teams/[id]] notifyNewTeamPost エラー:', err?.message, err)
+        })
+      } else {
+        console.warn('[teams/[id]] 通知スキップ - teamId:', teamId, 'teamName:', team?.name)
       }
 
       setNewPostContent("")

@@ -844,7 +844,8 @@ export default function TournamentDetailPage() {
         description: "投稿が作成されました",
       })
 
-      // プッシュ通知: お気に入り登録者に通知（非同期・エラーは無視）
+      // プッシュ通知 + DB通知: お気に入り登録者に通知（非同期）
+      console.log('[tournaments] 通知送信開始 - tournamentId:', tournamentId, 'name:', tournament?.name, 'email:', currentUserEmail)
       if (tournamentId && tournament?.name) {
         notifyNewTournamentPost(
           tournamentId,
@@ -852,7 +853,11 @@ export default function TournamentDetailPage() {
           currentUser ? `${currentUser.lastName}${currentUser.firstName}` : '投稿者',
           postContent,
           currentUserEmail || undefined
-        ).catch(() => {})
+        ).catch((err) => {
+          console.error('[tournaments] notifyNewTournamentPost エラー:', err?.message, err)
+        })
+      } else {
+        console.warn('[tournaments] 通知スキップ - tournamentId:', tournamentId, 'name:', tournament?.name)
       }
 
       setPostContent("")

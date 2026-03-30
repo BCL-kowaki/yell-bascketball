@@ -3106,6 +3106,14 @@ export async function createNotification(input: {
   relatedId?: string
   relatedType?: string
 }): Promise<DbNotification> {
+  console.log('[api] createNotification 開始:', {
+    recipientEmail: input.recipientEmail,
+    type: input.type,
+    title: input.title,
+    relatedId: input.relatedId,
+    relatedType: input.relatedType,
+  })
+
   const mutation = /* GraphQL */ `
     mutation CreateNotification($input: CreateNotificationInput!) {
       createNotification(input: $input) {
@@ -3127,12 +3135,14 @@ export async function createNotification(input: {
     }) as any
 
     if (result.errors) {
+      console.error('[api] createNotification GraphQL errors:', JSON.stringify(result.errors))
       throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
     }
 
+    console.log('[api] createNotification 成功:', result.data.createNotification?.id)
     return result.data.createNotification
   } catch (error: any) {
-    console.error('createNotification error:', error?.message)
+    console.error('[api] createNotification error:', error?.message, error)
     throw error
   }
 }
@@ -4043,6 +4053,7 @@ export async function getAllPushSubscriptions(limit = 1000): Promise<DbPushSubsc
  * お気に入りにこの大会/チームを登録しているユーザーのメールアドレスを取得
  */
 export async function getFavoriteUserEmails(targetId: string, targetType: 'tournament' | 'team'): Promise<string[]> {
+  console.log('[api] getFavoriteUserEmails 開始 - targetId:', targetId, 'targetType:', targetType)
   const filterField = targetType === 'tournament' ? 'tournamentId' : 'teamId'
   const query = /* GraphQL */ `
     query ListFavorites($filter: ModelFavoriteFilterInput, $limit: Int, $nextToken: String) {
@@ -4060,24 +4071,34 @@ export async function getFavoriteUserEmails(targetId: string, targetType: 'tourn
 
   try {
     do {
+      const filterVar = { [filterField]: { eq: targetId } }
+      console.log('[api] getFavoriteUserEmails - GraphQL filter:', JSON.stringify(filterVar))
+
       const result = await client.graphql({
         query,
         variables: {
-          filter: { [filterField]: { eq: targetId } },
+          filter: filterVar,
           limit: 200,
           nextToken
         },
         authMode: 'apiKey'
       }) as any
 
+      if (result.errors) {
+        console.error('[api] getFavoriteUserEmails - GraphQL errors:', JSON.stringify(result.errors))
+      }
+
       const items = result?.data?.listFavorites?.items ?? []
+      console.log('[api] getFavoriteUserEmails - 取得件数:', items.length, 'items:', items)
       allEmails.push(...items.map((i: any) => i.userEmail))
       nextToken = result?.data?.listFavorites?.nextToken || null
     } while (nextToken)
 
-    return [...new Set(allEmails)]
+    const uniqueEmails = [...new Set(allEmails)]
+    console.log('[api] getFavoriteUserEmails 結果:', uniqueEmails.length, '件', uniqueEmails)
+    return uniqueEmails
   } catch (error: any) {
-    console.error('getFavoriteUserEmails error:', error?.message)
+    console.error('[api] getFavoriteUserEmails error:', error?.message, error)
     return []
   }
 }
