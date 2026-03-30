@@ -843,7 +843,7 @@ export default function TournamentDetailPage() {
         notifyNewTournamentPost(
           tournamentId,
           tournament.name,
-          currentUser ? `${currentUser.lastName}${currentUser.firstName}` : '投稿者',
+          currentUserData?.name || '投稿者',
           postContent,
           currentUserEmail || undefined
         ).catch((err) => {

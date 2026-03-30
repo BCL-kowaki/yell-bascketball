@@ -1269,115 +1269,20 @@ export async function updateTeam(id: string, input: Partial<DbTeam>): Promise<Db
   }
 }
 
-// お気に入り機能
-export async function toggleFavoriteTournament(tournamentId: string, userEmail: string): Promise<{ isFavorite: boolean }> {
-  try {
-    // favoritesByUserが存在しない場合のフォールバック: 常にcreateFavoriteを試みる
-    // エラーが発生した場合は既に存在すると判断
-    try {
-      const createResult = await client.graphql({
-        query: `
-          mutation CreateFavorite($input: CreateFavoriteInput!) {
-            createFavorite(input: $input) {
-              id
-              userEmail
-              tournamentId
-            }
-          }
-        `,
-        variables: {
-          input: {
-            userEmail,
-            tournamentId
-          }
-        },
-        authMode: 'apiKey'
-      })
+// ==================== お気に入り機能 ====================
 
-      if ((createResult as any).errors) {
-        // エラーが発生した場合、既に存在する可能性がある
-        return { isFavorite: false }
-      }
+/**
+ * ユーザーの特定大会/チームのお気に入りレコードを検索
+ * favoritesByUser GSI → listFavorites フォールバックで検索
+ */
+async function findExistingFavorite(
+  userEmail: string,
+  targetId: string,
+  targetType: 'tournament' | 'team'
+): Promise<{ id: string } | null> {
+  const filterField = targetType === 'tournament' ? 'tournamentId' : 'teamId'
 
-      return { isFavorite: true }
-    } catch (createError: any) {
-      // createFavoriteが失敗した場合、既に存在する可能性がある
-      return { isFavorite: false }
-    }
-  } catch (error: any) {
-    console.error("toggleFavoriteTournament error:", error?.message)
-    throw error
-  }
-}
-
-export async function toggleFavoriteTeam(teamId: string, userEmail: string): Promise<{ isFavorite: boolean }> {
-  try {
-    // favoritesByUserが存在しない場合のフォールバック: 常にcreateFavoriteを試みる
-    // エラーが発生した場合は既に存在すると判断
-    let existingFavorite: any = null
-    
-    // まずcreateFavoriteを試みる（既に存在する場合はエラーが返される）
-    try {
-      const createResult = await client.graphql({
-        query: `
-          mutation CreateFavorite($input: CreateFavoriteInput!) {
-            createFavorite(input: $input) {
-              id
-              userEmail
-              teamId
-            }
-          }
-        `,
-        variables: {
-          input: {
-            userEmail,
-            teamId
-          }
-        },
-        authMode: 'apiKey'
-      })
-
-      if ((createResult as any).errors) {
-        // エラーが発生した場合、既に存在する可能性がある
-        return { isFavorite: false }
-      }
-
-      return { isFavorite: true }
-    } catch (createError: any) {
-      // createFavoriteが失敗した場合、既に存在する可能性がある
-      return { isFavorite: false }
-    }
-  } catch (error: any) {
-    console.error("toggleFavoriteTeam error:", error?.message)
-    throw error
-  }
-}
-
-export async function checkFavoriteTournament(tournamentId: string, userEmail: string): Promise<boolean> {
-  try {
-    // favoritesByUserが存在しない場合のフォールバック: 常にfalseを返す
-    // お気に入り機能が完全にデプロイされるまでの一時的な対応
-    return false
-  } catch (error: any) {
-    console.error("checkFavoriteTournament error:", error?.message)
-    return false
-  }
-}
-
-export async function checkFavoriteTeam(teamId: string, userEmail: string): Promise<boolean> {
-  try {
-    // favoritesByUserが存在しない場合のフォールバック: 常にfalseを返す
-    // お気に入り機能が完全にデプロイされるまでの一時的な対応
-    return false
-  } catch (error: any) {
-    console.error("checkFavoriteTeam error:", error?.message)
-    return false
-  }
-}
-
-export async function getUserFavorites(userEmail: string): Promise<{ tournaments: DbTournament[], teams: DbTeam[] }> {
-  try {
-    // まずfavoritesByUserを試す（GSIがデプロイされている場合）
+  // まずfavoritesByUser GSIを試す
   try {
     const result = await client.graphql({
       query: `
@@ -1391,34 +1296,23 @@ export async function getUserFavorites(userEmail: string): Promise<{ tournaments
           }
         }
       `,
-      variables: {
-        userEmail
-      },
+      variables: { userEmail },
       authMode: 'apiKey'
     }) as any
 
-      if (result.data?.favoritesByUser?.items) {
-        const favorites = result.data.favoritesByUser.items
-    const tournamentIds = favorites.filter((f: any) => f.tournamentId).map((f: any) => f.tournamentId)
-    const teamIds = favorites.filter((f: any) => f.teamId).map((f: any) => f.teamId)
-
-        const tournaments = await Promise.all(
-          tournamentIds.map((id: string) => getTournament(id))
-        )
-        const teams = await Promise.all(
-          teamIds.map((id: string) => getTeam(id))
-        )
-
-        return {
-          tournaments: tournaments.filter((t): t is DbTournament => t !== null),
-          teams: teams.filter((t): t is DbTeam => t !== null)
-        }
-      }
-    } catch (gsiError) {
-      // favoritesByUser GSIが利用不可の場合、listFavoritesにフォールバック
+    if (result.data?.favoritesByUser?.items) {
+      const match = result.data.favoritesByUser.items.find(
+        (f: any) => f[filterField] === targetId
+      )
+      if (match) return { id: match.id }
     }
+  } catch (gsiError) {
+    // GSIが利用不可の場合、listFavoritesにフォールバック
+    console.log('[api] findExistingFavorite: GSI利用不可、listFavoritesにフォールバック')
+  }
 
-    // フォールバック: listFavoritesを使用してフィルタリング
+  // フォールバック: listFavoritesでスキャン
+  try {
     const result = await client.graphql({
       query: `
         query ListFavorites($filter: ModelFavoriteFilterInput, $limit: Int) {
@@ -1433,13 +1327,189 @@ export async function getUserFavorites(userEmail: string): Promise<{ tournaments
         }
       `,
       variables: {
-        filter: { userEmail: { eq: userEmail } },
+        filter: {
+          userEmail: { eq: userEmail },
+          [filterField]: { eq: targetId }
+        },
         limit: 1000
       },
       authMode: 'apiKey'
     }) as any
 
-    const favorites = result.data?.listFavorites?.items || []
+    const items = result.data?.listFavorites?.items || []
+    if (items.length > 0) return { id: items[0].id }
+  } catch (error: any) {
+    console.error('[api] findExistingFavorite listFavorites error:', error?.message)
+  }
+
+  return null
+}
+
+/**
+ * お気に入り大会のトグル（追加/解除）
+ */
+export async function toggleFavoriteTournament(tournamentId: string, userEmail: string): Promise<{ isFavorite: boolean }> {
+  try {
+    // 既存のお気に入りを検索
+    const existing = await findExistingFavorite(userEmail, tournamentId, 'tournament')
+
+    if (existing) {
+      // 既に存在する → 削除（お気に入り解除）
+      await client.graphql({
+        query: `
+          mutation DeleteFavorite($input: DeleteFavoriteInput!) {
+            deleteFavorite(input: $input) { id }
+          }
+        `,
+        variables: { input: { id: existing.id } },
+        authMode: 'apiKey'
+      })
+      console.log('[api] toggleFavoriteTournament: お気に入り解除', tournamentId)
+      return { isFavorite: false }
+    } else {
+      // 存在しない → 作成（お気に入り登録）
+      await client.graphql({
+        query: `
+          mutation CreateFavorite($input: CreateFavoriteInput!) {
+            createFavorite(input: $input) { id userEmail tournamentId }
+          }
+        `,
+        variables: { input: { userEmail, tournamentId } },
+        authMode: 'apiKey'
+      })
+      console.log('[api] toggleFavoriteTournament: お気に入り登録', tournamentId)
+      return { isFavorite: true }
+    }
+  } catch (error: any) {
+    console.error("toggleFavoriteTournament error:", error?.message)
+    throw error
+  }
+}
+
+/**
+ * お気に入りチームのトグル（追加/解除）
+ */
+export async function toggleFavoriteTeam(teamId: string, userEmail: string): Promise<{ isFavorite: boolean }> {
+  try {
+    // 既存のお気に入りを検索
+    const existing = await findExistingFavorite(userEmail, teamId, 'team')
+
+    if (existing) {
+      // 既に存在する → 削除（お気に入り解除）
+      await client.graphql({
+        query: `
+          mutation DeleteFavorite($input: DeleteFavoriteInput!) {
+            deleteFavorite(input: $input) { id }
+          }
+        `,
+        variables: { input: { id: existing.id } },
+        authMode: 'apiKey'
+      })
+      console.log('[api] toggleFavoriteTeam: お気に入り解除', teamId)
+      return { isFavorite: false }
+    } else {
+      // 存在しない → 作成（お気に入り登録）
+      await client.graphql({
+        query: `
+          mutation CreateFavorite($input: CreateFavoriteInput!) {
+            createFavorite(input: $input) { id userEmail teamId }
+          }
+        `,
+        variables: { input: { userEmail, teamId } },
+        authMode: 'apiKey'
+      })
+      console.log('[api] toggleFavoriteTeam: お気に入り登録', teamId)
+      return { isFavorite: true }
+    }
+  } catch (error: any) {
+    console.error("toggleFavoriteTeam error:", error?.message)
+    throw error
+  }
+}
+
+/**
+ * 大会がお気に入り登録済みか確認
+ */
+export async function checkFavoriteTournament(tournamentId: string, userEmail: string): Promise<boolean> {
+  try {
+    const existing = await findExistingFavorite(userEmail, tournamentId, 'tournament')
+    return existing !== null
+  } catch (error: any) {
+    console.error("checkFavoriteTournament error:", error?.message)
+    return false
+  }
+}
+
+/**
+ * チームがお気に入り登録済みか確認
+ */
+export async function checkFavoriteTeam(teamId: string, userEmail: string): Promise<boolean> {
+  try {
+    const existing = await findExistingFavorite(userEmail, teamId, 'team')
+    return existing !== null
+  } catch (error: any) {
+    console.error("checkFavoriteTeam error:", error?.message)
+    return false
+  }
+}
+
+/**
+ * ユーザーのお気に入り一覧を取得（大会 + チーム）
+ */
+export async function getUserFavorites(userEmail: string): Promise<{ tournaments: DbTournament[], teams: DbTeam[] }> {
+  try {
+    let favorites: any[] = []
+
+    // まずfavoritesByUser GSIを試す
+    try {
+      const result = await client.graphql({
+        query: `
+          query FavoritesByUser($userEmail: String!) {
+            favoritesByUser(userEmail: $userEmail) {
+              items {
+                id
+                tournamentId
+                teamId
+              }
+            }
+          }
+        `,
+        variables: { userEmail },
+        authMode: 'apiKey'
+      }) as any
+
+      if (result.data?.favoritesByUser?.items) {
+        favorites = result.data.favoritesByUser.items
+      }
+    } catch (gsiError) {
+      // GSI利用不可の場合、listFavoritesにフォールバック
+      console.log('[api] getUserFavorites: GSI利用不可、listFavoritesにフォールバック')
+    }
+
+    // GSIで取得できなかった場合、listFavoritesを使用
+    if (favorites.length === 0) {
+      const result = await client.graphql({
+        query: `
+          query ListFavorites($filter: ModelFavoriteFilterInput, $limit: Int) {
+            listFavorites(filter: $filter, limit: $limit) {
+              items {
+                id
+                userEmail
+                tournamentId
+                teamId
+              }
+            }
+          }
+        `,
+        variables: {
+          filter: { userEmail: { eq: userEmail } },
+          limit: 1000
+        },
+        authMode: 'apiKey'
+      }) as any
+
+      favorites = result.data?.listFavorites?.items || []
+    }
 
     const tournamentIds = favorites.filter((f: any) => f.tournamentId).map((f: any) => f.tournamentId)
     const teamIds = favorites.filter((f: any) => f.teamId).map((f: any) => f.teamId)
@@ -4082,31 +4152,36 @@ export async function getAllPushSubscriptions(limit = 1000): Promise<DbPushSubsc
 
 /**
  * お気に入りにこの大会/チームを登録しているユーザーのメールアドレスを取得
+ * listFavoritesでスキャンし、ページネーションを最大10回まで試行
  */
 export async function getFavoriteUserEmails(targetId: string, targetType: 'tournament' | 'team'): Promise<string[]> {
   console.log('[api] getFavoriteUserEmails 開始 - targetId:', targetId, 'targetType:', targetType)
   const filterField = targetType === 'tournament' ? 'tournamentId' : 'teamId'
-  const query = /* GraphQL */ `
-    query ListFavorites($filter: ModelFavoriteFilterInput, $limit: Int, $nextToken: String) {
-      listFavorites(filter: $filter, limit: $limit, nextToken: $nextToken) {
-        items {
-          userEmail
-        }
-        nextToken
-      }
-    }
-  `
 
   const allEmails: string[] = []
   let nextToken: string | null = null
+  let pageCount = 0
+  const MAX_PAGES = 20 // 最大20ページまでスキャン（4000件）
 
   try {
     do {
+      pageCount++
       const filterVar = { [filterField]: { eq: targetId } }
-      console.log('[api] getFavoriteUserEmails - GraphQL filter:', JSON.stringify(filterVar))
+      if (pageCount === 1) {
+        console.log('[api] getFavoriteUserEmails - GraphQL filter:', JSON.stringify(filterVar))
+      }
 
       const result = await client.graphql({
-        query,
+        query: /* GraphQL */ `
+          query ListFavorites($filter: ModelFavoriteFilterInput, $limit: Int, $nextToken: String) {
+            listFavorites(filter: $filter, limit: $limit, nextToken: $nextToken) {
+              items {
+                userEmail
+              }
+              nextToken
+            }
+          }
+        `,
         variables: {
           filter: filterVar,
           limit: 200,
@@ -4117,13 +4192,14 @@ export async function getFavoriteUserEmails(targetId: string, targetType: 'tourn
 
       if (result.errors) {
         console.error('[api] getFavoriteUserEmails - GraphQL errors:', JSON.stringify(result.errors))
+        break
       }
 
       const items = result?.data?.listFavorites?.items ?? []
-      console.log('[api] getFavoriteUserEmails - 取得件数:', items.length, 'items:', items)
-      allEmails.push(...items.map((i: any) => i.userEmail))
+      console.log('[api] getFavoriteUserEmails - ページ', pageCount, '取得件数:', items.length)
+      allEmails.push(...items.map((i: any) => i.userEmail).filter(Boolean))
       nextToken = result?.data?.listFavorites?.nextToken || null
-    } while (nextToken)
+    } while (nextToken && pageCount < MAX_PAGES)
 
     const uniqueEmails = [...new Set(allEmails)]
     console.log('[api] getFavoriteUserEmails 結果:', uniqueEmails.length, '件', uniqueEmails)
