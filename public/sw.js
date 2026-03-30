@@ -1,5 +1,5 @@
 // YeLL Basketball Service Worker
-const CACHE_NAME = 'yell-v1'
+const CACHE_NAME = 'yell-v2'
 
 // キャッシュするリソース（アプリシェル）
 const PRECACHE_URLS = [
@@ -65,6 +65,10 @@ self.addEventListener('fetch', (event) => {
 })
 
 // ==================== プッシュ通知受信 ====================
+// ロック画面でも通知を表示するための最適化設定:
+// - requireInteraction: true → ユーザーが操作するまで通知を維持
+// - renotify: true → 同じtagでも再通知（バイブレーション再発生）
+// - silent: false → 音・バイブレーションを有効化
 
 self.addEventListener('push', (event) => {
   if (!event.data) return
@@ -84,12 +88,26 @@ self.addEventListener('push', (event) => {
     body: data.body || '',
     icon: data.icon || '/icons/icon-192x192.png',
     badge: '/icons/icon-96x96.png',
-    tag: data.tag || 'yell-notification',
+    tag: data.tag || 'yell-notification-' + Date.now(),
     data: {
       url: data.url || '/timeline'
     },
-    vibrate: [200, 100, 200],
-    requireInteraction: false
+    // ロック画面通知を確実に表示するための設定
+    vibrate: [200, 100, 200, 100, 200],
+    requireInteraction: true, // ユーザーが操作するまで通知を維持（ロック画面で消えない）
+    renotify: true,           // 同じtagでも再通知
+    silent: false,            // 音・バイブレーションを有効にする
+    // アクションボタン（対応ブラウザのみ）
+    actions: [
+      {
+        action: 'open',
+        title: '開く'
+      },
+      {
+        action: 'dismiss',
+        title: '閉じる'
+      }
+    ]
   }
 
   event.waitUntil(
@@ -100,6 +118,9 @@ self.addEventListener('push', (event) => {
 // 通知クリック時の処理
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
+
+  // 「閉じる」アクションの場合は何もしない
+  if (event.action === 'dismiss') return
 
   const url = event.notification.data?.url || '/timeline'
 
@@ -116,4 +137,9 @@ self.addEventListener('notificationclick', (event) => {
       return clients.openWindow(url)
     })
   )
+})
+
+// 通知を閉じた時の処理
+self.addEventListener('notificationclose', (event) => {
+  console.log('[SW] 通知を閉じました:', event.notification.tag)
 })

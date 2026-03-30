@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Settings, LogOut, Search, Trophy, Users, User, X, Smartphone, MessageCircle, ShieldAlert } from "lucide-react"
+import { Settings, LogOut, Search, Trophy, Users, User, X, Smartphone, MessageCircle, ShieldAlert, Bell } from "lucide-react"
 
 interface HeaderNavigationProps {
   isLoggedIn?: boolean
@@ -27,19 +27,30 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = fa
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [unreadCount, setUnreadCount] = useState(0)
+  const [notificationCount, setNotificationCount] = useState(0)
 
-  // ログイン中は未読メッセージ数を取得
+  // ログイン中は未読メッセージ数と未読通知数を取得
   useEffect(() => {
     if (!isLoggedIn) {
       setUnreadCount(0)
+      setNotificationCount(0)
       return
     }
 
     const fetchUnread = async () => {
       try {
-        const { getTotalUnreadCount } = await import("@/lib/api")
-        const count = await getTotalUnreadCount()
-        setUnreadCount(count)
+        const { getTotalUnreadCount, getUnreadNotificationCount, getCurrentUserEmail } = await import("@/lib/api")
+        const [msgCount, email] = await Promise.all([
+          getTotalUnreadCount(),
+          getCurrentUserEmail()
+        ])
+        setUnreadCount(msgCount)
+
+        // 通知数を取得
+        if (email) {
+          const notiCount = await getUnreadNotificationCount(email)
+          setNotificationCount(notiCount)
+        }
       } catch {
         // エラー時は0のまま
       }
@@ -117,6 +128,21 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = fa
             )}
           </button>
 
+          {/* お知らせ通知ボタン（ログイン時のみ） */}
+          {isLoggedIn && (
+            <Link
+              href="/notifications"
+              className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 shrink-0"
+            >
+              <Bell className="w-[18px] h-[18px] text-gray-700" />
+              {notificationCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white rounded-full bg-pink-500">
+                  {notificationCount > 99 ? "99+" : notificationCount}
+                </span>
+              )}
+            </Link>
+          )}
+
           {/* メッセージボタン（ログイン時のみ） */}
           {isLoggedIn && (
             <Link
@@ -157,6 +183,17 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = fa
                     </a>
                   </DropdownMenuItem>
                 )}
+                <DropdownMenuItem asChild>
+                  <Link href="/notifications" className="flex items-center cursor-pointer">
+                    <Bell className="mr-3 h-4 w-4" />
+                    お知らせ
+                    {notificationCount > 0 && (
+                      <span className="ml-auto text-xs font-bold text-pink-500">
+                        {notificationCount > 99 ? "99+" : notificationCount}
+                      </span>
+                    )}
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/profile" className="flex items-center cursor-pointer">
                     <User className="mr-3 h-4 w-4" />

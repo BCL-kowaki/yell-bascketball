@@ -3,9 +3,10 @@
 /**
  * プッシュ通知送信ヘルパー
  * フロントエンドからAPIルートを経由して通知を送信
+ * + Notification DBレコードも作成（お知らせ一覧用）
  */
 
-import { getPushSubscriptionsByUser, getFavoriteUserEmails } from './api'
+import { getPushSubscriptionsByUser, getFavoriteUserEmails, createNotification } from './api'
 
 /**
  * 特定ユーザーにプッシュ通知を送信
@@ -54,6 +55,43 @@ async function sendPushToUsers(
 }
 
 /**
+ * 特定ユーザーにNotification DBレコードを作成（お知らせ一覧用）
+ */
+async function createNotificationsForUsers(
+  userEmails: string[],
+  notification: {
+    type: string
+    title: string
+    message: string
+    senderName?: string
+    relatedId?: string
+    relatedType?: string
+  }
+): Promise<void> {
+  if (userEmails.length === 0) return
+
+  try {
+    await Promise.all(
+      userEmails.map(email =>
+        createNotification({
+          recipientEmail: email,
+          type: notification.type,
+          title: notification.title,
+          message: notification.message,
+          senderName: notification.senderName,
+          relatedId: notification.relatedId,
+          relatedType: notification.relatedType,
+        }).catch(err => {
+          console.error('DB通知作成失敗:', email, err?.message)
+        })
+      )
+    )
+  } catch (error) {
+    console.error('DB通知作成エラー:', error)
+  }
+}
+
+/**
  * チャットメッセージの通知を送信
  * 相手チームの運営者、または大会運営者に通知
  */
@@ -63,11 +101,25 @@ export async function notifyNewChatMessage(
   messagePreview: string,
   threadId: string
 ): Promise<void> {
+  const title = `${senderName}からメッセージ`
+  const body = messagePreview.length > 50 ? messagePreview.slice(0, 50) + '...' : messagePreview
+
+  // プッシュ通知送信
   await sendPushToUsers(recipientEmails, {
-    title: `${senderName}からメッセージ`,
-    body: messagePreview.length > 50 ? messagePreview.slice(0, 50) + '...' : messagePreview,
+    title,
+    body,
     url: `/messages/${threadId}`,
     tag: `chat-${threadId}`
+  })
+
+  // Notification DBレコード作成（お知らせ一覧用）
+  await createNotificationsForUsers(recipientEmails, {
+    type: 'chat_message',
+    title,
+    message: body,
+    senderName,
+    relatedId: threadId,
+    relatedType: 'chat',
   })
 }
 
@@ -86,11 +138,25 @@ export async function notifyNewTournamentPost(
   // 投稿者自身は除外
   const filtered = excludeEmail ? emails.filter(e => e !== excludeEmail) : emails
 
+  const title = `${tournamentName}に新しい投稿`
+  const body = `${authorName}: ${postPreview.length > 40 ? postPreview.slice(0, 40) + '...' : postPreview}`
+
+  // プッシュ通知送信
   await sendPushToUsers(filtered, {
-    title: `${tournamentName}に新しい投稿`,
-    body: `${authorName}: ${postPreview.length > 40 ? postPreview.slice(0, 40) + '...' : postPreview}`,
+    title,
+    body,
     url: `/tournaments/${tournamentId}`,
     tag: `tournament-post-${tournamentId}`
+  })
+
+  // Notification DBレコード作成（お知らせ一覧用）
+  await createNotificationsForUsers(filtered, {
+    type: 'tournament_post',
+    title,
+    message: body,
+    senderName: authorName,
+    relatedId: tournamentId,
+    relatedType: 'tournament',
   })
 }
 
@@ -109,10 +175,24 @@ export async function notifyNewTeamPost(
   // 投稿者自身は除外
   const filtered = excludeEmail ? emails.filter(e => e !== excludeEmail) : emails
 
+  const title = `${teamName}に新しい投稿`
+  const body = `${authorName}: ${postPreview.length > 40 ? postPreview.slice(0, 40) + '...' : postPreview}`
+
+  // プッシュ通知送信
   await sendPushToUsers(filtered, {
-    title: `${teamName}に新しい投稿`,
-    body: `${authorName}: ${postPreview.length > 40 ? postPreview.slice(0, 40) + '...' : postPreview}`,
+    title,
+    body,
     url: `/teams/${teamId}`,
     tag: `team-post-${teamId}`
+  })
+
+  // Notification DBレコード作成（お知らせ一覧用）
+  await createNotificationsForUsers(filtered, {
+    type: 'team_post',
+    title,
+    message: body,
+    senderName: authorName,
+    relatedId: teamId,
+    relatedType: 'team',
   })
 }

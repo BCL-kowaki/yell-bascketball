@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Bell, Trophy, Users, Heart, MessageCircle, Mail, Loader2, CheckCircle } from "lucide-react"
+import { Bell, Trophy, Users, Heart, MessageCircle, Mail, Loader2, CheckCircle, FileText } from "lucide-react"
 import Link from "next/link"
 import { Layout } from "@/components/layout"
 import {
@@ -57,8 +57,12 @@ export default function NotificationsPage() {
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
+      case "tournament_post":
+        return <Trophy className="h-4 w-4 text-red-500" />
       case "tournament_update":
         return <Trophy className="h-4 w-4 text-red-500" />
+      case "team_post":
+        return <Users className="h-4 w-4 text-[#e84b8a]" />
       case "team_update":
         return <Users className="h-4 w-4 text-[#e84b8a]" />
       case "offer_received":
@@ -67,6 +71,8 @@ export default function NotificationsPage() {
         return <CheckCircle className="h-4 w-4 text-green-500" />
       case "offer_rejected":
         return <Mail className="h-4 w-4 text-gray-400" />
+      case "chat_message":
+        return <MessageCircle className="h-4 w-4 text-blue-500" />
       case "comment":
         return <MessageCircle className="h-4 w-4 text-[#e84b8a]" />
       case "like":
@@ -107,11 +113,17 @@ export default function NotificationsPage() {
     return date.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })
   }
 
+  // タブのフィルタリング：新しいtypeに対応
   const filteredNotifications = notifications.filter((n) => {
     if (activeTab === "all") return true
     if (activeTab === "unread") return !n.isRead
-    if (activeTab === "favorites") return n.type === "tournament_update" || n.type === "team_update"
-    if (activeTab === "offers") return n.type === "offer_received" || n.type === "offer_accepted" || n.type === "offer_rejected"
+    if (activeTab === "favorites") {
+      return n.type === "tournament_post" || n.type === "team_post" ||
+             n.type === "tournament_update" || n.type === "team_update"
+    }
+    if (activeTab === "offers") {
+      return n.type === "offer_received" || n.type === "offer_accepted" || n.type === "offer_rejected"
+    }
     return true
   })
 
@@ -155,7 +167,7 @@ export default function NotificationsPage() {
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center space-x-2">
                 <Bell className="h-6 w-6 text-[#e84b8a]" />
-                <span>通知</span>
+                <span>お知らせ</span>
                 {unreadCount > 0 && (
                   <Badge variant="destructive" className="ml-2">
                     {unreadCount}
@@ -184,7 +196,7 @@ export default function NotificationsPage() {
                   )}
                 </TabsTrigger>
                 <TabsTrigger value="unread">未読</TabsTrigger>
-                <TabsTrigger value="favorites">お気に入り</TabsTrigger>
+                <TabsTrigger value="favorites">投稿</TabsTrigger>
                 <TabsTrigger value="offers">オファー</TabsTrigger>
               </TabsList>
 
@@ -196,7 +208,7 @@ export default function NotificationsPage() {
                       <p className="font-medium">通知はありません</p>
                       {tab === "favorites" && (
                         <p className="text-sm mt-1">
-                          お気に入りの大会やチームが更新されるとここに表示されます
+                          お気に入りの大会やチームに新しい投稿があるとここに表示されます
                         </p>
                       )}
                       {tab === "offers" && (
@@ -211,7 +223,7 @@ export default function NotificationsPage() {
                         const link = getNotificationLink(notification)
                         const content = (
                           <Card
-                            className={`${!notification.isRead ? "bg-red-50 border-red-100" : ""} ${link ? "cursor-pointer hover:shadow-md transition-shadow" : ""}`}
+                            className={`${!notification.isRead ? "bg-pink-50 border-pink-100" : ""} ${link ? "cursor-pointer hover:shadow-md transition-shadow" : ""}`}
                           >
                             <CardContent className="p-4">
                               <div className="flex items-start gap-3">
@@ -219,7 +231,7 @@ export default function NotificationsPage() {
                                   <Avatar className="h-10 w-10">
                                     <AvatarImage src={notification.senderAvatar || "/placeholder.svg"} />
                                     <AvatarFallback className="bg-gray-200">
-                                      {notification.title.charAt(0)}
+                                      {notification.senderName?.charAt(0) || notification.title.charAt(0)}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5">
@@ -232,12 +244,12 @@ export default function NotificationsPage() {
                                       <p className="text-sm">
                                         <span className="font-semibold text-gray-900">{notification.title}</span>
                                       </p>
-                                      <p className="text-sm text-gray-600 mt-0.5">{notification.message}</p>
+                                      <p className="text-sm text-gray-600 mt-0.5 line-clamp-2">{notification.message}</p>
                                       <p className="text-xs text-gray-400 mt-1">{formatTime(notification.createdAt)}</p>
                                     </div>
                                     {!notification.isRead && (
                                       <div className="flex items-center gap-2 flex-shrink-0">
-                                        <div className="w-2 h-2 bg-brand-gradient rounded-full"></div>
+                                        <div className="w-2.5 h-2.5 bg-pink-500 rounded-full animate-pulse"></div>
                                         <Button
                                           size="sm"
                                           variant="ghost"
@@ -277,19 +289,23 @@ export default function NotificationsPage() {
 
         {/* 通知の説明 */}
         <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <h3 className="font-medium text-gray-800 mb-2">通知について</h3>
-          <ul className="text-sm text-gray-600 space-y-1">
+          <h3 className="font-medium text-gray-800 mb-2">お知らせについて</h3>
+          <ul className="text-sm text-gray-600 space-y-1.5">
             <li className="flex items-start gap-2">
-              <Heart className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-              <span>お気に入り登録した<strong>大会</strong>や<strong>チーム</strong>が更新されると通知が届きます</span>
+              <Trophy className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+              <span>お気に入り登録した<strong>大会</strong>に新しい投稿があると通知が届きます</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <Users className="w-4 h-4 text-[#e84b8a] mt-0.5 flex-shrink-0" />
+              <span>お気に入り登録した<strong>チーム</strong>に新しい投稿があると通知が届きます</span>
             </li>
             <li className="flex items-start gap-2">
               <Mail className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
               <span>大会主催者からの<strong>参加オファー</strong>が届くと通知されます</span>
             </li>
             <li className="flex items-start gap-2">
-              <MessageCircle className="w-4 h-4 text-[#e84b8a] mt-0.5 flex-shrink-0" />
-              <span>あなたの投稿への<strong>コメント</strong>や<strong>いいね</strong>が通知されます</span>
+              <MessageCircle className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+              <span>チャットで<strong>新しいメッセージ</strong>を受信すると通知されます</span>
             </li>
           </ul>
         </div>
