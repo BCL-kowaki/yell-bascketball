@@ -106,25 +106,25 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = fa
     >
       {/* 1段目: ロゴ | 検索 | アバター or ログイン/登録 */}
       <div
-        className="flex items-center justify-between h-11 px-2 border-b border-gray-100"
+        className="flex items-center justify-between h-14 lg:h-11 px-3 lg:px-2 border-b border-gray-100"
         style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
       >
         {/* ロゴ */}
         <Link href="/tournaments" className="shrink-0">
-          <img src="/images/symbol.png" alt="YeLL" className="h-8 w-auto" />
+          <img src="/images/symbol.png" alt="YeLL" className="h-9 lg:h-8 w-auto" />
         </Link>
 
         {/* 右側 */}
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-1.5 lg:gap-1 shrink-0">
           {/* 検索ボタン */}
           <button
             onClick={() => setIsSearchOpen(!isSearchOpen)}
-            className="flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 shrink-0"
+            className="flex items-center justify-center w-10 h-10 lg:w-9 lg:h-9 rounded-full bg-gray-100 hover:bg-gray-200 active:bg-gray-300 shrink-0"
           >
             {isSearchOpen ? (
-              <X className="w-[18px] h-[18px] text-gray-700" />
+              <X className="w-5 h-5 lg:w-[18px] lg:h-[18px] text-gray-700" />
             ) : (
-              <Search className="w-[18px] h-[18px] text-gray-700" />
+              <Search className="w-5 h-5 lg:w-[18px] lg:h-[18px] text-gray-700" />
             )}
           </button>
 
@@ -132,9 +132,9 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = fa
           {isLoggedIn && (
             <Link
               href="/notifications"
-              className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 shrink-0"
+              className="relative flex items-center justify-center w-10 h-10 lg:w-9 lg:h-9 rounded-full bg-gray-100 hover:bg-gray-200 active:bg-gray-300 shrink-0"
             >
-              <Bell className="w-[18px] h-[18px] text-gray-700" />
+              <Bell className="w-5 h-5 lg:w-[18px] lg:h-[18px] text-gray-700" />
               {notificationCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white rounded-full bg-pink-500">
                   {notificationCount > 99 ? "99+" : notificationCount}
@@ -147,9 +147,9 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = fa
           {isLoggedIn && (
             <Link
               href="/messages"
-              className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 shrink-0"
+              className="relative flex items-center justify-center w-10 h-10 lg:w-9 lg:h-9 rounded-full bg-gray-100 hover:bg-gray-200 active:bg-gray-300 shrink-0"
             >
-              <MessageCircle className="w-[18px] h-[18px] text-gray-700" />
+              <MessageCircle className="w-5 h-5 lg:w-[18px] lg:h-[18px] text-gray-700" />
               {unreadCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white rounded-full bg-red-500">
                   {unreadCount > 99 ? "99+" : unreadCount}
