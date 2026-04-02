@@ -246,12 +246,12 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = fa
         </div>
       )}
 
-      {/* 2段目: 大会 | チーム | マイページ */}
+      {/* 2段目: 大会 | チーム | マイページ（PCのみ表示、スマホは下部ナビに統一） */}
       {(() => {
         const visibleNavItems = navItems.filter(item => !item.requireLogin || isLoggedIn)
         return (
           <div
-            className={`grid h-11 border-b border-gray-100 ${visibleNavItems.length === 4 ? 'grid-cols-4' : visibleNavItems.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}
+            className={`hidden lg:grid h-11 border-b border-gray-100 ${visibleNavItems.length === 4 ? 'grid-cols-4' : visibleNavItems.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}
             style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', padding: 0, margin: 0 }}
           >
             {visibleNavItems.map((item) => {

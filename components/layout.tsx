@@ -2,6 +2,7 @@
 import { ReactNode, useState, useEffect, useRef } from "react"
 import { usePathname } from "next/navigation"
 import { HeaderNavigation } from "@/components/header-navigation"
+import { SidebarMenu } from "@/components/sidebar-menu"
 import { getUserByEmail, isAdminEmail } from "@/lib/api"
 
 interface LayoutProps {
@@ -126,11 +127,12 @@ export function Layout({ children, isLoggedIn: propIsLoggedIn = false, currentUs
   return (
     <div className="min-h-screen bg-background overflow-x-hidden w-full max-w-full">
       <HeaderNavigation isLoggedIn={isLoggedIn} currentUser={currentUser} isAdmin={isAdmin} />
-      <div className="pt-[88px]">
+      <div className="pt-[44px] lg:pt-[88px] pb-16 lg:pb-0">
         <main className="min-h-screen w-full max-w-full overflow-x-hidden">
           {children}
         </main>
       </div>
+      <SidebarMenu isLoggedIn={isLoggedIn} currentUser={currentUser} />
     </div>
   )
 }
