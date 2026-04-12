@@ -20,6 +20,14 @@ const sourceSans = Source_Sans_3({
 export const metadata: Metadata = {
   title: "YeLL Bascketball【公式】",
   description: "YeLL Bascketball公式サイト - バスケットボールコミュニティ",
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+    },
+  },
   generator: "v0.app",
   manifest: "/manifest.json",
   appleWebApp: {
