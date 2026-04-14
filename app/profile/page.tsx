@@ -1110,8 +1110,8 @@ export default function ProfilePage() {
           </div>
 
           {/* アバター - カバー左下にオーバーラップ（FB: カバー下端から上に約1/3重なる） */}
-          <div className="absolute -bottom-[68px] md:-bottom-[80px] left-1/2 -translate-x-1/2 md:left-[16px] md:translate-x-0 z-10">
-            <Avatar className="w-[136px] h-[136px] md:w-[168px] md:h-[168px] border-[4px] border-white shadow-md ring-0">
+          <div className="absolute -bottom-[76px] md:-bottom-[80px] left-1/2 -translate-x-1/2 md:left-[16px] md:translate-x-0 z-10">
+            <Avatar className="w-[152px] h-[152px] md:w-[168px] md:h-[168px] border-[4px] border-white shadow-md ring-0">
               <AvatarImage
                 src={getAvatarUrl()}
                 alt={displayName}
@@ -1227,7 +1227,7 @@ export default function ProfilePage() {
           </div>
 
           {/* === モバイル版: 中央揃え縦レイアウト === */}
-          <div className="flex md:hidden flex-col items-center px-[16px] pt-[76px] pb-[12px]">
+          <div className="flex md:hidden flex-col items-center px-[16px] pt-[84px] pb-[12px]">
             <h1 className="text-[24px] font-extrabold text-center leading-[28px]">{displayName}</h1>
             <div className="flex items-center gap-[4px] mt-[4px] text-[14px] text-muted-foreground">
               <Link href={`/list/following?user=${encodeURIComponent(user.email)}`} className="hover:underline cursor-pointer">
