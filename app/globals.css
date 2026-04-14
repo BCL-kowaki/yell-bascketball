@@ -10,7 +10,7 @@
   --gradient-mid: #f06a4e; /* Mid tone for single-color fallback */
   --gradient: linear-gradient(135deg, var(--gradient-from), var(--gradient-to));
 
-  --background: #f5f5f0;
+  --background: #F0F2F5;
   --foreground: #1e1e1e;
   --card: #ffffff;
   --card-foreground: #1e1e1e;
