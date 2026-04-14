@@ -91,7 +91,7 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = fa
     setIsSearchOpen(false)
   }
 
-  // ログイン・ゲスト共通: 大会 | チーム | タイムライン | プロフィール
+  // ナビアイテム
   const navItems = [
     { href: "/tournaments", icon: Trophy, label: "大会一覧" },
     { href: "/teams", icon: Users, label: "チーム一覧" },
@@ -99,76 +99,96 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = fa
     { href: "/profile", icon: User, label: "マイページ", requireLogin: true },
   ]
 
+  const visibleNavItems = navItems.filter(item => !item.requireLogin || isLoggedIn)
+
   return (
     <header
       className="fixed top-0 z-50 bg-background shadow-sm"
-      style={{ left: 0, right: 0, width: '100%', maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}
+      style={{ left: 0, right: 0, width: '100%' }}
     >
-      {/* 1段目: ロゴ | 検索 | アバター or ログイン/登録 */}
-      <div
-        className="flex items-center justify-between h-14 lg:h-11 px-3 lg:px-2 border-b border-gray-100"
-        style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
-      >
-        {/* ロゴ */}
-        <Link href="/tournaments" className="shrink-0">
-          <img src="/images/symbol.png" alt="YeLL" className="h-9 lg:h-8 w-auto" />
+      {/* === FB風1段ヘッダー（PC） === */}
+      <div className="hidden lg:flex items-center h-[56px] px-[16px]" style={{ width: '100%' }}>
+        {/* 左: ロゴ */}
+        <Link href="/tournaments" className="shrink-0 mr-[8px]">
+          <img src="/images/symbol.png" alt="YeLL" className="h-[40px] w-auto" />
         </Link>
 
-        {/* 右側 */}
-        <div className="flex items-center gap-1.5 lg:gap-1 shrink-0">
-          {/* 検索ボタン */}
-          <button
-            onClick={() => setIsSearchOpen(!isSearchOpen)}
-            className="flex items-center justify-center w-10 h-10 lg:w-9 lg:h-9 rounded-full bg-gray-100 hover:bg-gray-200 active:bg-gray-300 shrink-0"
-          >
-            {isSearchOpen ? (
-              <X className="w-5 h-5 lg:w-[18px] lg:h-[18px] text-gray-700" />
-            ) : (
-              <Search className="w-5 h-5 lg:w-[18px] lg:h-[18px] text-gray-700" />
-            )}
-          </button>
+        {/* 左: 検索ボタン */}
+        <button
+          onClick={() => setIsSearchOpen(!isSearchOpen)}
+          className="flex items-center justify-center w-[40px] h-[40px] rounded-full bg-gray-100 hover:bg-gray-200 shrink-0"
+        >
+          {isSearchOpen ? (
+            <X className="w-[20px] h-[20px] text-gray-600" />
+          ) : (
+            <Search className="w-[20px] h-[20px] text-gray-600" />
+          )}
+        </button>
 
-          {/* お知らせ通知ボタン（ログイン時のみ） */}
+        {/* 中央: ナビゲーションアイコン（FB風 等間幅） */}
+        <div className="flex-1 flex justify-center">
+          <div className="flex items-center h-[56px]">
+            {visibleNavItems.map((item) => {
+              const IconComponent = item.icon
+              const active = isActive(item.href)
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center justify-center h-[48px] min-w-[110px] px-[16px] mx-[4px] rounded-[8px] relative transition-colors ${
+                    active ? "text-[#e84b8a]" : "text-gray-500 hover:bg-gray-100"
+                  }`}
+                >
+                  <IconComponent className="w-[24px] h-[24px]" />
+                  {active && (
+                    <div className="absolute bottom-0 left-[8px] right-[8px] h-[3px] rounded-t-full" style={{ background: 'linear-gradient(90deg, #f7931e, #e84b8a)' }} />
+                  )}
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* 右: アイコン群 */}
+        <div className="flex items-center gap-[8px] shrink-0">
+          {/* 通知 */}
           {isLoggedIn && (
             <Link
               href="/notifications"
-              className="relative flex items-center justify-center w-10 h-10 lg:w-9 lg:h-9 rounded-full bg-gray-100 hover:bg-gray-200 active:bg-gray-300 shrink-0"
+              className="relative flex items-center justify-center w-[40px] h-[40px] rounded-full bg-gray-100 hover:bg-gray-200"
             >
-              <Bell className="w-5 h-5 lg:w-[18px] lg:h-[18px] text-gray-700" />
+              <Bell className="w-[20px] h-[20px] text-gray-600" />
               {notificationCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white rounded-full bg-pink-500">
+                <span className="absolute -top-[2px] -right-[2px] flex items-center justify-center min-w-[18px] h-[18px] px-[4px] text-[11px] font-bold text-white rounded-full bg-red-500">
                   {notificationCount > 99 ? "99+" : notificationCount}
                 </span>
               )}
             </Link>
           )}
 
-          {/* メッセージボタン（ログイン時のみ・PCのみ表示。モバイルは下部ナビに移動） */}
+          {/* メッセージ */}
           {isLoggedIn && (
             <Link
               href="/messages"
-              className="hidden lg:flex relative items-center justify-center w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 active:bg-gray-300 shrink-0"
+              className="relative flex items-center justify-center w-[40px] h-[40px] rounded-full bg-gray-100 hover:bg-gray-200"
             >
-              <MessageCircle className="w-[18px] h-[18px] text-gray-700" />
+              <MessageCircle className="w-[20px] h-[20px] text-gray-600" />
               {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white rounded-full bg-red-500">
+                <span className="absolute -top-[2px] -right-[2px] flex items-center justify-center min-w-[18px] h-[18px] px-[4px] text-[11px] font-bold text-white rounded-full bg-red-500">
                   {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               )}
             </Link>
           )}
 
-          {/* ログイン済み: ユーザー名 + アバター（ドロップダウンでプロフィール/設定） */}
+          {/* アカウント */}
           {isLoggedIn ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-1.5 px-1 hover:opacity-80 transition-opacity cursor-pointer">
-                  <span className="text-xs font-medium text-gray-700 max-w-[80px] truncate">
-                    {currentUser?.name || "ユーザー"}
-                  </span>
-                  <Avatar className="w-7 h-7">
+                <button className="flex items-center justify-center w-[40px] h-[40px] rounded-full hover:opacity-80 cursor-pointer">
+                  <Avatar className="w-[40px] h-[40px]">
                     <AvatarImage src={currentUser?.avatar} />
-                    <AvatarFallback className="bg-brand-gradient text-white text-xs">
+                    <AvatarFallback className="bg-brand-gradient text-white text-sm">
                       {currentUser?.name?.charAt(0) || 'U'}
                     </AvatarFallback>
                   </Avatar>
@@ -214,11 +234,103 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = fa
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <div className="flex items-center gap-1">
-              <Link href="/login" className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded whitespace-nowrap">
+            <div className="flex items-center gap-[6px]">
+              <Link href="/login" className="px-[12px] py-[6px] text-[14px] text-gray-700 hover:bg-gray-100 rounded-[6px] whitespace-nowrap">
                 ログイン
               </Link>
-              <Link href="/register" className="px-2 py-1 text-sm bg-brand-gradient text-white rounded whitespace-nowrap hover:opacity-90">
+              <Link href="/register" className="px-[12px] py-[6px] text-[14px] bg-brand-gradient text-white rounded-[6px] whitespace-nowrap hover:opacity-90">
+                登録
+              </Link>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* === モバイルヘッダー（1段のみ） === */}
+      <div
+        className="flex lg:hidden items-center justify-between h-[56px] px-[12px]"
+      >
+        {/* ロゴ */}
+        <Link href="/tournaments" className="shrink-0">
+          <img src="/images/symbol.png" alt="YeLL" className="h-[36px] w-auto" />
+        </Link>
+
+        {/* 右側アイコン */}
+        <div className="flex items-center gap-[6px]">
+          {/* 検索 */}
+          <button
+            onClick={() => setIsSearchOpen(!isSearchOpen)}
+            className="flex items-center justify-center w-[36px] h-[36px] rounded-full bg-gray-100 hover:bg-gray-200"
+          >
+            {isSearchOpen ? (
+              <X className="w-[20px] h-[20px] text-gray-600" />
+            ) : (
+              <Search className="w-[20px] h-[20px] text-gray-600" />
+            )}
+          </button>
+
+          {/* 通知 */}
+          {isLoggedIn && (
+            <Link
+              href="/notifications"
+              className="relative flex items-center justify-center w-[36px] h-[36px] rounded-full bg-gray-100 hover:bg-gray-200"
+            >
+              <Bell className="w-[20px] h-[20px] text-gray-600" />
+              {notificationCount > 0 && (
+                <span className="absolute -top-[1px] -right-[1px] flex items-center justify-center min-w-[16px] h-[16px] px-[3px] text-[10px] font-bold text-white rounded-full bg-pink-500">
+                  {notificationCount > 99 ? "99+" : notificationCount}
+                </span>
+              )}
+            </Link>
+          )}
+
+          {/* アカウント */}
+          {isLoggedIn ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center justify-center hover:opacity-80 cursor-pointer">
+                  <Avatar className="w-[32px] h-[32px]">
+                    <AvatarImage src={currentUser?.avatar} />
+                    <AvatarFallback className="bg-brand-gradient text-white text-xs">
+                      {currentUser?.name?.charAt(0) || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <a href="/admin" target="_blank" rel="noopener noreferrer" className="flex items-center cursor-pointer">
+                      <ShieldAlert className="mr-3 h-4 w-4" />
+                      管理者パネル
+                    </a>
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem asChild>
+                  <Link href="/profile" className="flex items-center cursor-pointer">
+                    <User className="mr-3 h-4 w-4" />
+                    プロフィール
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings" className="flex items-center cursor-pointer">
+                    <Settings className="mr-3 h-4 w-4" />
+                    設定
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer">
+                  <LogOut className="mr-3 h-4 w-4" />
+                  ログアウト
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <div className="flex items-center gap-[4px]">
+              <Link href="/login" className="px-[8px] py-[4px] text-[13px] text-gray-700 hover:bg-gray-100 rounded whitespace-nowrap">
+                ログイン
+              </Link>
+              <Link href="/register" className="px-[8px] py-[4px] text-[13px] bg-brand-gradient text-white rounded whitespace-nowrap hover:opacity-90">
                 登録
               </Link>
             </div>
@@ -228,55 +340,19 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = fa
 
       {/* 検索バー（展開時） */}
       {isSearchOpen && (
-        <div
-          className="px-2 py-2 bg-background border-b border-gray-100"
-          style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
-        >
+        <div className="px-[12px] py-[8px] bg-background border-t border-gray-100">
           <form onSubmit={handleSearch}>
             <input
               type="text"
               placeholder="YeLLを検索"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-9 px-3 bg-gray-100 rounded-full text-sm outline-none focus:bg-background focus:ring-2 ring-brand"
-              style={{ maxWidth: '100%', boxSizing: 'border-box' }}
+              className="w-full h-[36px] px-[14px] bg-gray-100 rounded-full text-[14px] outline-none focus:bg-background focus:ring-2 ring-brand"
               autoFocus
             />
           </form>
         </div>
       )}
-
-      {/* 2段目: 大会 | チーム | マイページ（PCのみ表示、スマホは下部ナビに統一） */}
-      {(() => {
-        const visibleNavItems = navItems.filter(item => !item.requireLogin || isLoggedIn)
-        return (
-          <div className="hidden lg:flex justify-center border-b border-gray-100" style={{ width: '100%' }}>
-            <div
-              className={`grid h-11 w-full ${visibleNavItems.length === 4 ? 'grid-cols-4' : visibleNavItems.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}
-              style={{ maxWidth: '1080px' }}
-            >
-              {visibleNavItems.map((item) => {
-                const IconComponent = item.icon
-                const active = isActive(item.href)
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`flex items-center justify-center h-full relative ${
-                      active ? "text-[#e84b8a]" : "text-gray-500 hover:bg-gray-50"
-                    }`}
-                  >
-                    <IconComponent className="w-5 h-5" />
-                    {active && (
-                      <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-brand-gradient-h" />
-                    )}
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-        )
-      })()}
     </header>
   )
 }
