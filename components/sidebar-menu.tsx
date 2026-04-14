@@ -53,16 +53,9 @@ export function SidebarMenu({ isLoggedIn = false, currentUser }: SidebarMenuProp
 
   const menuItems = [
     {
-      href: "/timeline",
-      icon: Smartphone,
-      label: "フィード",
-      show: true,
-      badge: 0
-    },
-    {
       href: "/tournaments",
       icon: Trophy,
-      label: "大会情報",
+      label: "大会",
       show: true,
       badge: 0
     },
@@ -70,6 +63,13 @@ export function SidebarMenu({ isLoggedIn = false, currentUser }: SidebarMenuProp
       href: "/teams",
       icon: Users,
       label: "チーム",
+      show: true,
+      badge: 0
+    },
+    {
+      href: "/timeline",
+      icon: Smartphone,
+      label: "フィード",
       show: true,
       badge: 0
     },
