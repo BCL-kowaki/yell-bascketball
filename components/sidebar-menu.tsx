@@ -1,8 +1,6 @@
 "use client"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Users,
   Trophy,
@@ -90,74 +88,6 @@ export function SidebarMenu({ isLoggedIn = false, currentUser }: SidebarMenuProp
         </div>
       </nav>
 
-      {/* Desktop Sidebar */}
-      <div className="hidden lg:block fixed left-0 top-17 h-[calc(100vh-1rem)] bg-white/95 backdrop-blur-md border-r border-gray-200/50 shadow-lg z-30 w-64">
-        {/* User Profile Section */}
-        {isLoggedIn && currentUser && (
-          <div className="p-4 border-b border-gray-200/50">
-            <Link href="/profile">
-              <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
-                <Avatar className="w-10 h-10 border-2 border-[#f06a4e]">
-                  <AvatarImage
-                    src={currentUser.avatar || "/placeholder-user.jpg"}
-                    alt={currentUser.name || 'ユーザー'}
-                  />
-                  <AvatarFallback className="bg-brand-gradient text-white font-semibold text-sm">
-                    {currentUser.name?.charAt(0)?.toUpperCase() ||
-                     currentUser.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() ||
-                     'U'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium text-gray-900 truncate">
-                    {currentUser.name || 'ユーザー'}
-                  </div>
-                  <div className="text-xs text-gray-500">オンライン</div>
-                </div>
-              </div>
-            </Link>
-          </div>
-        )}
-
-        {/* Navigation Menu */}
-        <nav className="flex-1 p-4">
-          <div className="space-y-2">
-            {visibleMenuItems.map((item) => {
-              const IconComponent = item.icon
-              const linkProps = item.external
-                ? { href: item.href, target: "_blank", rel: "noopener noreferrer" }
-                : { href: item.href }
-
-              return (
-                <Link key={item.href} {...linkProps}>
-                  <Button
-                    variant="ghost"
-                    className={`w-full justify-start h-12 px-4 ${
-                      isActive(item.href)
-                        ? "bg-brand-gradient text-white hover:opacity-90"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                    }`}
-                  >
-                    <IconComponent className="w-5 h-5 mr-3 flex-shrink-0" />
-                    <span className="font-medium">{item.label}</span>
-                  </Button>
-                </Link>
-              )
-            })}
-          </div>
-        </nav>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-gray-200/50">
-          <div className="text-xs text-gray-500 text-center">
-            <div>YeLL Basketball Platform</div>
-            <div className="mt-1">© 2024 All rights reserved</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Desktop Content Spacer */}
-      <div className="hidden lg:block w-64" />
     </>
   )
 }
