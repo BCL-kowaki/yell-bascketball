@@ -512,19 +512,21 @@ export default function TeamsPage() {
             {filteredTeams.map((team) => (
               <Link key={team.id} href={`/teams/${team.id}`}>
                 <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer group hover:scale-105 py-0 overflow-hidden">
-                  <div className="relative overflow-hidden">
-                    <img
-                      src={team.coverImageUrl || "/placeholder.svg?height=200&width=400&text=No+Cover"}
-                      alt={team.name}
-                      className="w-full h-32 object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  <div className="relative">
+                    <div className="overflow-hidden">
+                      <img
+                        src={team.coverImageUrl || "/placeholder.svg?height=200&width=400&text=No+Cover"}
+                        alt={team.name}
+                        className="w-full h-32 object-cover group-hover:scale-110 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    </div>
 
-                    {/* Team Logo */}
-                    <div className="absolute top-22 left-4 z-10">
-                      <Avatar className="w-18 h-18 border-2 border-white shadow-md">
+                    {/* Team Logo - overflow-hiddenの外に配置 */}
+                    <div className="absolute -bottom-[28px] left-4 z-10">
+                      <Avatar className="w-[56px] h-[56px] border-2 border-white shadow-md">
                         <AvatarImage src={team.logoUrl || undefined} />
-                        <AvatarFallback className="bg-brand-gradient text-white font-bold">
+                        <AvatarFallback className="bg-brand-gradient text-white font-bold text-sm">
                           {(team.shortName || team.name).slice(0, 2)}
                         </AvatarFallback>
                       </Avatar>
