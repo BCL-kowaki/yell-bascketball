@@ -4,6 +4,9 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
 import { signIn, signOut, fetchUserAttributes } from "aws-amplify/auth"
+import { getUserByEmail } from "@/lib/api"
+import { generateClient } from "aws-amplify/api"
+import { createUser } from "@/src/graphql/mutations"
 
 // Cognitoエラーメッセージを日本語に翻訳
 function translateCognitoError(errorMessage: string): string {
@@ -182,8 +185,31 @@ export default function LoginPage() {
       expires.setDate(expires.getDate() + 30)
       document.cookie = `savedEmail=${encodeURIComponent(userEmail)}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`
 
-      // === Step 6: ページ遷移 ===
-      // ★ DB操作はここではやらない（profileページで行う）
+      // === Step 6: DB未登録ユーザーのリカバリー ===
+      // Cognito登録後にプロフィール設定画面に到達せず離脱したケースに対応
+      setStatusMsg("ユーザーデータ確認中...")
+      try {
+        const dbUser = await getUserByEmail(userEmail)
+        if (!dbUser) {
+          // DBにユーザーがいない → 自動作成（最低限のデータで）
+          const apiClient = generateClient({ authMode: 'apiKey' })
+          await apiClient.graphql({
+            query: createUser,
+            variables: {
+              input: {
+                email: userEmail,
+                firstName: "",
+                lastName: "",
+              }
+            },
+            authMode: 'apiKey'
+          })
+        }
+      } catch {
+        // DB操作失敗でもログイン自体は続行する
+      }
+
+      // === Step 7: ページ遷移 ===
       // ★ window.location.hrefで確実にフルリロードさせる
       setStatusMsg("ログイン成功！リダイレクト中...")
       window.location.href = '/profile'
