@@ -418,7 +418,7 @@ export default function ChatDetailPage() {
   const otherName = isSender ? thread.teamName : thread.senderName
 
   return (
-    <div className="flex flex-col h-screen bg-[#f0ebe3]">
+    <div className="flex flex-col h-screen bg-[#F0F2F5]">
       {/* ヘッダー */}
       <div className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-2xl mx-auto flex items-center gap-3 px-3 py-2.5">
