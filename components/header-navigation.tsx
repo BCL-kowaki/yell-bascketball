@@ -250,28 +250,30 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = fa
       {(() => {
         const visibleNavItems = navItems.filter(item => !item.requireLogin || isLoggedIn)
         return (
-          <div
-            className={`hidden lg:grid h-11 border-b border-gray-100 ${visibleNavItems.length === 4 ? 'grid-cols-4' : visibleNavItems.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}
-            style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', padding: 0, margin: 0 }}
-          >
-            {visibleNavItems.map((item) => {
-              const IconComponent = item.icon
-              const active = isActive(item.href)
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center justify-center h-full relative ${
-                    active ? "text-[#e84b8a]" : "text-gray-500 hover:bg-gray-50"
-                  }`}
-                >
-                  <IconComponent className="w-5 h-5" />
-                  {active && (
-                    <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-brand-gradient-h" />
-                  )}
-                </Link>
-              )
-            })}
+          <div className="hidden lg:flex justify-center border-b border-gray-100" style={{ width: '100%' }}>
+            <div
+              className={`grid h-11 w-full ${visibleNavItems.length === 4 ? 'grid-cols-4' : visibleNavItems.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}
+              style={{ maxWidth: '1080px' }}
+            >
+              {visibleNavItems.map((item) => {
+                const IconComponent = item.icon
+                const active = isActive(item.href)
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center justify-center h-full relative ${
+                      active ? "text-[#e84b8a]" : "text-gray-500 hover:bg-gray-50"
+                    }`}
+                  >
+                    <IconComponent className="w-5 h-5" />
+                    {active && (
+                      <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-brand-gradient-h" />
+                    )}
+                  </Link>
+                )
+              })}
+            </div>
           </div>
         )
       })()}
