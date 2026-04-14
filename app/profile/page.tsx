@@ -1328,7 +1328,7 @@ export default function ProfilePage() {
           </div> {/* max-w-[1080px] */}
         </div> {/* bg-card全幅 */}
 
-      <div className="w-full max-w-[1080px] mx-auto pb-20 px-0 lg:px-4">
+      <div className="w-full max-w-[1080px] mx-auto pb-20 px-0 lg:px-4" style={{ backgroundColor: '#F0F2F5' }}>
         <div className="flex justify-center gap-3">
         <div className="w-full max-w-[720px] px-0 overflow-hidden box-border">
           <TabsContent value="timeline" className="mt-2 space-y-2 w-full overflow-hidden box-border">
