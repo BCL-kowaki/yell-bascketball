@@ -1874,9 +1874,9 @@ export default function TournamentDetailPage() {
                 ) : (
                   <>
                     {tournament.startDate && tournament.endDate && (
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        <span>
+                      <div className="flex items-center gap-2 bg-gradient-to-r from-orange-50 to-pink-50 border border-orange-200 rounded-lg px-4 py-2">
+                        <Calendar className="w-5 h-5 text-[#e84b8a]" />
+                        <span className="text-base font-semibold text-foreground">
                           {new Date(tournament.startDate).toLocaleDateString('ja-JP')} 〜 {new Date(tournament.endDate).toLocaleDateString('ja-JP')}
                         </span>
                       </div>
@@ -2281,6 +2281,7 @@ export default function TournamentDetailPage() {
                 )}
           </div>
         </div>
+        <div className="pb-[16px]" />
 
         {/* FB風タブメニュー */}
           <div className="border-t border-border px-[16px]">
