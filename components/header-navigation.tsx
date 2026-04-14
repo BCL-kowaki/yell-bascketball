@@ -143,13 +143,13 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = fa
             </Link>
           )}
 
-          {/* メッセージボタン（ログイン時のみ） */}
+          {/* メッセージボタン（ログイン時のみ・PCのみ表示。モバイルは下部ナビに移動） */}
           {isLoggedIn && (
             <Link
               href="/messages"
-              className="relative flex items-center justify-center w-10 h-10 lg:w-9 lg:h-9 rounded-full bg-gray-100 hover:bg-gray-200 active:bg-gray-300 shrink-0"
+              className="hidden lg:flex relative items-center justify-center w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 active:bg-gray-300 shrink-0"
             >
-              <MessageCircle className="w-5 h-5 lg:w-[18px] lg:h-[18px] text-gray-700" />
+              <MessageCircle className="w-[18px] h-[18px] text-gray-700" />
               {unreadCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white rounded-full bg-red-500">
                   {unreadCount > 99 ? "99+" : unreadCount}
