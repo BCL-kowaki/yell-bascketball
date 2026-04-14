@@ -521,8 +521,8 @@ export default function TeamsPage() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
 
                     {/* Team Logo */}
-                    <div className="absolute top-22 left-4">
-                      <Avatar className="w-18 h-18 border-2 border-white">
+                    <div className="absolute top-22 left-4 z-10">
+                      <Avatar className="w-18 h-18 border-2 border-white shadow-md">
                         <AvatarImage src={team.logoUrl || undefined} />
                         <AvatarFallback className="bg-brand-gradient text-white font-bold">
                           {(team.shortName || team.name).slice(0, 2)}
@@ -531,7 +531,7 @@ export default function TeamsPage() {
                     </div>
                   </div>
 
-                  <CardHeader className="pt-10 pb-3 px-2">
+                  <CardHeader className="pt-10 pb-3 px-3">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg font-bold text-gray-900 group-hover:text-[#e84b8a] transition-colors">
                         {team.name}
@@ -550,7 +550,7 @@ export default function TeamsPage() {
                     </div>
                   </CardHeader>
 
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-6 pb-4">
                     {/* Team Info */}
                     {team.description && (
                       <p className="text-sm text-gray-600 line-clamp-2">{team.description}</p>
