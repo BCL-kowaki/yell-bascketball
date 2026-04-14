@@ -103,7 +103,7 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = fa
 
   return (
     <header
-      className="fixed top-0 z-50 bg-background shadow-sm"
+      className="fixed top-0 z-50 bg-white shadow-sm"
       style={{ left: 0, right: 0, width: '100%' }}
     >
       {/* === FB風1段ヘッダー（PC） === */}

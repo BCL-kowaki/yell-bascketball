@@ -1092,6 +1092,8 @@ export default function ProfilePage() {
   return (
     <Layout isLoggedIn={true} currentUser={{ name: displayName, avatar: getAvatarUrl() || undefined }}>
       {/* === Facebook風 プロフィールヘッダー === */}
+      {/* 白背景で両サイドの余白を埋める */}
+      <div className="w-full bg-white">
       {/* カバー画像（中央寄せ・max-width制限） */}
       <div className="max-w-[1080px] mx-auto">
         <div className="relative">
@@ -1102,6 +1104,10 @@ export default function ProfilePage() {
               className="w-full h-full object-cover"
               onError={handleCoverImageError}
             />
+            {/* FB風グラデーションオーバーレイ（下部を少し暗く） */}
+            <div className="absolute inset-0 pointer-events-none" style={{
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0.06) 0%, transparent 15%, transparent 60%, rgba(0,0,0,0.25) 100%)',
+            }} />
           </div>
 
           {/* アバター - カバー左下にオーバーラップ（FB: カバー下端から上に約1/3重なる） */}
@@ -1888,6 +1894,7 @@ export default function ProfilePage() {
       </div>
       </div>
       </Tabs>
+      </div> {/* bg-white 全体ラッパー閉じ */}
 
       {/* コメントモーダル */}
       {selectedPostForComment && user && (
