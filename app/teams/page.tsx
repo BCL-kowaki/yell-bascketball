@@ -511,7 +511,7 @@ export default function TeamsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
             {filteredTeams.map((team) => (
               <Link key={team.id} href={`/teams/${team.id}`}>
-                <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer group hover:scale-105">
+                <Card className="border-0 shadow-[0px_1px_2px_1px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer group hover:scale-105 py-0 overflow-hidden">
                   <div className="relative overflow-hidden">
                     <img
                       src={team.coverImageUrl || "/placeholder.svg?height=200&width=400&text=No+Cover"}
@@ -521,8 +521,8 @@ export default function TeamsPage() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
 
                     {/* Team Logo */}
-                    <div className="absolute bottom-4 left-4">
-                      <Avatar className="w-12 h-12 border-2 border-white">
+                    <div className="absolute top-22 left-4">
+                      <Avatar className="w-18 h-18 border-2 border-white">
                         <AvatarImage src={team.logoUrl || undefined} />
                         <AvatarFallback className="bg-brand-gradient text-white font-bold">
                           {(team.shortName || team.name).slice(0, 2)}
@@ -531,7 +531,7 @@ export default function TeamsPage() {
                     </div>
                   </div>
 
-                  <CardHeader className="pt-3 pb-3">
+                  <CardHeader className="pt-10 pb-3 px-2">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg font-bold text-gray-900 group-hover:text-[#e84b8a] transition-colors">
                         {team.name}

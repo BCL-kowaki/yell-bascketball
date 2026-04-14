@@ -26,7 +26,7 @@ import { OFFICIAL_AREAS_BY_PREFECTURE } from "@/lib/regionData"
 function TournamentCard({ tournament }: { tournament: DbTournament }) {
   return (
     <Link href={`/tournaments/${tournament.id}`}>
-      <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group h-full overflow-hidden">
+      <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group h-full overflow-hidden py-0">
         {tournament.coverImage && (
           <div className="relative w-full h-32 overflow-hidden">
             <img
