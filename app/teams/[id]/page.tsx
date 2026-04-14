@@ -1320,143 +1320,56 @@ export default function TeamDetailPage() {
         </div>
         </div>
 
-      {/* カバー画像 - Full Width */}
-      <div className="relative w-screen -mx-[calc((100vw-100%)/2)]">
-          <div className="h-48 md:h-64 bg-gradient-to-r from-orange-400 to-red-400 overflow-hidden">
+      {/* === FB風 チームヘッダー === */}
+      <div className="w-full bg-white">
+      <div className="max-w-[1080px] mx-auto">
+        <div className="relative">
+          <div className="h-[200px] md:h-[400px] bg-gradient-to-r from-orange-400 to-red-400 overflow-hidden md:rounded-b-lg">
             {team.coverImageUrl ? (
-              <img
-                src={team.coverImageUrl}
-                alt={team.name}
-                className="w-full h-full object-cover"
-              />
+              <img src={team.coverImageUrl} alt={team.name} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
                 <Users className="w-24 h-24 text-white/50" />
               </div>
             )}
+            <div className="absolute inset-0 pointer-events-none" style={{
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0.06) 0%, transparent 15%, transparent 60%, rgba(0,0,0,0.25) 100%)',
+            }} />
           </div>
 
-        {/* Logo and Cover Edit Button - Positioned relative to max-w-6xl container */}
-        <div className="absolute -bottom-12 md:-bottom-16 left-1/2 -translate-x-1/2 w-full max-w-6xl px-4 md:px-8">
-          <div className="relative">
-            <div className="absolute left-0 -bottom-0">
-            <div className="relative">
-              <Avatar className="w-24 h-24 md:w-32 md:h-32 border-4 border-card">
-                <AvatarImage src={team.logoUrl || undefined} alt={team.name} className="object-cover object-center" />
-                <AvatarFallback className="text-2xl bg-brand-gradient text-white font-bold">
-                  {(team.shortName || team.name).slice(0, 2)}
-                </AvatarFallback>
-              </Avatar>
-            </div>
-          </div>
-
-          {canEdit && !isEditing && (
-              <div className="absolute right-0 bottom-2 md:bottom-4">
-              <Button 
-                size="sm" 
-                variant="outline" 
-                className="bg-card text-xs md:text-sm gap-2"
-                onClick={() => {
-                  setIsEditing(true)
-                  handleEditClick()
-                  setTimeout(() => {
-                    coverImageInputRef.current?.click()
-                  }, 100)
-                }}
-              >
-                <Camera className="w-4 h-4" />
-                カバー写真を変更
-              </Button>
-            </div>
-          )}
+          {/* ロゴ - カバー左下にオーバーラップ */}
+          <div className="absolute -bottom-[68px] md:-bottom-[80px] left-1/2 -translate-x-1/2 md:left-[16px] md:translate-x-0 z-10">
+            <Avatar className="w-[136px] h-[136px] md:w-[168px] md:h-[168px] border-[4px] border-white shadow-md ring-0">
+              <AvatarImage src={team.logoUrl || undefined} alt={team.name} className="object-cover object-center" />
+              <AvatarFallback className="text-3xl md:text-4xl bg-brand-gradient text-white font-bold">
+                {(team.shortName || team.name).slice(0, 2)}
+              </AvatarFallback>
+            </Avatar>
           </div>
         </div>
-        </div>
+      </div>
+      </div>
 
-      {/* チームヘッダー - Full Width */}
       <Tabs defaultValue="timeline" className="w-full">
-        <div className="w-screen -mx-[calc((100vw-100%)/2)] bg-card">
-          <div className="max-w-6xl mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-0">
-          <div className="flex flex-col md:flex-row items-start justify-between">
-            <div className="flex-1 mb-4 md:mb-0">
-              <h1 className="text-2xl md:text-3xl font-bold mb-2">{team.name}</h1>
-              {team.shortName && (
-                <p className="text-lg text-muted-foreground mb-2">{team.shortName}</p>
-              )}
-              {team.category && (
-                <Badge className="mb-4">{team.category}</Badge>
-              )}
+        <div className="w-full bg-card shadow-sm">
+          <div className="max-w-[1080px] mx-auto px-[16px]">
 
-              <p className="text-muted-foreground mb-4 text-sm md:text-base">
-                {team.description || "チームの説明はまだ登録されていません"}
-              </p>
-
-              <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-6 text-sm text-muted-foreground mb-4">
-                {team.prefecture && (
-                  <div className="flex items-center gap-1">
-                    <MapPin className="w-4 h-4" />
-                    {team.region && `${team.region} / `}{team.prefecture}
-                  </div>
-                )}
-                {team.founded && (
-                  <div className="flex items-center gap-1">
-                    <Calendar className="w-4 h-4" />
-                    設立: {team.founded}
-                  </div>
-                )}
-                {team.headcount && (
-                  <div className="flex items-center gap-1">
-                    <Users className="w-4 h-4" />
-                    {team.headcount}名
-                  </div>
-                )}
+          {/* PC版: ロゴ横に名前＋ボタン */}
+          <div className="hidden md:flex items-start pt-[20px]" style={{ minHeight: '80px' }}>
+            <div className="shrink-0" style={{ width: '184px' }} />
+            <div className="flex-1 min-w-0 pt-[4px]">
+              <h1 className="text-[28px] font-extrabold leading-[32px]">{team.name}</h1>
+              {team.shortName && <p className="text-[15px] text-muted-foreground mt-[2px]">{team.shortName}</p>}
+              <div className="flex items-center gap-[8px] mt-[4px]">
+                {team.category && <Badge className="text-[13px]">{team.category}</Badge>}
               </div>
-
-              {/* インスタグラムリンク */}
-              {team.instagramUrl && (() => {
-                const getInstagramAccountId = (url: string): string => {
-                  if (!url) return ''
-                  // @を削除
-                  let accountId = url.replace(/^@/, '')
-                  // URLからアカウントIDを抽出
-                  const match = accountId.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^\/\?]+)/)
-                  if (match) {
-                    accountId = match[1]
-                  }
-                  // スラッシュやクエリパラメータを削除
-                  accountId = accountId.split('/')[0].split('?')[0]
-                  return accountId
-                }
-                const accountId = getInstagramAccountId(team.instagramUrl)
-                const instagramUrl = team.instagramUrl.startsWith('http') ? team.instagramUrl : `https://instagram.com/${accountId}`
-                return (
-                  <div className="mb-4">
-                    <a
-                      href={instagramUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 transition-colors"
-                      style={{
-                        background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        backgroundClip: 'text'
-                      }}
-                    >
-                      <Instagram className="w-5 h-5" style={{ color: '#E4405F' }} />
-                      <span className="text-sm font-medium">{accountId}</span>
-                    </a>
-                  </div>
-                )
-              })()}
             </div>
-
-            <div className="flex gap-2 w-full md:w-auto">
+            <div className="shrink-0 flex gap-[8px] pt-[4px]">
               {currentUserEmail ? (
                 <>
                   <Button
                     variant={isFavorite ? "default" : "outline"}
-                    className={`flex-1 md:flex-initial gap-2 ${isFavorite ? "bg-red-500 hover:bg-red-600" : ""}`}
+                    className={`gap-2 h-[36px] px-[16px] text-[15px] font-semibold rounded-[6px] ${isFavorite ? "bg-red-500 hover:bg-red-600" : ""}`}
                     onClick={handleToggleFavorite}
                   >
                     <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
@@ -1465,54 +1378,99 @@ export default function TeamDetailPage() {
                   {isTournamentAdmin && (
                     <Button
                       variant="outline"
-                      className="flex-1 md:flex-initial gap-2 border-[#e84b8a] text-[#e84b8a] hover:bg-[#e84b8a] hover:text-white"
+                      className="gap-2 h-[36px] px-[16px] text-[15px] font-semibold rounded-[6px] border-[#e84b8a] text-[#e84b8a] hover:bg-[#e84b8a] hover:text-white"
                       onClick={handleOpenMessageDialog}
                     >
-                      <Send className="w-4 h-4" />
-                      オファーを送る
+                      <Send className="w-4 h-4" /> オファーを送る
                     </Button>
                   )}
                 </>
               ) : (
+                <Button variant="outline" className="gap-2 h-[36px] px-[16px] text-[15px] font-semibold rounded-[6px]" onClick={() => setShowLoginModal(true)}>
+                  <Heart className="w-4 h-4" /> お気に入り
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* モバイル版: 中央揃え */}
+          <div className="flex md:hidden flex-col items-center pt-[76px] pb-[12px]">
+            <h1 className="text-[24px] font-extrabold text-center">{team.name}</h1>
+            {team.shortName && <p className="text-[14px] text-muted-foreground">{team.shortName}</p>}
+            {team.category && <Badge className="mt-[4px]">{team.category}</Badge>}
+            <div className="mt-[12px] w-full flex gap-[8px]">
+              {currentUserEmail ? (
                 <>
                   <Button
-                    variant="outline"
-                    className="flex-1 md:flex-initial gap-2"
-                    onClick={() => setShowLoginModal(true)}
+                    variant={isFavorite ? "default" : "outline"}
+                    className={`flex-1 gap-2 h-[36px] text-[15px] font-semibold rounded-[6px] ${isFavorite ? "bg-red-500 hover:bg-red-600" : ""}`}
+                    onClick={handleToggleFavorite}
                   >
-                    <Heart className="w-4 h-4" />
-                    お気に入り
+                    <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
+                    {isFavorite ? "お気に入り済み" : "お気に入り"}
                   </Button>
+                  {isTournamentAdmin && (
+                    <Button variant="outline" className="flex-1 gap-2 h-[36px] text-[15px] font-semibold rounded-[6px] border-[#e84b8a] text-[#e84b8a]" onClick={handleOpenMessageDialog}>
+                      <Send className="w-4 h-4" /> オファー
+                    </Button>
+                  )}
                 </>
+              ) : (
+                <Button variant="outline" className="w-full gap-2 h-[36px] text-[15px] font-semibold rounded-[6px]" onClick={() => setShowLoginModal(true)}>
+                  <Heart className="w-4 h-4" /> お気に入り
+                </Button>
               )}
+            </div>
           </div>
-        </div>
 
-          {/* タブメニュー */}
-          <div className="mt-6 order-t border-border border-b border-border">
-            <TabsList className="grid w-full grid-cols-4 bg-transparent h-auto p-0 gap-0">
-              <TabsTrigger 
-                value="timeline"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
-              >
+          {/* 情報行 */}
+          <div className="flex flex-wrap items-center gap-x-[12px] gap-y-[4px] text-[15px] text-muted-foreground pb-[16px] md:pl-[184px]">
+            {team.description && <p className="w-full mb-[4px]">{team.description}</p>}
+            {team.prefecture && (
+              <span className="flex items-center gap-[4px]"><MapPin className="w-[16px] h-[16px]" />{team.region && `${team.region} / `}{team.prefecture}</span>
+            )}
+            {team.founded && (
+              <span className="flex items-center gap-[4px]"><Calendar className="w-[16px] h-[16px]" />設立: {team.founded}</span>
+            )}
+            {team.headcount && (
+              <span className="flex items-center gap-[4px]"><Users className="w-[16px] h-[16px]" />{team.headcount}名</span>
+            )}
+            {team.instagramUrl && (() => {
+              const getInstagramAccountId = (url: string): string => {
+                if (!url) return ''
+                let accountId = url.replace(/^@/, '')
+                const match = accountId.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^\/\?]+)/)
+                if (match) accountId = match[1]
+                accountId = accountId.split('/')[0].split('?')[0]
+                return accountId
+              }
+              const accountId = getInstagramAccountId(team.instagramUrl)
+              const instagramUrl = team.instagramUrl.startsWith('http') ? team.instagramUrl : `https://instagram.com/${accountId}`
+              return (
+                <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-[4px] hover:opacity-80">
+                  <Instagram className="w-[16px] h-[16px]" style={{ color: '#E4405F' }} />
+                  <span className="font-semibold" style={{
+                    background: 'linear-gradient(45deg, #f09433, #dc2743, #bc1888)',
+                    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text'
+                  }}>{accountId}</span>
+                </a>
+              )
+            })()}
+          </div>
+
+          {/* FB風タブメニュー */}
+          <div className="border-t border-border">
+            <TabsList className="flex w-auto bg-transparent h-auto p-0 gap-0">
+              <TabsTrigger value="timeline" className="shrink-0 rounded-none border-b-[3px] border-transparent data-[state=active]:border-[#e84b8a] data-[state=active]:bg-transparent data-[state=active]:text-[#e84b8a] data-[state=active]:shadow-none px-[16px] py-[14px] font-semibold text-[15px] text-muted-foreground hover:bg-muted/50 rounded-t-[4px] transition-colors">
                 タイムライン
               </TabsTrigger>
-              <TabsTrigger 
-                value="about"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
-              >
+              <TabsTrigger value="about" className="shrink-0 rounded-none border-b-[3px] border-transparent data-[state=active]:border-[#e84b8a] data-[state=active]:bg-transparent data-[state=active]:text-[#e84b8a] data-[state=active]:shadow-none px-[16px] py-[14px] font-semibold text-[15px] text-muted-foreground hover:bg-muted/50 rounded-t-[4px] transition-colors">
                 基本データ
               </TabsTrigger>
-              <TabsTrigger 
-                value="photos"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
-              >
+              <TabsTrigger value="photos" className="shrink-0 rounded-none border-b-[3px] border-transparent data-[state=active]:border-[#e84b8a] data-[state=active]:bg-transparent data-[state=active]:text-[#e84b8a] data-[state=active]:shadow-none px-[16px] py-[14px] font-semibold text-[15px] text-muted-foreground hover:bg-muted/50 rounded-t-[4px] transition-colors">
                 写真
               </TabsTrigger>
-              <TabsTrigger 
-                value="tournaments"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
-              >
+              <TabsTrigger value="tournaments" className="shrink-0 rounded-none border-b-[3px] border-transparent data-[state=active]:border-[#e84b8a] data-[state=active]:bg-transparent data-[state=active]:text-[#e84b8a] data-[state=active]:shadow-none px-[16px] py-[14px] font-semibold text-[15px] text-muted-foreground hover:bg-muted/50 rounded-t-[4px] transition-colors">
                 参加大会
               </TabsTrigger>
             </TabsList>
@@ -1520,7 +1478,7 @@ export default function TeamDetailPage() {
         </div>
       </div>
 
-      <div className="w-full max-w-6xl mx-auto pb-20 px-0">
+      <div className="w-full max-w-[1080px] mx-auto pb-20 px-0 lg:px-4">
         <div className="w-full max-w-[1080px] mx-auto px-0 lg:px-4">
         <div className="flex justify-center gap-3">
         <div className="w-full max-w-[720px] px-0 overflow-hidden box-border">

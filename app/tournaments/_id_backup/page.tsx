@@ -1727,9 +1727,11 @@ export default function TournamentDetailPage() {
         </div>
         </div>
 
-      {/* カバー画像 - Full Width */}
-      <div className="relative w-screen -mx-[calc((100vw-100%)/2)]">
-          <div className="h-48 md:h-64 bg-gradient-to-r from-orange-400 to-red-400 overflow-hidden">
+      {/* === FB風 大会ヘッダー === */}
+      <div className="w-full bg-white">
+      <div className="max-w-[1080px] mx-auto">
+        <div className="relative">
+          <div className="h-[200px] md:h-[400px] bg-gradient-to-r from-orange-400 to-red-400 overflow-hidden md:rounded-b-lg">
             {coverImageUrl ? (
               <img
                 src={coverImageUrl}
@@ -1745,14 +1747,36 @@ export default function TournamentDetailPage() {
                 <Trophy className="w-24 h-24 text-white/50" />
               </div>
             )}
+            {/* グラデーションオーバーレイ */}
+            <div className="absolute inset-0 pointer-events-none" style={{
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0.06) 0%, transparent 15%, transparent 60%, rgba(0,0,0,0.25) 100%)',
+            }} />
+          </div>
+
+          {/* アイコン - カバー左下にオーバーラップ */}
+          <div className="absolute -bottom-[68px] md:-bottom-[80px] left-1/2 -translate-x-1/2 md:left-[16px] md:translate-x-0 z-10">
+            <Avatar className="w-[136px] h-[136px] md:w-[168px] md:h-[168px] border-[4px] border-white shadow-md ring-0">
+              <AvatarImage
+                src={iconUrl || ""}
+                alt={tournament.name}
+                className="object-contain"
+              />
+              <AvatarFallback className="text-4xl md:text-5xl bg-gradient-to-br from-orange-400 to-red-400 text-white">
+                <Trophy className="w-16 h-16" />
+              </AvatarFallback>
+            </Avatar>
           </div>
         </div>
+      </div>
+      </div>
 
-      {/* 大会ヘッダー - Full Width */}
       <Tabs defaultValue="timeline" className="w-full">
-        <div className="w-screen -mx-[calc((100vw-100%)/2)] bg-card">
-          <div className="max-w-6xl mx-auto px-4 md:px-8 pt-8 pb-0">
-          <div className="flex flex-col md:flex-row items-start justify-between gap-4">
+        <div className="w-full bg-card shadow-sm">
+          <div className="max-w-[1080px] mx-auto px-[16px]">
+          {/* 名前・情報エリア */}
+          <div className="flex flex-col md:flex-row items-start justify-between gap-4 pt-[76px] md:pt-[20px]" style={{ paddingLeft: '0' }}>
+            {/* PC版: アイコン横のスペーサー */}
+            <div className="hidden md:block shrink-0" style={{ width: '184px' }} />
             <div className="flex-1">
               {isEditing ? (
                 <Input
@@ -2258,28 +2282,27 @@ export default function TournamentDetailPage() {
           </div>
         </div>
 
-        {/* タブメニュー */}
-          <div className="mt-6 border-t border-border border-b border-border">
-            <TabsList className="grid w-full grid-cols-3 bg-transparent h-auto p-0 gap-0">
-              <TabsTrigger 
-                value="timeline" 
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
+        {/* FB風タブメニュー */}
+          <div className="border-t border-border px-[16px]">
+            <TabsList className="flex w-auto bg-transparent h-auto p-0 gap-0">
+              <TabsTrigger
+                value="timeline"
+                className="shrink-0 rounded-none border-b-[3px] border-transparent data-[state=active]:border-[#e84b8a] data-[state=active]:bg-transparent data-[state=active]:text-[#e84b8a] data-[state=active]:shadow-none px-[16px] py-[14px] font-semibold text-[15px] text-muted-foreground hover:bg-muted/50 rounded-t-[4px] transition-colors"
               >
                 タイムライン
               </TabsTrigger>
-              <TabsTrigger 
+              <TabsTrigger
                 value="teams"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
+                className="shrink-0 rounded-none border-b-[3px] border-transparent data-[state=active]:border-[#e84b8a] data-[state=active]:bg-transparent data-[state=active]:text-[#e84b8a] data-[state=active]:shadow-none px-[16px] py-[14px] font-semibold text-[15px] text-muted-foreground hover:bg-muted/50 rounded-t-[4px] transition-colors"
               >
                 参加チーム
               </TabsTrigger>
-              <TabsTrigger 
+              <TabsTrigger
                 value="results"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium"
+                className="shrink-0 rounded-none border-b-[3px] border-transparent data-[state=active]:border-[#e84b8a] data-[state=active]:bg-transparent data-[state=active]:text-[#e84b8a] data-[state=active]:shadow-none px-[16px] py-[14px] font-semibold text-[15px] text-muted-foreground hover:bg-muted/50 rounded-t-[4px] transition-colors"
               >
                 過去大会結果
               </TabsTrigger>
-              
             </TabsList>
                     </div>
                   </div>
