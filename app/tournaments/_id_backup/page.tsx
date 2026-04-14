@@ -1757,7 +1757,7 @@ export default function TournamentDetailPage() {
           <div className="absolute -bottom-[68px] md:-bottom-[80px] left-1/2 -translate-x-1/2 md:left-[16px] md:translate-x-0 z-10">
             <Avatar className="w-[136px] h-[136px] md:w-[168px] md:h-[168px] border-[4px] border-white shadow-md ring-0">
               <AvatarImage
-                src={iconUrl || ""}
+                src={iconPreview || tournament.iconUrl || ""}
                 alt={tournament.name}
                 className="object-contain"
               />
