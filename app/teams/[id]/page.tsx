@@ -56,9 +56,7 @@ import {
   Instagram,
   Send
 } from "lucide-react"
-import { getTeam, getCurrentUserEmail, updateTeam, type DbTeam, getPostsByTeam, createPost, type DbPost, toggleFavoriteTeam, checkFavoriteTeam, getUserByEmail, deletePost, toggleLike as toggleDbLike, addComment as addDbComment, getCommentsByPost, updatePostCounts, checkLikeStatus, searchUsers, getTeamTournaments, type DbUser, type DbTournamentTeam, type DbTournament, createChatThread, checkTournamentAdminPermission, listTournaments, parseSponsors, stringifySponsors, type SponsorBanner } from "@/lib/api"
-import SponsorBannerEditor from "@/components/sponsor-banner-editor"
-import SponsorBannerDisplay from "@/components/sponsor-banner-display"
+import { getTeam, getCurrentUserEmail, updateTeam, type DbTeam, getPostsByTeam, createPost, type DbPost, toggleFavoriteTeam, checkFavoriteTeam, getUserByEmail, deletePost, toggleLike as toggleDbLike, addComment as addDbComment, getCommentsByPost, updatePostCounts, checkLikeStatus, searchUsers, getTeamTournaments, type DbUser, type DbTournamentTeam, type DbTournament, createChatThread, checkTournamentAdminPermission, listTournaments, getSiteSponsors, type SponsorBanner } from "@/lib/api"
 import SponsorSidebar, { MobileSnsCard } from "@/components/sponsor-sidebar"
 import { notifyNewTeamPost } from "@/lib/push-sender"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -216,8 +214,8 @@ export default function TeamDetailPage() {
   const [selectedTournamentId, setSelectedTournamentId] = useState("")
   const [isLoadingMyTournaments, setIsLoadingMyTournaments] = useState(false)
 
-  // スポンサーバナー関連
-  const [editSponsors, setEditSponsors] = useState<SponsorBanner[]>([])
+  // サイト全体スポンサー
+  const [siteSponsors, setSiteSponsors] = useState<SponsorBanner[]>([])
 
   // File input refs
   const imageInputRef = useRef<HTMLInputElement>(null)
@@ -233,6 +231,11 @@ export default function TeamDetailPage() {
       loadParticipatingTournaments()
     }
   }, [params.id])
+
+  // サイト全体スポンサーを取得
+  useEffect(() => {
+    getSiteSponsors().then(setSiteSponsors).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (team && currentUserEmail) {
@@ -480,8 +483,6 @@ export default function TeamDetailPage() {
     } else {
       setAvailableDistricts(DEFAULT_DISTRICTS)
     }
-    // スポンサーデータを初期化
-    setEditSponsors(parseSponsors(team?.sponsors))
     // 編集用の管理者リストを初期化（ownerEmail + editorEmailsを統合）
     const allAdminEmails = new Set<string>()
     if (team?.ownerEmail) allAdminEmails.add(team.ownerEmail)
@@ -673,7 +674,6 @@ export default function TeamDetailPage() {
         coverImageUrl: coverImageUrl || undefined,
         ownerEmail: allAdminEmails[0], // 最初の管理者をownerEmailに設定
         editorEmails: allAdminEmails,   // 全管理者をeditorEmailsに保存
-        sponsors: editSponsors.length > 0 ? stringifySponsors(editSponsors) : null
       }
 
       await updateTeam(params.id, updatedData)
@@ -1900,17 +1900,6 @@ export default function TeamDetailPage() {
                 </div>
               )}
 
-              {/* スポンサーバナー（モバイルのみ・タイムラインタブ下部） */}
-              <div className="lg:hidden mt-2">
-                <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-3 px-4">
-                  <SponsorBannerDisplay
-                    sponsors={parseSponsors(team?.sponsors)}
-                    title="スポンサー"
-                    showPlaceholder={true}
-                    layout="horizontal"
-                  />
-                </Card>
-              </div>
             </TabsContent>
 
             {/* 基本データタブ */}
@@ -2247,14 +2236,6 @@ export default function TeamDetailPage() {
                         </div>
                       </div>
 
-                      {/* スポンサーバナー編集 */}
-                      <div className="pt-2 border-t">
-                        <SponsorBannerEditor
-                          sponsors={editSponsors}
-                          onChange={setEditSponsors}
-                          maxCount={5}
-                        />
-                      </div>
                     </>
                   ) : (
                     <>
@@ -2388,17 +2369,6 @@ export default function TeamDetailPage() {
                 </CardContent>
               </Card>
 
-              {/* スポンサーバナー（モバイルのみ・基本データタブ下部） */}
-              <div className="lg:hidden mt-2">
-                <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-3 px-4">
-                  <SponsorBannerDisplay
-                    sponsors={parseSponsors(team?.sponsors)}
-                    title="スポンサー"
-                    showPlaceholder={true}
-                    layout="horizontal"
-                  />
-                </Card>
-              </div>
             </TabsContent>
 
             {/* 写真タブ */}
@@ -2418,17 +2388,6 @@ export default function TeamDetailPage() {
                 </CardContent>
               </Card>
 
-              {/* スポンサーバナー（モバイルのみ・写真タブ下部） */}
-              <div className="lg:hidden mt-2">
-                <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-3 px-4">
-                  <SponsorBannerDisplay
-                    sponsors={parseSponsors(team?.sponsors)}
-                    title="スポンサー"
-                    showPlaceholder={true}
-                    layout="horizontal"
-                  />
-                </Card>
-              </div>
             </TabsContent>
 
             {/* 参加大会タブ */}
@@ -2526,23 +2485,12 @@ export default function TeamDetailPage() {
                 </div>
               )}
 
-              {/* スポンサーバナー（モバイルのみ・参加大会タブ下部） */}
-              <div className="lg:hidden mt-2">
-                <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-3 px-4">
-                  <SponsorBannerDisplay
-                    sponsors={parseSponsors(team?.sponsors)}
-                    title="スポンサー"
-                    showPlaceholder={true}
-                    layout="horizontal"
-                  />
-                </Card>
-              </div>
             </TabsContent>
         {/* モバイル用 公式SNSリンク（lg未満で表示） */}
         <MobileSnsCard />
         </div>
         {/* スポンサーサイドバー（デスクトップのみ） */}
-        <SponsorSidebar sponsors={parseSponsors(team?.sponsors)} title="スポンサー" />
+        <SponsorSidebar sponsors={siteSponsors} title="YeLL スポンサー" />
         </div>
       </div>
       </div>

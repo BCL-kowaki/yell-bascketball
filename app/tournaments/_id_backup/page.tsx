@@ -69,12 +69,9 @@ import {
   type DbTournamentTeam,
   type DbTournamentResult,
   type DbTeam,
-  parseSponsors,
-  stringifySponsors,
-  type SponsorBanner
+  getSiteSponsors,
+  type SponsorBanner,
 } from "@/lib/api"
-import SponsorBannerEditor from "@/components/sponsor-banner-editor"
-import SponsorBannerDisplay from "@/components/sponsor-banner-display"
 import SponsorSidebar, { MobileSnsCard } from "@/components/sponsor-sidebar"
 import { notifyNewTournamentPost } from "@/lib/push-sender"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
@@ -322,8 +319,8 @@ export default function TournamentDetailPage() {
   const [rankingSearchResults, setRankingSearchResults] = useState<Record<number, DbTeam[]>>({})
   const [selectedRankingTeams, setSelectedRankingTeams] = useState<Record<number, DbTeam | null>>({})
 
-  // スポンサーバナー関連
-  const [editSponsors, setEditSponsors] = useState<SponsorBanner[]>([])
+  // サイト全体スポンサー
+  const [siteSponsors, setSiteSponsors] = useState<SponsorBanner[]>([])
 
   // オファー送信関連
   const [showOfferDialog, setShowOfferDialog] = useState(false)
@@ -378,6 +375,11 @@ export default function TournamentDetailPage() {
     }
   }, [tournamentId])
 
+  // サイト全体スポンサーを取得
+  useEffect(() => {
+    getSiteSponsors().then(setSiteSponsors).catch(() => {})
+  }, [])
+
   useEffect(() => {
     if (tournament && currentUserEmail) {
       // 管理者判定: ownerEmail + coAdminEmails を統合
@@ -407,8 +409,6 @@ export default function TournamentDetailPage() {
           area: tournament.area || "",
           subArea: tournament.subArea || "",
         })
-        // スポンサーデータを初期化
-        setEditSponsors(parseSponsors(tournament.sponsors))
         // 画像プレビューを設定
         if (tournament.iconUrl) {
           setIconPreview(tournament.iconUrl)
@@ -1001,7 +1001,6 @@ export default function TournamentDetailPage() {
         coAdminEmails: coAdminEmails, // 全管理者をcoAdminEmailsに保存
         iconUrl: iconUrl || null,
         coverImage: coverImage || null,
-        sponsors: editSponsors.length > 0 ? stringifySponsors(editSponsors) : null,
       })
 
       setTournament(updated)
@@ -2166,14 +2165,6 @@ export default function TournamentDetailPage() {
             </div>
           </div>
 
-                  {/* スポンサーバナー編集 */}
-                  <div className="pt-2 border-t">
-                    <SponsorBannerEditor
-                      sponsors={editSponsors}
-                      onChange={setEditSponsors}
-                      maxCount={5}
-                    />
-                  </div>
         </div>
               )}
 
@@ -2597,17 +2588,6 @@ export default function TournamentDetailPage() {
                 </div>
               )}
 
-              {/* スポンサーバナー（モバイルのみ・タイムラインタブ下部） */}
-              <div className="lg:hidden mt-2">
-                <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-3 px-4">
-                  <SponsorBannerDisplay
-                    sponsors={parseSponsors(tournament?.sponsors)}
-                    title="スポンサー"
-                    showPlaceholder={true}
-                    layout="horizontal"
-                  />
-                </Card>
-              </div>
             </TabsContent>
 
             {/* 参加チームタブ */}
@@ -2813,17 +2793,6 @@ export default function TournamentDetailPage() {
                 </DialogContent>
               </Dialog>
 
-              {/* スポンサーバナー（モバイルのみ・参加チームタブ下部） */}
-              <div className="lg:hidden mt-2">
-                <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-3 px-4">
-                  <SponsorBannerDisplay
-                    sponsors={parseSponsors(tournament?.sponsors)}
-                    title="スポンサー"
-                    showPlaceholder={true}
-                    layout="horizontal"
-                  />
-                </Card>
-              </div>
             </TabsContent>
 
             {/* 過去大会結果タブ */}
@@ -3247,17 +3216,6 @@ export default function TournamentDetailPage() {
                 </DialogContent>
               </Dialog>
 
-              {/* スポンサーバナー（モバイルのみ・過去大会結果タブ下部） */}
-              <div className="lg:hidden mt-2">
-                <Card className="w-full border-0 shadow-sm bg-white sm:rounded-lg rounded-none py-3 px-4">
-                  <SponsorBannerDisplay
-                    sponsors={parseSponsors(tournament?.sponsors)}
-                    title="スポンサー"
-                    showPlaceholder={true}
-                    layout="horizontal"
-                  />
-                </Card>
-              </div>
             </TabsContent>
 
 
@@ -3265,7 +3223,7 @@ export default function TournamentDetailPage() {
         <MobileSnsCard />
         </div>
         {/* スポンサーサイドバー（デスクトップのみ） */}
-        <SponsorSidebar sponsors={parseSponsors(tournament?.sponsors)} title="スポンサー" />
+        <SponsorSidebar sponsors={siteSponsors} title="YeLL スポンサー" />
         </div>
       </div>
       </div>

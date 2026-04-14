@@ -43,7 +43,6 @@ type Tournament @model @auth(rules: [{allow: public}]) {
   endDate: AWSDateTime
   favoritesCount: Int
   instagramUrl: String
-  sponsors: String
   createdAt: AWSDateTime
   updatedAt: AWSDateTime
 
@@ -73,7 +72,6 @@ type Team @model @auth(rules: [{allow: public}]) {
   ownerEmail: String!
   editorEmails: [String]
   isApproved: Boolean!
-  sponsors: String
   createdAt: AWSDateTime
   updatedAt: AWSDateTime
 
