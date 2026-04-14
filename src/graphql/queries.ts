@@ -82,8 +82,8 @@ export const getTournament = /* GraphQL */ `
       startDate
       endDate
       favoritesCount
+      isApproved
       instagramUrl
-      sponsors
       createdAt
       updatedAt
       teams {
@@ -135,8 +135,8 @@ export const listTournaments = /* GraphQL */ `
         startDate
         endDate
         favoritesCount
+        isApproved
         instagramUrl
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -165,7 +165,6 @@ export const getTeam = /* GraphQL */ `
       ownerEmail
       editorEmails
       isApproved
-      sponsors
       createdAt
       updatedAt
       tournamentTeams {
@@ -208,7 +207,6 @@ export const listTeams = /* GraphQL */ `
         ownerEmail
         editorEmails
         isApproved
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -263,8 +261,8 @@ export const getPost = /* GraphQL */ `
         startDate
         endDate
         favoritesCount
+        isApproved
         instagramUrl
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -286,7 +284,6 @@ export const getPost = /* GraphQL */ `
         ownerEmail
         editorEmails
         isApproved
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -446,8 +443,8 @@ export const getFavorite = /* GraphQL */ `
         startDate
         endDate
         favoritesCount
+        isApproved
         instagramUrl
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -469,7 +466,6 @@ export const getFavorite = /* GraphQL */ `
         ownerEmail
         editorEmails
         isApproved
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -559,8 +555,8 @@ export const getTournamentTeam = /* GraphQL */ `
         startDate
         endDate
         favoritesCount
+        isApproved
         instagramUrl
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -582,7 +578,6 @@ export const getTournamentTeam = /* GraphQL */ `
         ownerEmail
         editorEmails
         isApproved
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -648,8 +643,8 @@ export const getTournamentResult = /* GraphQL */ `
         startDate
         endDate
         favoritesCount
+        isApproved
         instagramUrl
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -720,8 +715,8 @@ export const getTournamentInvitation = /* GraphQL */ `
         startDate
         endDate
         favoritesCount
+        isApproved
         instagramUrl
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -818,6 +813,10 @@ export const getChatMessage = /* GraphQL */ `
       senderName
       content
       messageType
+      imageUrl
+      videoUrl
+      pdfUrl
+      pdfName
       isRead
       createdAt
       updatedAt
@@ -839,6 +838,10 @@ export const listChatMessages = /* GraphQL */ `
         senderName
         content
         messageType
+        imageUrl
+        videoUrl
+        pdfUrl
+        pdfName
         isRead
         createdAt
         updatedAt
@@ -1051,6 +1054,46 @@ export const listSiteConfigs = /* GraphQL */ `
         configKey
         configValue
         updatedBy
+        createdAt
+        updatedAt
+        __typename
+      }
+      nextToken
+      __typename
+    }
+  }
+`;
+export const getPushSubscription = /* GraphQL */ `
+  query GetPushSubscription($id: ID!) {
+    getPushSubscription(id: $id) {
+      id
+      userEmail
+      endpoint
+      p256dh
+      auth
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const listPushSubscriptions = /* GraphQL */ `
+  query ListPushSubscriptions(
+    $filter: ModelPushSubscriptionFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    listPushSubscriptions(
+      filter: $filter
+      limit: $limit
+      nextToken: $nextToken
+    ) {
+      items {
+        id
+        userEmail
+        endpoint
+        p256dh
+        auth
         createdAt
         updatedAt
         __typename
@@ -1614,6 +1657,10 @@ export const chatMessagesByThreadIdAndCreatedAt = /* GraphQL */ `
         senderName
         content
         messageType
+        imageUrl
+        videoUrl
+        pdfUrl
+        pdfName
         isRead
         createdAt
         updatedAt
@@ -1803,6 +1850,36 @@ export const siteConfigByKey = /* GraphQL */ `
         configKey
         configValue
         updatedBy
+        createdAt
+        updatedAt
+        __typename
+      }
+      nextToken
+      __typename
+    }
+  }
+`;
+export const pushSubscriptionsByUser = /* GraphQL */ `
+  query PushSubscriptionsByUser(
+    $userEmail: String!
+    $sortDirection: ModelSortDirection
+    $filter: ModelPushSubscriptionFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    pushSubscriptionsByUser(
+      userEmail: $userEmail
+      sortDirection: $sortDirection
+      filter: $filter
+      limit: $limit
+      nextToken: $nextToken
+    ) {
+      items {
+        id
+        userEmail
+        endpoint
+        p256dh
+        auth
         createdAt
         updatedAt
         __typename

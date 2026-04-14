@@ -24,7 +24,7 @@ export default function AdminDashboardPage() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [stats, setStats] = useState({
     users: 0, teams: 0, tournaments: 0, chats: 0,
-    pendingTeams: 0, recentUsers: 0, recentTeams: 0,
+    pendingTeams: 0, pendingTournaments: 0, recentUsers: 0, recentTeams: 0,
   })
 
   // ログインフォーム用
@@ -49,6 +49,7 @@ export default function AdminDashboardPage() {
         tournaments: tournaments.length,
         chats: chats.length,
         pendingTeams: teams.filter(t => !t.isApproved).length,
+        pendingTournaments: tournaments.filter((t: any) => !t.isApproved).length,
         recentUsers: users.filter(u => u.createdAt && new Date(u.createdAt) > weekAgo).length,
         recentTeams: teams.filter(t => t.createdAt && new Date(t.createdAt) > weekAgo).length,
       })
@@ -172,7 +173,9 @@ export default function AdminDashboardPage() {
       label: "大会管理",
       count: stats.tournaments,
       color: "from-[#f7931e] to-[#e84b8a]",
-      desc: "全大会の一覧・編集・削除",
+      desc: "大会承認・編集・削除",
+      badge: stats.pendingTournaments > 0 ? `${stats.pendingTournaments} 件未承認` : undefined,
+      badgeColor: stats.pendingTournaments > 0 ? "bg-red-500" : undefined,
     },
     {
       href: "/admin/teams",

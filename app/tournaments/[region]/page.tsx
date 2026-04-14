@@ -69,7 +69,7 @@ export default function RegionTournamentsPage() {
     
     try {
       setIsLoading(true)
-      const allTournaments = await listTournaments(1000)
+      const allTournaments = await listTournaments(1000, { isApproved: true })
 
       console.log('🔍 Filtering tournaments by region:', {
         regionName,

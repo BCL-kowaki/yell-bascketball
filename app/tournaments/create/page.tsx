@@ -220,7 +220,7 @@ export default function CreateTournamentPage() {
         }
       }
 
-      // 大会を作成（一般ユーザーはカップ戦のみ）
+      // 大会を作成（一般ユーザーはカップ戦のみ、承認待ち状態で作成）
       const tournamentData = {
         name: formData.name,
         iconUrl: null,
@@ -236,6 +236,7 @@ export default function CreateTournamentPage() {
         ownerEmail: currentUser.email,
         // 管理者一覧（作成者を必ず含める）
         coAdminEmails: [currentUser.email, ...selectedCoAdmins.map(admin => admin.email).filter(e => e !== currentUser.email)],
+        isApproved: false,
       }
 
       console.log('Creating tournament:', tournamentData)
@@ -262,8 +263,8 @@ export default function CreateTournamentPage() {
       }
 
       toast({
-        title: "成功",
-        description: "大会を登録しました",
+        title: "大会を登録しました",
+        description: "管理者の承認後に公開されます。しばらくお待ちください。",
       })
 
       router.push('/tournaments')

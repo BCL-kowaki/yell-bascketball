@@ -221,7 +221,7 @@ export default function CreateTeamPage() {
         instagramUrl: formData.instagramUrl || undefined,
         ownerEmail: currentUserEmail,
         editorEmails: editorEmailList, // 作成者を含む全管理者
-        isApproved: true,
+        isApproved: false,
       }
 
       console.log('Creating team with data:', teamData)
@@ -229,8 +229,8 @@ export default function CreateTeamPage() {
       console.log('Team created:', createdTeam)
 
       toast({
-        title: "チームを作成しました",
-        description: "チームが正常に作成され、公開されました。",
+        title: "チームを登録しました",
+        description: "管理者の承認後に公開されます。しばらくお待ちください。",
       })
 
       // フォームをリセット

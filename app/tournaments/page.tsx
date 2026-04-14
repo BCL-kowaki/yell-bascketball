@@ -84,7 +84,7 @@ export default function TournamentsPage() {
   async function loadTournaments() {
     try {
       setIsLoading(true)
-      const allTournaments = await listTournaments(1000)
+      const allTournaments = await listTournaments(1000, { isApproved: true })
       console.log("📊 Total tournaments loaded:", allTournaments.length)
       if (allTournaments.length > 0) {
         console.log("📝 First tournament sample:", allTournaments[0])

@@ -143,7 +143,7 @@ export default function AdminTeamsPage() {
 
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input placeholder="チーム名・オーナーメール・都道府県で検索..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
+          <Input placeholder="チーム名・オーナーメール・都道府県で検索..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 bg-white" />
         </div>
 
         <div className="space-y-2">

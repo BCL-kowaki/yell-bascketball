@@ -42,6 +42,7 @@ type Tournament @model @auth(rules: [{allow: public}]) {
   startDate: AWSDateTime
   endDate: AWSDateTime
   favoritesCount: Int
+  isApproved: Boolean!
   instagramUrl: String
   createdAt: AWSDateTime
   updatedAt: AWSDateTime

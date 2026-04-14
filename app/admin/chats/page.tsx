@@ -113,7 +113,7 @@ export default function AdminChatsPage() {
 
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input placeholder="送信者・チーム名・大会名・メッセージで検索..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
+          <Input placeholder="送信者・チーム名・大会名・メッセージで検索..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 bg-white" />
         </div>
 
         <div className="space-y-2">

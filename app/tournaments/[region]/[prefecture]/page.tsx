@@ -121,7 +121,7 @@ export default function PrefectureTournamentsPage() {
 
     try {
       setIsLoading(true)
-      const allTournaments = await listTournaments(1000)
+      const allTournaments = await listTournaments(1000, { isApproved: true })
 
       // 指定された地域と都道府県の大会のみフィルター
       const filteredTournaments = allTournaments.filter(

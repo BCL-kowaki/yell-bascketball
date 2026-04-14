@@ -101,8 +101,8 @@ export const onCreateTournament = /* GraphQL */ `
       startDate
       endDate
       favoritesCount
+      isApproved
       instagramUrl
-      sponsors
       createdAt
       updatedAt
       teams {
@@ -151,8 +151,8 @@ export const onUpdateTournament = /* GraphQL */ `
       startDate
       endDate
       favoritesCount
+      isApproved
       instagramUrl
-      sponsors
       createdAt
       updatedAt
       teams {
@@ -201,8 +201,8 @@ export const onDeleteTournament = /* GraphQL */ `
       startDate
       endDate
       favoritesCount
+      isApproved
       instagramUrl
-      sponsors
       createdAt
       updatedAt
       teams {
@@ -248,7 +248,6 @@ export const onCreateTeam = /* GraphQL */ `
       ownerEmail
       editorEmails
       isApproved
-      sponsors
       createdAt
       updatedAt
       tournamentTeams {
@@ -286,7 +285,6 @@ export const onUpdateTeam = /* GraphQL */ `
       ownerEmail
       editorEmails
       isApproved
-      sponsors
       createdAt
       updatedAt
       tournamentTeams {
@@ -324,7 +322,6 @@ export const onDeleteTeam = /* GraphQL */ `
       ownerEmail
       editorEmails
       isApproved
-      sponsors
       createdAt
       updatedAt
       tournamentTeams {
@@ -388,8 +385,8 @@ export const onCreatePost = /* GraphQL */ `
         startDate
         endDate
         favoritesCount
+        isApproved
         instagramUrl
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -411,7 +408,6 @@ export const onCreatePost = /* GraphQL */ `
         ownerEmail
         editorEmails
         isApproved
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -465,8 +461,8 @@ export const onUpdatePost = /* GraphQL */ `
         startDate
         endDate
         favoritesCount
+        isApproved
         instagramUrl
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -488,7 +484,6 @@ export const onUpdatePost = /* GraphQL */ `
         ownerEmail
         editorEmails
         isApproved
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -542,8 +537,8 @@ export const onDeletePost = /* GraphQL */ `
         startDate
         endDate
         favoritesCount
+        isApproved
         instagramUrl
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -565,7 +560,6 @@ export const onDeletePost = /* GraphQL */ `
         ownerEmail
         editorEmails
         isApproved
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -745,8 +739,8 @@ export const onCreateFavorite = /* GraphQL */ `
         startDate
         endDate
         favoritesCount
+        isApproved
         instagramUrl
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -768,7 +762,6 @@ export const onCreateFavorite = /* GraphQL */ `
         ownerEmail
         editorEmails
         isApproved
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -804,8 +797,8 @@ export const onUpdateFavorite = /* GraphQL */ `
         startDate
         endDate
         favoritesCount
+        isApproved
         instagramUrl
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -827,7 +820,6 @@ export const onUpdateFavorite = /* GraphQL */ `
         ownerEmail
         editorEmails
         isApproved
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -863,8 +855,8 @@ export const onDeleteFavorite = /* GraphQL */ `
         startDate
         endDate
         favoritesCount
+        isApproved
         instagramUrl
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -886,7 +878,6 @@ export const onDeleteFavorite = /* GraphQL */ `
         ownerEmail
         editorEmails
         isApproved
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -961,8 +952,8 @@ export const onCreateTournamentTeam = /* GraphQL */ `
         startDate
         endDate
         favoritesCount
+        isApproved
         instagramUrl
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -984,7 +975,6 @@ export const onCreateTournamentTeam = /* GraphQL */ `
         ownerEmail
         editorEmails
         isApproved
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -1023,8 +1013,8 @@ export const onUpdateTournamentTeam = /* GraphQL */ `
         startDate
         endDate
         favoritesCount
+        isApproved
         instagramUrl
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -1046,7 +1036,6 @@ export const onUpdateTournamentTeam = /* GraphQL */ `
         ownerEmail
         editorEmails
         isApproved
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -1085,8 +1074,8 @@ export const onDeleteTournamentTeam = /* GraphQL */ `
         startDate
         endDate
         favoritesCount
+        isApproved
         instagramUrl
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -1108,7 +1097,6 @@ export const onDeleteTournamentTeam = /* GraphQL */ `
         ownerEmail
         editorEmails
         isApproved
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -1154,8 +1142,8 @@ export const onCreateTournamentResult = /* GraphQL */ `
         startDate
         endDate
         favoritesCount
+        isApproved
         instagramUrl
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -1201,8 +1189,8 @@ export const onUpdateTournamentResult = /* GraphQL */ `
         startDate
         endDate
         favoritesCount
+        isApproved
         instagramUrl
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -1248,8 +1236,8 @@ export const onDeleteTournamentResult = /* GraphQL */ `
         startDate
         endDate
         favoritesCount
+        isApproved
         instagramUrl
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -1289,8 +1277,8 @@ export const onCreateTournamentInvitation = /* GraphQL */ `
         startDate
         endDate
         favoritesCount
+        isApproved
         instagramUrl
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -1330,8 +1318,8 @@ export const onUpdateTournamentInvitation = /* GraphQL */ `
         startDate
         endDate
         favoritesCount
+        isApproved
         instagramUrl
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -1371,8 +1359,8 @@ export const onDeleteTournamentInvitation = /* GraphQL */ `
         startDate
         endDate
         favoritesCount
+        isApproved
         instagramUrl
-        sponsors
         createdAt
         updatedAt
         __typename
@@ -1464,6 +1452,10 @@ export const onCreateChatMessage = /* GraphQL */ `
       senderName
       content
       messageType
+      imageUrl
+      videoUrl
+      pdfUrl
+      pdfName
       isRead
       createdAt
       updatedAt
@@ -1482,6 +1474,10 @@ export const onUpdateChatMessage = /* GraphQL */ `
       senderName
       content
       messageType
+      imageUrl
+      videoUrl
+      pdfUrl
+      pdfName
       isRead
       createdAt
       updatedAt
@@ -1500,6 +1496,10 @@ export const onDeleteChatMessage = /* GraphQL */ `
       senderName
       content
       messageType
+      imageUrl
+      videoUrl
+      pdfUrl
+      pdfName
       isRead
       createdAt
       updatedAt
@@ -1816,6 +1816,54 @@ export const onDeleteSiteConfig = /* GraphQL */ `
       configKey
       configValue
       updatedBy
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const onCreatePushSubscription = /* GraphQL */ `
+  subscription OnCreatePushSubscription(
+    $filter: ModelSubscriptionPushSubscriptionFilterInput
+  ) {
+    onCreatePushSubscription(filter: $filter) {
+      id
+      userEmail
+      endpoint
+      p256dh
+      auth
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const onUpdatePushSubscription = /* GraphQL */ `
+  subscription OnUpdatePushSubscription(
+    $filter: ModelSubscriptionPushSubscriptionFilterInput
+  ) {
+    onUpdatePushSubscription(filter: $filter) {
+      id
+      userEmail
+      endpoint
+      p256dh
+      auth
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const onDeletePushSubscription = /* GraphQL */ `
+  subscription OnDeletePushSubscription(
+    $filter: ModelSubscriptionPushSubscriptionFilterInput
+  ) {
+    onDeletePushSubscription(filter: $filter) {
+      id
+      userEmail
+      endpoint
+      p256dh
+      auth
       createdAt
       updatedAt
       __typename

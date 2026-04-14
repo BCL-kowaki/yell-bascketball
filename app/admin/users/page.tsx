@@ -135,7 +135,7 @@ export default function AdminUsersPage() {
             placeholder="名前・メール・都道府県で検索..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="pl-10 bg-white"
           />
         </div>
 

@@ -9,12 +9,12 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import {
   Trophy, ArrowLeft, Search, Loader2, ShieldAlert,
-  Trash2, MapPin, Calendar, ChevronDown, ChevronUp, Save, X, Shield, Flag, Plus
+  Trash2, MapPin, Calendar, ChevronDown, ChevronUp, Save, X, Shield, Flag, Plus, CheckCircle, XCircle
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import {
   isSystemAdmin, adminListAllTournaments, updateTournament, adminDeleteTournament,
-  createTournament, getCurrentUserEmail,
+  adminUpdateTournamentApproval, createTournament, getCurrentUserEmail,
   type DbTournament
 } from "@/lib/api"
 import {
@@ -80,9 +80,13 @@ export default function AdminTournamentsPage() {
     ? (areaHierarchy[createForm.area] || [])
     : []
 
+  const pendingTournamentCount = tournaments.filter(t => !t.isApproved).length
+
   const filteredTournaments = tournaments.filter(t => {
     if (filterType === "official" && t.tournamentType !== "official") return false
     if (filterType === "cup" && t.tournamentType === "official") return false
+    if (filterType === "pending" && t.isApproved) return false
+    if (filterType === "approved" && !t.isApproved) return false
     if (!searchQuery.trim()) return true
     const q = searchQuery.toLowerCase()
     return (
@@ -121,6 +125,17 @@ export default function AdminTournamentsPage() {
       await adminDeleteTournament(id)
       setTournaments(prev => prev.filter(t => t.id !== id))
       toast({ title: "大会を削除しました" })
+    } catch (error: any) {
+      toast({ title: "エラー", description: error?.message, variant: "destructive" })
+    }
+  }
+
+  // 大会承認・却下
+  const handleApproval = async (id: string, approved: boolean) => {
+    try {
+      await adminUpdateTournamentApproval(id, approved)
+      setTournaments(prev => prev.map(t => t.id === id ? { ...t, isApproved: approved } : t))
+      toast({ title: approved ? "大会を承認しました" : "大会を未承認に戻しました" })
     } catch (error: any) {
       toast({ title: "エラー", description: error?.message, variant: "destructive" })
     }
@@ -171,6 +186,7 @@ export default function AdminTournamentsPage() {
         description: createForm.description.trim() || null,
         ownerEmail,
         coAdminEmails,
+        isApproved: true,
       }
 
       const created = await createTournament(tournamentData)
@@ -201,6 +217,7 @@ export default function AdminTournamentsPage() {
             <Trophy className="w-5 h-5 text-[#f06a4e]" />
             <h1 className="text-xl font-bold">大会管理</h1>
             <Badge variant="secondary">{tournaments.length}件</Badge>
+            {pendingTournamentCount > 0 && <Badge className="bg-red-500 text-white">{pendingTournamentCount}件未承認</Badge>}
           </div>
           <Button
             size="sm"
@@ -375,6 +392,8 @@ export default function AdminTournamentsPage() {
         <div className="flex gap-2 mb-3">
           {[
             { key: "all", label: "すべて" },
+            { key: "pending", label: `未承認 (${pendingTournamentCount})` },
+            { key: "approved", label: "承認済み" },
             { key: "official", label: "公式戦" },
             { key: "cup", label: "カップ戦" },
           ].map(f => (
@@ -389,13 +408,13 @@ export default function AdminTournamentsPage() {
         {/* 検索 */}
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input placeholder="大会名・主催者メール・都道府県で検索..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
+          <Input placeholder="大会名・主催者メール・都道府県で検索..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 bg-white" />
         </div>
 
         {/* 一覧 */}
         <div className="space-y-2">
           {filteredTournaments.map(t => (
-            <Card key={t.id} className="border-gray-200 overflow-hidden">
+            <Card key={t.id} className={`overflow-hidden ${!t.isApproved ? 'border-yellow-300 bg-yellow-50/30' : 'border-gray-200'}`}>
               <button onClick={() => toggleExpand(t.id)} className="w-full text-left p-3 flex items-center gap-3 hover:bg-gray-50 transition-colors">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${t.tournamentType === 'official' ? 'bg-gradient-to-br from-[#f7931e] to-[#e84b8a]' : 'bg-gradient-to-br from-blue-500 to-indigo-600'}`}>
                   {t.tournamentType === 'official' ? <Shield className="w-5 h-5 text-white" /> : <Flag className="w-5 h-5 text-white" />}
@@ -404,6 +423,11 @@ export default function AdminTournamentsPage() {
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-gray-900 truncate">{t.name}</span>
                     {t.tournamentType === 'official' && <Badge className="bg-[#f06a4e] text-white text-[10px] px-1 py-0">公式</Badge>}
+                    {t.isApproved ? (
+                      <Badge variant="outline" className="text-green-600 border-green-300 text-[10px] px-1 py-0"><CheckCircle className="w-2.5 h-2.5 mr-0.5" />承認済み</Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-yellow-600 border-yellow-400 bg-yellow-50 text-[10px] px-1 py-0"><XCircle className="w-2.5 h-2.5 mr-0.5" />未承認</Badge>
+                    )}
                   </div>
                   <p className="text-xs text-gray-500 truncate">
                     {[t.prefecture, t.district || t.area].filter(Boolean).join(' / ')} | 管理者: {[t.ownerEmail, ...(t.coAdminEmails || [])].filter((v, i, a) => v && a.indexOf(v) === i).join(', ') || '-'}
@@ -482,6 +506,19 @@ export default function AdminTournamentsPage() {
                     <label className="text-xs font-medium text-gray-600">説明</label>
                     <Input value={editingData.description || ''} onChange={e => setEditingData({...editingData, description: e.target.value})} />
                   </div>
+                  {/* 承認ボタン */}
+                  <div className="flex items-center gap-2 pt-2 pb-2">
+                    {!t.isApproved ? (
+                      <Button size="sm" onClick={() => handleApproval(t.id, true)} className="bg-green-600 hover:bg-green-700 text-white">
+                        <CheckCircle className="w-3 h-3 mr-1" />承認する
+                      </Button>
+                    ) : (
+                      <Button variant="outline" size="sm" onClick={() => handleApproval(t.id, false)} className="text-yellow-600 border-yellow-400 hover:bg-yellow-50">
+                        <XCircle className="w-3 h-3 mr-1" />未承認に戻す
+                      </Button>
+                    )}
+                  </div>
+
                   <div className="flex items-center justify-between pt-2">
                     <Button variant="destructive" size="sm" onClick={() => handleDelete(t.id, t.name)}>
                       <Trash2 className="w-3 h-3 mr-1" />削除

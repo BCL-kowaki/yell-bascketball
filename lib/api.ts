@@ -77,6 +77,7 @@ export type DbTournament = {
   startDate?: string | null
   endDate?: string | null
   favoritesCount?: number | null
+  isApproved?: boolean
   instagramUrl?: string | null
   createdAt?: string | null
   updatedAt?: string | null
@@ -857,7 +858,7 @@ export async function createTournament(input: Partial<DbTournament>): Promise<Db
       createTournament(input: $input) {
         id name iconUrl coverImage category regionBlock prefecture district
         tournamentType area subArea
-        description ownerEmail coAdminEmails startDate endDate favoritesCount instagramUrl createdAt updatedAt
+        description ownerEmail coAdminEmails startDate endDate favoritesCount isApproved instagramUrl createdAt updatedAt
       }
     }
   `
@@ -881,14 +882,14 @@ export async function createTournament(input: Partial<DbTournament>): Promise<Db
   }
 }
 
-export async function listTournaments(limit = 200): Promise<DbTournament[]> {
+export async function listTournaments(limit = 200, filter?: { isApproved?: boolean }): Promise<DbTournament[]> {
   const query = /* GraphQL */ `
-    query ListTournaments($limit: Int, $nextToken: String) {
-      listTournaments(limit: $limit, nextToken: $nextToken) {
+    query ListTournaments($limit: Int, $nextToken: String, $filter: ModelTournamentFilterInput) {
+      listTournaments(limit: $limit, nextToken: $nextToken, filter: $filter) {
         items {
           id name iconUrl coverImage category regionBlock prefecture district
           tournamentType area subArea
-          description ownerEmail coAdminEmails startDate endDate favoritesCount instagramUrl createdAt updatedAt
+          description ownerEmail coAdminEmails startDate endDate favoritesCount isApproved instagramUrl createdAt updatedAt
         }
         nextToken
       }
@@ -899,11 +900,21 @@ export async function listTournaments(limit = 200): Promise<DbTournament[]> {
     let allItems: DbTournament[] = []
     let nextToken: string | null = null
 
+    // フィルタ構築
+    const graphqlFilter: any = {}
+    if (filter?.isApproved !== undefined) {
+      graphqlFilter.isApproved = { eq: filter.isApproved }
+    }
+
     // ページネーションで全大会を取得
     do {
       const result = await client.graphql({
         query,
-        variables: { limit, nextToken },
+        variables: {
+          limit,
+          nextToken,
+          filter: Object.keys(graphqlFilter).length > 0 ? graphqlFilter : undefined,
+        },
         authMode: 'apiKey'
       }) as any
 
@@ -934,7 +945,7 @@ export async function getTournament(id: string): Promise<DbTournament | null> {
       getTournament(id: $id) {
         id name iconUrl coverImage category regionBlock prefecture district
         tournamentType area subArea
-        description ownerEmail coAdminEmails startDate endDate favoritesCount instagramUrl createdAt updatedAt
+        description ownerEmail coAdminEmails startDate endDate favoritesCount isApproved instagramUrl createdAt updatedAt
       }
     }
   `
@@ -3690,7 +3701,7 @@ export async function adminListAllTournaments(limit = 500): Promise<DbTournament
       listTournaments(limit: $limit, nextToken: $nextToken) {
         items {
           id name category regionBlock prefecture district tournamentType area subArea
-          ownerEmail coAdminEmails startDate endDate favoritesCount createdAt updatedAt
+          ownerEmail coAdminEmails startDate endDate favoritesCount isApproved createdAt updatedAt
         }
         nextToken
       }
@@ -3828,6 +3839,31 @@ export async function adminUpdateTeamApproval(id: string, isApproved: boolean): 
   }
 
   return result.data.updateTeam
+}
+
+/**
+ * 管理者用: 大会の承認状態を更新
+ */
+export async function adminUpdateTournamentApproval(id: string, isApproved: boolean): Promise<DbTournament> {
+  const mutation = /* GraphQL */ `
+    mutation UpdateTournament($input: UpdateTournamentInput!) {
+      updateTournament(input: $input) {
+        id name isApproved
+      }
+    }
+  `
+
+  const result = await client.graphql({
+    query: mutation,
+    variables: { input: { id, isApproved } },
+    authMode: 'apiKey'
+  }) as any
+
+  if (result.errors) {
+    throw new Error(result.errors[0]?.message || '大会更新エラー')
+  }
+
+  return result.data.updateTournament
 }
 
 /**
