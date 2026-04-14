@@ -2595,15 +2595,6 @@ export default function TournamentDetailPage() {
                               コメント ({post.commentsCount || 0})
                             </span>
                           </button>
-                          <button
-                              onClick={() => handleShare(post.id)}
-                            className="flex items-center gap-2 flex-1 justify-center py-2 hover:bg-gray-50 rounded-lg transition-colors"
-                          >
-                            <Share2 className="w-5 h-5 text-gray-600" />
-                            <span className="text-[12px] sm:text-sm text-gray-700">
-                              シェア
-                                      </span>
-                          </button>
                                     </div>
 
                       </CardContent>
