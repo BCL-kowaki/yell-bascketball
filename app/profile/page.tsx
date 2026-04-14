@@ -1091,9 +1091,11 @@ export default function ProfilePage() {
 
   return (
     <Layout isLoggedIn={true} currentUser={{ name: displayName, avatar: getAvatarUrl() || undefined }}>
-      {/* Cover Photo - Full Width */}
-      <div className="relative w-screen -mx-[calc((100vw-100%)/2)]">
-          <div className="h-48 md:h-64 bg-gradient-to-r from-orange-400 to-red-400 overflow-hidden">
+      {/* === Facebook風 プロフィールヘッダー === */}
+      <div className="max-w-[1080px] mx-auto">
+        {/* カバー画像 */}
+        <div className="relative">
+          <div className="h-48 md:h-72 bg-gradient-to-r from-orange-400 to-red-400 overflow-hidden md:rounded-b-lg">
             <img
               src={getCoverImageUrl()}
               alt="Cover"
@@ -1102,181 +1104,182 @@ export default function ProfilePage() {
             />
           </div>
 
-        {/* Avatar and Cover Edit Button - Positioned relative to max-w-[1152px] container */}
-        <div className="absolute -bottom-12 md:-bottom-16 left-1/2 -translate-x-1/2 w-full max-w-[1152px] px-4 md:px-8">
-          <div className="relative">
-            <div className="absolute left-0 -bottom-0">
-            <div className="relative">
-              <Avatar className="w-24 h-24 md:w-32 md:h-32 border-4 border-card">
-                <AvatarImage
-                  src={getAvatarUrl()}
-                  alt={displayName}
-                  className="object-contain"
-                  onError={handleAvatarError}
-                />
-                <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
-                  {user.firstName[0]}{user.lastName[0]}
-                </AvatarFallback>
-              </Avatar>
-            </div>
-          </div>
-
-          </div>
+          {/* アバター - カバー左下にオーバーラップ */}
+          <div className="absolute -bottom-14 md:-bottom-[84px] left-1/2 -translate-x-1/2 md:left-6 md:translate-x-0">
+            <Avatar className="w-28 h-28 md:w-[168px] md:h-[168px] border-[5px] border-white shadow-lg">
+              <AvatarImage
+                src={getAvatarUrl()}
+                alt={displayName}
+                className="object-contain"
+                onError={handleAvatarError}
+              />
+              <AvatarFallback className="text-3xl md:text-5xl bg-primary text-primary-foreground">
+                {user.firstName[0]}{user.lastName[0]}
+              </AvatarFallback>
+            </Avatar>
           </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="w-screen -mx-[calc((100vw-100%)/2)] bg-card">
-          <div className="max-w-[1152px] mx-auto px-4 md:px-8 pt-16 md:pt-20 pb-0">
-          <div className="flex flex-col md:flex-row items-start justify-between">
-            <div className="flex-1 mb-4 md:mb-0">
-              <>
-                  <h1 className="text-2xl md:text-3xl font-bold mb-2">{displayName}</h1>
-                  <p className="text-muted-foreground mb-4 text-sm md:text-base">
-                    {user.bio || "自己紹介がまだ設定されていません"}
-                  </p>
+        <div className="bg-card md:rounded-b-lg shadow-sm">
+          <div className="px-4 md:px-8">
 
-                  <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-6 text-sm text-muted-foreground mb-4">
-                    {(isOwnProfile || user.isRegistrationDatePublic) && user.createdAt && (
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        {new Date(user.createdAt).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' })}に参加
-                      </div>
-                    )}
-                    {/* フォロー/フォロワー数 */}
-                    <div className="flex items-center gap-4">
-                      <Link
-                        href={`/list/following?user=${encodeURIComponent(user.email)}`}
-                        className="hover:underline cursor-pointer"
-                      >
-                        <span className="font-semibold text-foreground">{followCounts.following}</span>
-                        <span className="ml-1">フォロー中</span>
-                      </Link>
-                      <Link
-                        href={`/list/followers?user=${encodeURIComponent(user.email)}`}
-                        className="hover:underline cursor-pointer"
-                      >
-                        <span className="font-semibold text-foreground">{followCounts.followers}</span>
-                        <span className="ml-1">フォロワー</span>
-                      </Link>
-                    </div>
-                  </div>
-
-                  {/* お気に入りチーム・大会 */}
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <Link
-                      href={`/list/favorite-teams?user=${encodeURIComponent(user.email)}`}
-                      className="hover:underline cursor-pointer flex items-center gap-1"
-                    >
-                      <Heart className="w-4 h-4 text-red-500" />
-                      <span className="font-semibold text-foreground">{favoriteTeams.length}</span>
-                      <span>お気に入りチーム</span>
-                    </Link>
-                    <Link
-                      href={`/list/favorite-tournaments?user=${encodeURIComponent(user.email)}`}
-                      className="hover:underline cursor-pointer flex items-center gap-1"
-                    >
-                      <Heart className="w-4 h-4 text-red-500" />
-                      <span className="font-semibold text-foreground">{favoriteTournaments.length}</span>
-                      <span>お気に入り大会</span>
-                    </Link>
-                  </div>
-
-                  {/* インスタグラムリンク */}
-                  {user.instagramUrl && (() => {
-                    const getInstagramAccountId = (url: string): string => {
-                      if (!url) return ''
-                      let accountId = url.replace(/^@/, '')
-                      const match = accountId.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^\/\?]+)/)
-                      if (match) {
-                        accountId = match[1]
-                      }
-                      accountId = accountId.split('/')[0].split('?')[0]
-                      return accountId
-                    }
-                    const accountId = getInstagramAccountId(user.instagramUrl)
-                    const instagramUrl = user.instagramUrl.startsWith('http') ? user.instagramUrl : `https://instagram.com/${accountId}`
-                    return (
-                      <div className="mb-4">
-                        <a
-                          href={instagramUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 transition-colors"
-                          style={{
-                            background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            backgroundClip: 'text'
-                          }}
-                        >
-                          <Instagram className="w-5 h-5" style={{ color: '#E4405F' }} />
-                          <span className="text-sm font-medium">{accountId}</span>
-                        </a>
-                      </div>
-                    )
-                  })()}
-                </>
+            {/* === PC版: 名前＋ボタン横並び === */}
+            <div className="hidden md:flex items-end pt-6 pb-3">
+              {/* アバター幅分のスペーサー */}
+              <div className="w-[168px] shrink-0 mr-5" />
+              {/* 名前＋フォロー数 */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-3xl font-bold leading-tight">{displayName}</h1>
+                <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                  <Link href={`/list/following?user=${encodeURIComponent(user.email)}`} className="hover:underline cursor-pointer">
+                    <span className="font-semibold text-foreground">{followCounts.following}</span>
+                    <span className="ml-1">フォロー中</span>
+                  </Link>
+                  <Link href={`/list/followers?user=${encodeURIComponent(user.email)}`} className="hover:underline cursor-pointer">
+                    <span className="font-semibold text-foreground">{followCounts.followers}</span>
+                    <span className="ml-1">フォロワー</span>
+                  </Link>
+                </div>
+              </div>
+              {/* 編集/フォローボタン */}
+              <div className="shrink-0 ml-4">
+                {isOwnProfile ? (
+                  <Button
+                    onClick={() => {
+                      setAvatarPreview(getAvatarUrl() !== "/placeholder-user.jpg" ? getAvatarUrl() : null)
+                      setCoverPreview(getCoverImageUrl() !== "/placeholder.svg?height=300&width=800" ? getCoverImageUrl() : null)
+                      setIsEditing(true)
+                    }}
+                    variant="outline"
+                  >
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    プロフィールを編集
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleFollow}
+                    disabled={isLoadingFollow}
+                    variant={isFollowing ? "outline" : "default"}
+                  >
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    {isFollowing ? "フォロー解除" : "フォローする"}
+                  </Button>
+                )}
+              </div>
             </div>
 
-            <div className="flex gap-2 w-full md:w-auto flex-wrap">
-              {isOwnProfile ? (
-                <Button
-                  onClick={() => {
-                    // 既存の画像をプレビューにセット
-                    setAvatarPreview(getAvatarUrl() !== "/placeholder-user.jpg" ? getAvatarUrl() : null)
-                    setCoverPreview(getCoverImageUrl() !== "/placeholder.svg?height=300&width=800" ? getCoverImageUrl() : null)
-                    setIsEditing(true)
-                  }}
-                  variant="outline"
-                  className="flex-1 md:flex-initial"
-                >
-                  <Edit2 className="w-4 h-4 mr-2" />
-                  プロフィールを編集
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleFollow}
-                  disabled={isLoadingFollow}
-                  variant={isFollowing ? "outline" : "default"}
-                  className="flex-1 md:flex-initial"
-                >
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  {isFollowing ? "フォロー解除" : "フォローする"}
-                </Button>
-              )}
-          </div>
-        </div>
+            {/* === モバイル版: 中央揃え縦レイアウト === */}
+            <div className="flex md:hidden flex-col items-center pt-16 pb-3">
+              <h1 className="text-2xl font-bold text-center">{displayName}</h1>
+              <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                <Link href={`/list/following?user=${encodeURIComponent(user.email)}`} className="hover:underline cursor-pointer">
+                  <span className="font-semibold text-foreground">{followCounts.following}</span>
+                  <span className="ml-1">フォロー中</span>
+                </Link>
+                <Link href={`/list/followers?user=${encodeURIComponent(user.email)}`} className="hover:underline cursor-pointer">
+                  <span className="font-semibold text-foreground">{followCounts.followers}</span>
+                  <span className="ml-1">フォロワー</span>
+                </Link>
+              </div>
+              <div className="mt-3 w-full">
+                {isOwnProfile ? (
+                  <Button
+                    onClick={() => {
+                      setAvatarPreview(getAvatarUrl() !== "/placeholder-user.jpg" ? getAvatarUrl() : null)
+                      setCoverPreview(getCoverImageUrl() !== "/placeholder.svg?height=300&width=800" ? getCoverImageUrl() : null)
+                      setIsEditing(true)
+                    }}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    プロフィールを編集
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleFollow}
+                    disabled={isLoadingFollow}
+                    variant={isFollowing ? "outline" : "default"}
+                    className="w-full"
+                  >
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    {isFollowing ? "フォロー解除" : "フォローする"}
+                  </Button>
+                )}
+              </div>
+            </div>
 
-          {/* タブメニュー */}
-          <div className="mt-6 border-t border-border border-b border-border">
-              <TabsList className="grid w-full grid-cols-4 bg-transparent h-auto p-0 gap-0">
-              <TabsTrigger
-                value="tournaments"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium text-sm"
-              >
-                大会
-              </TabsTrigger>
-              <TabsTrigger
-                value="management"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium text-sm"
-              >
-                運営
-              </TabsTrigger>
-              <TabsTrigger
-                value="timeline"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium text-sm"
-              >
-                投稿
-              </TabsTrigger>
-              <TabsTrigger
-                value="about"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary px-4 py-3 font-medium text-sm"
-              >
-                基本情報
-              </TabsTrigger>
+            {/* === 情報行（自己紹介・登録日・お気に入り・Instagram） === */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground pb-4 md:pl-[188px]">
+              {/* 自己紹介 */}
+              {user.bio && (
+                <p className="w-full text-muted-foreground mb-1">{user.bio}</p>
+              )}
+
+              {/* 登録日 */}
+              {(isOwnProfile || user.isRegistrationDatePublic) && user.createdAt && (
+                <div className="flex items-center gap-1">
+                  <Calendar className="w-4 h-4" />
+                  {new Date(user.createdAt).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' })}に参加
+                </div>
+              )}
+
+              {/* お気に入りチーム */}
+              <Link href={`/list/favorite-teams?user=${encodeURIComponent(user.email)}`} className="hover:underline cursor-pointer flex items-center gap-1">
+                <Heart className="w-4 h-4 text-red-500" />
+                <span className="font-semibold text-foreground">{favoriteTeams.length}</span>
+                <span>お気に入りチーム</span>
+              </Link>
+
+              {/* お気に入り大会 */}
+              <Link href={`/list/favorite-tournaments?user=${encodeURIComponent(user.email)}`} className="hover:underline cursor-pointer flex items-center gap-1">
+                <Heart className="w-4 h-4 text-red-500" />
+                <span className="font-semibold text-foreground">{favoriteTournaments.length}</span>
+                <span>お気に入り大会</span>
+              </Link>
+
+              {/* Instagram */}
+              {user.instagramUrl && (() => {
+                const getInstagramAccountId = (url: string): string => {
+                  if (!url) return ''
+                  let accountId = url.replace(/^@/, '')
+                  const match = accountId.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^\/\?]+)/)
+                  if (match) accountId = match[1]
+                  accountId = accountId.split('/')[0].split('?')[0]
+                  return accountId
+                }
+                const accountId = getInstagramAccountId(user.instagramUrl)
+                const instagramUrl = user.instagramUrl.startsWith('http') ? user.instagramUrl : `https://instagram.com/${accountId}`
+                return (
+                  <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
+                    <Instagram className="w-4 h-4" style={{ color: '#E4405F' }} />
+                    <span className="font-medium" style={{
+                      background: 'linear-gradient(45deg, #f09433, #dc2743, #bc1888)',
+                      WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text'
+                    }}>{accountId}</span>
+                  </a>
+                )
+              })()}
+            </div>
+
+            {/* === タブメニュー（Facebook風 横並び・ピンク下線） === */}
+            <div className="border-t border-border">
+              <TabsList className="flex w-auto bg-transparent h-auto p-0 gap-0 md:pl-[188px]">
+                <TabsTrigger value="tournaments" className="shrink-0 rounded-none border-b-[3px] border-transparent data-[state=active]:border-[#e84b8a] data-[state=active]:bg-transparent data-[state=active]:text-[#e84b8a] data-[state=active]:shadow-none px-4 py-3 font-semibold text-sm text-muted-foreground hover:bg-muted/50 transition-colors">
+                  大会
+                </TabsTrigger>
+                <TabsTrigger value="management" className="shrink-0 rounded-none border-b-[3px] border-transparent data-[state=active]:border-[#e84b8a] data-[state=active]:bg-transparent data-[state=active]:text-[#e84b8a] data-[state=active]:shadow-none px-4 py-3 font-semibold text-sm text-muted-foreground hover:bg-muted/50 transition-colors">
+                  運営
+                </TabsTrigger>
+                <TabsTrigger value="timeline" className="shrink-0 rounded-none border-b-[3px] border-transparent data-[state=active]:border-[#e84b8a] data-[state=active]:bg-transparent data-[state=active]:text-[#e84b8a] data-[state=active]:shadow-none px-4 py-3 font-semibold text-sm text-muted-foreground hover:bg-muted/50 transition-colors">
+                  投稿
+                </TabsTrigger>
+                <TabsTrigger value="about" className="shrink-0 rounded-none border-b-[3px] border-transparent data-[state=active]:border-[#e84b8a] data-[state=active]:bg-transparent data-[state=active]:text-[#e84b8a] data-[state=active]:shadow-none px-4 py-3 font-semibold text-sm text-muted-foreground hover:bg-muted/50 transition-colors">
+                  基本情報
+                </TabsTrigger>
               </TabsList>
-          </div>
+            </div>
           </div>
         </div>
 
@@ -1846,6 +1849,7 @@ export default function ProfilePage() {
       </div>
       </div>
       </Tabs>
+      </div> {/* max-w-[1080px] mx-auto */}
 
       {/* コメントモーダル */}
       {selectedPostForComment && user && (
