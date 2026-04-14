@@ -67,18 +67,18 @@ export function SidebarMenu({ isLoggedIn = false, currentUser }: SidebarMenuProp
       badge: 0
     },
     {
-      href: "/messages",
-      icon: MessageCircle,
-      label: "チャット",
-      show: isLoggedIn,
-      badge: unreadCount
-    },
-    {
       href: "/teams",
       icon: Users,
       label: "チーム",
       show: true,
       badge: 0
+    },
+    {
+      href: "/messages",
+      icon: MessageCircle,
+      label: "チャット",
+      show: isLoggedIn,
+      badge: unreadCount
     },
     {
       href: "/profile",
