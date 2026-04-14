@@ -1092,9 +1092,8 @@ export default function ProfilePage() {
   return (
     <Layout isLoggedIn={true} currentUser={{ name: displayName, avatar: getAvatarUrl() || undefined }}>
       {/* === Facebook風 プロフィールヘッダー === */}
-      {/* 白背景で両サイドの余白を埋める */}
+      {/* カバー画像エリア（白背景全幅） */}
       <div className="w-full bg-white">
-      {/* カバー画像（中央寄せ・max-width制限） */}
       <div className="max-w-[1080px] mx-auto">
         <div className="relative">
           <div className="h-[200px] md:h-[400px] bg-gradient-to-r from-orange-400 to-red-400 overflow-hidden md:rounded-b-lg">
@@ -1126,8 +1125,9 @@ export default function ProfilePage() {
           </div>
         </div>
       </div> {/* max-w-[1080px] カバー画像コンテナの閉じ */}
+      </div> {/* bg-white カバーエリア閉じ */}
 
-      {/* プロフィール情報セクション（全幅の白背景） */}
+      {/* プロフィール情報セクション（全幅の白背景 bg-card） */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="w-full bg-card shadow-sm">
           <div className="max-w-[1080px] mx-auto">
@@ -1328,7 +1328,7 @@ export default function ProfilePage() {
           </div> {/* max-w-[1080px] */}
         </div> {/* bg-card全幅 */}
 
-      <div className="w-full max-w-[1080px] mx-auto pb-20 px-0 lg:px-4" style={{ backgroundColor: '#F0F2F5' }}>
+      <div className="w-full max-w-[1080px] mx-auto pb-20 px-0 lg:px-4">
         <div className="flex justify-center gap-3">
         <div className="w-full max-w-[720px] px-0 overflow-hidden box-border">
           <TabsContent value="timeline" className="mt-2 space-y-2 w-full overflow-hidden box-border">
@@ -1894,7 +1894,6 @@ export default function ProfilePage() {
       </div>
       </div>
       </Tabs>
-      </div> {/* bg-white 全体ラッパー閉じ */}
 
       {/* コメントモーダル */}
       {selectedPostForComment && user && (
