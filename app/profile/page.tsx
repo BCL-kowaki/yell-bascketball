@@ -1222,7 +1222,12 @@ export default function ProfilePage() {
             <div className="flex gap-2 w-full md:w-auto flex-wrap">
               {isOwnProfile ? (
                 <Button
-                  onClick={() => setIsEditing(true)}
+                  onClick={() => {
+                    // 既存の画像をプレビューにセット
+                    setAvatarPreview(getAvatarUrl() !== "/placeholder-user.jpg" ? getAvatarUrl() : null)
+                    setCoverPreview(getCoverImageUrl() !== "/placeholder.svg?height=300&width=800" ? getCoverImageUrl() : null)
+                    setIsEditing(true)
+                  }}
                   variant="outline"
                   className="flex-1 md:flex-initial"
                 >
