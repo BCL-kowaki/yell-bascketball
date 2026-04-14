@@ -1092,10 +1092,10 @@ export default function ProfilePage() {
   return (
     <Layout isLoggedIn={true} currentUser={{ name: displayName, avatar: getAvatarUrl() || undefined }}>
       {/* === Facebook風 プロフィールヘッダー === */}
+      {/* カバー画像（中央寄せ・max-width制限） */}
       <div className="max-w-[1080px] mx-auto">
-        {/* カバー画像 */}
         <div className="relative">
-          <div className="h-48 md:h-72 bg-gradient-to-r from-orange-400 to-red-400 overflow-hidden md:rounded-b-lg">
+          <div className="h-[200px] md:h-[400px] bg-gradient-to-r from-orange-400 to-red-400 overflow-hidden md:rounded-b-lg">
             <img
               src={getCoverImageUrl()}
               alt="Cover"
@@ -1104,46 +1104,50 @@ export default function ProfilePage() {
             />
           </div>
 
-          {/* アバター - カバー左下にオーバーラップ */}
-          <div className="absolute -bottom-14 md:-bottom-[84px] left-1/2 -translate-x-1/2 md:left-6 md:translate-x-0">
-            <Avatar className="w-28 h-28 md:w-[168px] md:h-[168px] border-[5px] border-white shadow-lg">
+          {/* アバター - カバー左下にオーバーラップ（FB: カバー下端から上に約1/3重なる） */}
+          <div className="absolute -bottom-[68px] md:-bottom-[80px] left-1/2 -translate-x-1/2 md:left-[16px] md:translate-x-0 z-10">
+            <Avatar className="w-[136px] h-[136px] md:w-[168px] md:h-[168px] border-[4px] border-white shadow-md ring-0">
               <AvatarImage
                 src={getAvatarUrl()}
                 alt={displayName}
                 className="object-contain"
                 onError={handleAvatarError}
               />
-              <AvatarFallback className="text-3xl md:text-5xl bg-primary text-primary-foreground">
+              <AvatarFallback className="text-4xl md:text-5xl bg-primary text-primary-foreground">
                 {user.firstName[0]}{user.lastName[0]}
               </AvatarFallback>
             </Avatar>
           </div>
         </div>
+      </div> {/* max-w-[1080px] カバー画像コンテナの閉じ */}
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="bg-card md:rounded-b-lg shadow-sm">
-          <div className="px-4 md:px-8">
-
-            {/* === PC版: 名前＋ボタン横並び === */}
-            <div className="hidden md:flex items-end pt-6 pb-3">
-              {/* アバター幅分のスペーサー */}
-              <div className="w-[168px] shrink-0 mr-5" />
+      {/* プロフィール情報セクション（全幅の白背景） */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <div className="w-full bg-card shadow-sm">
+          <div className="max-w-[1080px] mx-auto">
+          {/* === PC版: アバター横に名前＋フォロー数＋情報、右上にボタン === */}
+          <div className="hidden md:block px-[16px] pt-[20px]">
+            {/* 行1: アバター横 — 名前＋ボタン */}
+            <div className="flex items-start" style={{ minHeight: '80px' }}>
+              {/* アバター幅 + 余白のスペーサー */}
+              <div className="shrink-0" style={{ width: '184px' }} />
               {/* 名前＋フォロー数 */}
-              <div className="flex-1 min-w-0">
-                <h1 className="text-3xl font-bold leading-tight">{displayName}</h1>
-                <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                  <Link href={`/list/following?user=${encodeURIComponent(user.email)}`} className="hover:underline cursor-pointer">
+              <div className="flex-1 min-w-0 pt-[4px]">
+                <h1 className="text-[28px] font-extrabold leading-[32px] text-foreground">{displayName}</h1>
+                <div className="flex items-center gap-1 mt-[2px]">
+                  <Link href={`/list/following?user=${encodeURIComponent(user.email)}`} className="text-[15px] text-muted-foreground hover:underline cursor-pointer">
                     <span className="font-semibold text-foreground">{followCounts.following}</span>
-                    <span className="ml-1">フォロー中</span>
+                    <span className="ml-[3px]">フォロー中</span>
                   </Link>
-                  <Link href={`/list/followers?user=${encodeURIComponent(user.email)}`} className="hover:underline cursor-pointer">
+                  <span className="text-muted-foreground mx-[6px]">·</span>
+                  <Link href={`/list/followers?user=${encodeURIComponent(user.email)}`} className="text-[15px] text-muted-foreground hover:underline cursor-pointer">
                     <span className="font-semibold text-foreground">{followCounts.followers}</span>
-                    <span className="ml-1">フォロワー</span>
+                    <span className="ml-[3px]">フォロワー</span>
                   </Link>
                 </div>
               </div>
-              {/* 編集/フォローボタン */}
-              <div className="shrink-0 ml-4">
+              {/* 編集/フォローボタン（右上配置） */}
+              <div className="shrink-0 pt-[4px]">
                 {isOwnProfile ? (
                   <Button
                     onClick={() => {
@@ -1152,8 +1156,9 @@ export default function ProfilePage() {
                       setIsEditing(true)
                     }}
                     variant="outline"
+                    className="h-[36px] px-[16px] text-[15px] font-semibold rounded-[6px]"
                   >
-                    <Edit2 className="w-4 h-4 mr-2" />
+                    <Edit2 className="w-4 h-4 mr-[6px]" />
                     プロフィールを編集
                   </Button>
                 ) : (
@@ -1161,85 +1166,36 @@ export default function ProfilePage() {
                     onClick={handleFollow}
                     disabled={isLoadingFollow}
                     variant={isFollowing ? "outline" : "default"}
+                    className="h-[36px] px-[16px] text-[15px] font-semibold rounded-[6px]"
                   >
-                    <UserPlus className="w-4 h-4 mr-2" />
+                    <UserPlus className="w-4 h-4 mr-[6px]" />
                     {isFollowing ? "フォロー解除" : "フォローする"}
                   </Button>
                 )}
               </div>
             </div>
 
-            {/* === モバイル版: 中央揃え縦レイアウト === */}
-            <div className="flex md:hidden flex-col items-center pt-16 pb-3">
-              <h1 className="text-2xl font-bold text-center">{displayName}</h1>
-              <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                <Link href={`/list/following?user=${encodeURIComponent(user.email)}`} className="hover:underline cursor-pointer">
-                  <span className="font-semibold text-foreground">{followCounts.following}</span>
-                  <span className="ml-1">フォロー中</span>
-                </Link>
-                <Link href={`/list/followers?user=${encodeURIComponent(user.email)}`} className="hover:underline cursor-pointer">
-                  <span className="font-semibold text-foreground">{followCounts.followers}</span>
-                  <span className="ml-1">フォロワー</span>
-                </Link>
-              </div>
-              <div className="mt-3 w-full">
-                {isOwnProfile ? (
-                  <Button
-                    onClick={() => {
-                      setAvatarPreview(getAvatarUrl() !== "/placeholder-user.jpg" ? getAvatarUrl() : null)
-                      setCoverPreview(getCoverImageUrl() !== "/placeholder.svg?height=300&width=800" ? getCoverImageUrl() : null)
-                      setIsEditing(true)
-                    }}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    <Edit2 className="w-4 h-4 mr-2" />
-                    プロフィールを編集
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={handleFollow}
-                    disabled={isLoadingFollow}
-                    variant={isFollowing ? "outline" : "default"}
-                    className="w-full"
-                  >
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    {isFollowing ? "フォロー解除" : "フォローする"}
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            {/* === 情報行（自己紹介・登録日・お気に入り・Instagram） === */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground pb-4 md:pl-[188px]">
-              {/* 自己紹介 */}
+            {/* 行2: 情報行（自己紹介・登録日・お気に入り・Instagram）— アバター幅揃え */}
+            <div className="flex flex-wrap items-center gap-x-[12px] gap-y-[4px] text-[15px] text-muted-foreground pb-[16px]" style={{ paddingLeft: '184px' }}>
               {user.bio && (
-                <p className="w-full text-muted-foreground mb-1">{user.bio}</p>
+                <p className="w-full text-muted-foreground mb-[4px]">{user.bio}</p>
               )}
-
-              {/* 登録日 */}
               {(isOwnProfile || user.isRegistrationDatePublic) && user.createdAt && (
-                <div className="flex items-center gap-1">
-                  <Calendar className="w-4 h-4" />
+                <span className="flex items-center gap-[4px]">
+                  <Calendar className="w-[16px] h-[16px]" />
                   {new Date(user.createdAt).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' })}に参加
-                </div>
+                </span>
               )}
-
-              {/* お気に入りチーム */}
-              <Link href={`/list/favorite-teams?user=${encodeURIComponent(user.email)}`} className="hover:underline cursor-pointer flex items-center gap-1">
-                <Heart className="w-4 h-4 text-red-500" />
+              <Link href={`/list/favorite-teams?user=${encodeURIComponent(user.email)}`} className="hover:underline cursor-pointer flex items-center gap-[4px]">
+                <Heart className="w-[16px] h-[16px] text-red-500" />
                 <span className="font-semibold text-foreground">{favoriteTeams.length}</span>
                 <span>お気に入りチーム</span>
               </Link>
-
-              {/* お気に入り大会 */}
-              <Link href={`/list/favorite-tournaments?user=${encodeURIComponent(user.email)}`} className="hover:underline cursor-pointer flex items-center gap-1">
-                <Heart className="w-4 h-4 text-red-500" />
+              <Link href={`/list/favorite-tournaments?user=${encodeURIComponent(user.email)}`} className="hover:underline cursor-pointer flex items-center gap-[4px]">
+                <Heart className="w-[16px] h-[16px] text-red-500" />
                 <span className="font-semibold text-foreground">{favoriteTournaments.length}</span>
                 <span>お気に入り大会</span>
               </Link>
-
-              {/* Instagram */}
               {user.instagramUrl && (() => {
                 const getInstagramAccountId = (url: string): string => {
                   if (!url) return ''
@@ -1252,9 +1208,9 @@ export default function ProfilePage() {
                 const accountId = getInstagramAccountId(user.instagramUrl)
                 const instagramUrl = user.instagramUrl.startsWith('http') ? user.instagramUrl : `https://instagram.com/${accountId}`
                 return (
-                  <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
-                    <Instagram className="w-4 h-4" style={{ color: '#E4405F' }} />
-                    <span className="font-medium" style={{
+                  <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-[4px] hover:opacity-80 transition-opacity">
+                    <Instagram className="w-[16px] h-[16px]" style={{ color: '#E4405F' }} />
+                    <span className="font-semibold" style={{
                       background: 'linear-gradient(45deg, #f09433, #dc2743, #bc1888)',
                       WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text'
                     }}>{accountId}</span>
@@ -1262,26 +1218,109 @@ export default function ProfilePage() {
                 )
               })()}
             </div>
+          </div>
 
-            {/* === タブメニュー（Facebook風 横並び・ピンク下線） === */}
-            <div className="border-t border-border">
-              <TabsList className="flex w-auto bg-transparent h-auto p-0 gap-0 md:pl-[188px]">
-                <TabsTrigger value="tournaments" className="shrink-0 rounded-none border-b-[3px] border-transparent data-[state=active]:border-[#e84b8a] data-[state=active]:bg-transparent data-[state=active]:text-[#e84b8a] data-[state=active]:shadow-none px-4 py-3 font-semibold text-sm text-muted-foreground hover:bg-muted/50 transition-colors">
-                  大会
-                </TabsTrigger>
-                <TabsTrigger value="management" className="shrink-0 rounded-none border-b-[3px] border-transparent data-[state=active]:border-[#e84b8a] data-[state=active]:bg-transparent data-[state=active]:text-[#e84b8a] data-[state=active]:shadow-none px-4 py-3 font-semibold text-sm text-muted-foreground hover:bg-muted/50 transition-colors">
-                  運営
-                </TabsTrigger>
-                <TabsTrigger value="timeline" className="shrink-0 rounded-none border-b-[3px] border-transparent data-[state=active]:border-[#e84b8a] data-[state=active]:bg-transparent data-[state=active]:text-[#e84b8a] data-[state=active]:shadow-none px-4 py-3 font-semibold text-sm text-muted-foreground hover:bg-muted/50 transition-colors">
-                  投稿
-                </TabsTrigger>
-                <TabsTrigger value="about" className="shrink-0 rounded-none border-b-[3px] border-transparent data-[state=active]:border-[#e84b8a] data-[state=active]:bg-transparent data-[state=active]:text-[#e84b8a] data-[state=active]:shadow-none px-4 py-3 font-semibold text-sm text-muted-foreground hover:bg-muted/50 transition-colors">
-                  基本情報
-                </TabsTrigger>
-              </TabsList>
+          {/* === モバイル版: 中央揃え縦レイアウト === */}
+          <div className="flex md:hidden flex-col items-center px-[16px] pt-[76px] pb-[12px]">
+            <h1 className="text-[24px] font-extrabold text-center leading-[28px]">{displayName}</h1>
+            <div className="flex items-center gap-[4px] mt-[4px] text-[14px] text-muted-foreground">
+              <Link href={`/list/following?user=${encodeURIComponent(user.email)}`} className="hover:underline cursor-pointer">
+                <span className="font-semibold text-foreground">{followCounts.following}</span>
+                <span className="ml-[2px]">フォロー中</span>
+              </Link>
+              <span className="mx-[4px]">·</span>
+              <Link href={`/list/followers?user=${encodeURIComponent(user.email)}`} className="hover:underline cursor-pointer">
+                <span className="font-semibold text-foreground">{followCounts.followers}</span>
+                <span className="ml-[2px]">フォロワー</span>
+              </Link>
+            </div>
+            {user.bio && (
+              <p className="text-[14px] text-muted-foreground text-center mt-[8px]">{user.bio}</p>
+            )}
+            <div className="flex flex-wrap justify-center items-center gap-x-[10px] gap-y-[4px] mt-[8px] text-[13px] text-muted-foreground">
+              {(isOwnProfile || user.isRegistrationDatePublic) && user.createdAt && (
+                <span className="flex items-center gap-[3px]">
+                  <Calendar className="w-[14px] h-[14px]" />
+                  {new Date(user.createdAt).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' })}に参加
+                </span>
+              )}
+              <Link href={`/list/favorite-teams?user=${encodeURIComponent(user.email)}`} className="hover:underline flex items-center gap-[3px]">
+                <Heart className="w-[14px] h-[14px] text-red-500" />
+                <span className="font-semibold text-foreground">{favoriteTeams.length}</span> お気に入りチーム
+              </Link>
+              <Link href={`/list/favorite-tournaments?user=${encodeURIComponent(user.email)}`} className="hover:underline flex items-center gap-[3px]">
+                <Heart className="w-[14px] h-[14px] text-red-500" />
+                <span className="font-semibold text-foreground">{favoriteTournaments.length}</span> お気に入り大会
+              </Link>
+              {user.instagramUrl && (() => {
+                const getInstagramAccountId = (url: string): string => {
+                  if (!url) return ''
+                  let accountId = url.replace(/^@/, '')
+                  const match = accountId.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^\/\?]+)/)
+                  if (match) accountId = match[1]
+                  accountId = accountId.split('/')[0].split('?')[0]
+                  return accountId
+                }
+                const accountId = getInstagramAccountId(user.instagramUrl)
+                const instagramUrl = user.instagramUrl.startsWith('http') ? user.instagramUrl : `https://instagram.com/${accountId}`
+                return (
+                  <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-[3px] hover:opacity-80">
+                    <Instagram className="w-[14px] h-[14px]" style={{ color: '#E4405F' }} />
+                    <span className="font-semibold" style={{
+                      background: 'linear-gradient(45deg, #f09433, #dc2743, #bc1888)',
+                      WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text'
+                    }}>{accountId}</span>
+                  </a>
+                )
+              })()}
+            </div>
+            <div className="mt-[12px] w-full">
+              {isOwnProfile ? (
+                <Button
+                  onClick={() => {
+                    setAvatarPreview(getAvatarUrl() !== "/placeholder-user.jpg" ? getAvatarUrl() : null)
+                    setCoverPreview(getCoverImageUrl() !== "/placeholder.svg?height=300&width=800" ? getCoverImageUrl() : null)
+                    setIsEditing(true)
+                  }}
+                  variant="outline"
+                  className="w-full h-[36px] text-[15px] font-semibold rounded-[6px]"
+                >
+                  <Edit2 className="w-4 h-4 mr-[6px]" />
+                  プロフィールを編集
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleFollow}
+                  disabled={isLoadingFollow}
+                  variant={isFollowing ? "outline" : "default"}
+                  className="w-full h-[36px] text-[15px] font-semibold rounded-[6px]"
+                >
+                  <UserPlus className="w-4 h-4 mr-[6px]" />
+                  {isFollowing ? "フォロー解除" : "フォローする"}
+                </Button>
+              )}
             </div>
           </div>
-        </div>
+
+          {/* === タブメニュー（FB風: 左寄せ、3px下線、px-16左パディング） === */}
+          <div className="border-t border-border px-[16px]">
+            <TabsList className="flex w-auto bg-transparent h-auto p-0 gap-0">
+              <TabsTrigger value="tournaments" className="shrink-0 rounded-none border-b-[3px] border-transparent data-[state=active]:border-[#e84b8a] data-[state=active]:bg-transparent data-[state=active]:text-[#e84b8a] data-[state=active]:shadow-none px-[16px] py-[14px] font-semibold text-[15px] text-muted-foreground hover:bg-muted/50 rounded-t-[4px] transition-colors">
+                大会
+              </TabsTrigger>
+              <TabsTrigger value="management" className="shrink-0 rounded-none border-b-[3px] border-transparent data-[state=active]:border-[#e84b8a] data-[state=active]:bg-transparent data-[state=active]:text-[#e84b8a] data-[state=active]:shadow-none px-[16px] py-[14px] font-semibold text-[15px] text-muted-foreground hover:bg-muted/50 rounded-t-[4px] transition-colors">
+                運営
+              </TabsTrigger>
+              <TabsTrigger value="timeline" className="shrink-0 rounded-none border-b-[3px] border-transparent data-[state=active]:border-[#e84b8a] data-[state=active]:bg-transparent data-[state=active]:text-[#e84b8a] data-[state=active]:shadow-none px-[16px] py-[14px] font-semibold text-[15px] text-muted-foreground hover:bg-muted/50 rounded-t-[4px] transition-colors">
+                投稿
+              </TabsTrigger>
+              <TabsTrigger value="about" className="shrink-0 rounded-none border-b-[3px] border-transparent data-[state=active]:border-[#e84b8a] data-[state=active]:bg-transparent data-[state=active]:text-[#e84b8a] data-[state=active]:shadow-none px-[16px] py-[14px] font-semibold text-[15px] text-muted-foreground hover:bg-muted/50 rounded-t-[4px] transition-colors">
+                基本情報
+              </TabsTrigger>
+            </TabsList>
+          </div>
+          </div> {/* max-w-[1080px] */}
+        </div> {/* bg-card全幅 */}
 
       <div className="w-full max-w-[1080px] mx-auto pb-20 px-0 lg:px-4">
         <div className="flex justify-center gap-3">
@@ -1849,7 +1888,6 @@ export default function ProfilePage() {
       </div>
       </div>
       </Tabs>
-      </div> {/* max-w-[1080px] mx-auto */}
 
       {/* コメントモーダル */}
       {selectedPostForComment && user && (
