@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { createTeam, getCurrentUserEmail, searchUsers } from "@/lib/api"
+import { createTeam, getCurrentUserEmail, searchUsers, notifyAdminsForApproval } from "@/lib/api"
 import { uploadImageToS3 } from "@/lib/storage"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
@@ -232,6 +232,16 @@ export default function CreateTeamPage() {
         title: "チームを登録しました",
         description: "管理者の承認後に公開されます。しばらくお待ちください。",
       })
+
+      // 管理者へ承認待ち通知を送信
+      notifyAdminsForApproval({
+        type: 'approval_request',
+        title: 'チーム承認リクエスト',
+        message: `新しいチーム「${formData.name}」が登録されました。承認をお願いします。`,
+        senderName: currentUserEmail,
+        relatedId: createdTeam.id,
+        relatedType: 'team',
+      }).catch(e => console.error('管理者通知送信エラー:', e))
 
       // フォームをリセット
       setFormData({

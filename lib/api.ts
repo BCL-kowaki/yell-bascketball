@@ -3258,6 +3258,35 @@ export async function createNotification(input: {
 }
 
 /**
+ * システム管理者全員に承認待ち通知を送信
+ */
+export async function notifyAdminsForApproval(notification: {
+  type: string
+  title: string
+  message: string
+  senderName?: string
+  senderAvatar?: string
+  relatedId?: string
+  relatedType?: string
+}): Promise<void> {
+  try {
+    const adminEmails = await getAdminEmails()
+    for (const email of adminEmails) {
+      try {
+        await createNotification({
+          recipientEmail: email,
+          ...notification,
+        })
+      } catch (error) {
+        console.error(`管理者通知送信エラー (${email}):`, error)
+      }
+    }
+  } catch (error) {
+    console.error('管理者通知送信エラー:', error)
+  }
+}
+
+/**
  * チームの運営者全員に通知を送信
  */
 export async function notifyTeamAdmins(teamId: string, notification: {

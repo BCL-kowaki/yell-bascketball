@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
-import { getUserByEmail, createTournament, searchUsers, createTournamentInvitation, getCurrentUserEmail, type DbUser } from "@/lib/api"
+import { getUserByEmail, createTournament, searchUsers, createTournamentInvitation, getCurrentUserEmail, notifyAdminsForApproval, type DbUser } from "@/lib/api"
 import { uploadImageToS3 } from "@/lib/storage"
 import { CATEGORIES, REGION_BLOCKS, PREFECTURES_BY_REGION, DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS } from "@/lib/regionData"
 import { Button } from "@/components/ui/button"
@@ -266,6 +266,16 @@ export default function CreateTournamentPage() {
         title: "大会を登録しました",
         description: "管理者の承認後に公開されます。しばらくお待ちください。",
       })
+
+      // 管理者へ承認待ち通知を送信
+      notifyAdminsForApproval({
+        type: 'approval_request',
+        title: '大会承認リクエスト',
+        message: `新しい大会「${formData.name}」が登録されました。承認をお願いします。`,
+        senderName: currentUser.email,
+        relatedId: tournament.id,
+        relatedType: 'tournament',
+      }).catch(e => console.error('管理者通知送信エラー:', e))
 
       router.push('/tournaments')
     } catch (error: any) {

@@ -28,12 +28,14 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = fa
   const [searchQuery, setSearchQuery] = useState("")
   const [unreadCount, setUnreadCount] = useState(0)
   const [notificationCount, setNotificationCount] = useState(0)
+  const [pendingApprovalCount, setPendingApprovalCount] = useState(0)
 
   // ログイン中は未読メッセージ数と未読通知数を取得
   useEffect(() => {
     if (!isLoggedIn) {
       setUnreadCount(0)
       setNotificationCount(0)
+      setPendingApprovalCount(0)
       return
     }
 
@@ -51,6 +53,22 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = fa
           const notiCount = await getUnreadNotificationCount(email)
           setNotificationCount(notiCount)
         }
+
+        // 管理者の場合は未承認件数を取得
+        if (isAdmin) {
+          try {
+            const { adminListAllTeams, adminListAllTournaments } = await import("@/lib/api")
+            const [teams, tournaments] = await Promise.all([
+              adminListAllTeams(),
+              adminListAllTournaments()
+            ])
+            const pendingTeams = teams.filter(t => !t.isApproved).length
+            const pendingTournaments = tournaments.filter((t: any) => !t.isApproved).length
+            setPendingApprovalCount(pendingTeams + pendingTournaments)
+          } catch {
+            // エラー時は0のまま
+          }
+        }
       } catch {
         // エラー時は0のまま
       }
@@ -60,7 +78,7 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = fa
     // 60秒ごとにポーリングして未読数を更新
     const interval = setInterval(fetchUnread, 60000)
     return () => clearInterval(interval)
-  }, [isLoggedIn])
+  }, [isLoggedIn, isAdmin])
 
   const isActive = (path: string) => {
     if (path === "/") return pathname === path
@@ -151,6 +169,21 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = fa
 
         {/* 右: アイコン群 */}
         <div className="flex items-center gap-[8px] shrink-0">
+          {/* 管理パネル（管理者のみ） */}
+          {isLoggedIn && isAdmin && (
+            <Link
+              href="/admin"
+              className="relative flex items-center justify-center w-[40px] h-[40px] rounded-full bg-gray-100 hover:bg-gray-200"
+            >
+              <ShieldAlert className="w-[20px] h-[20px] text-gray-600" />
+              {pendingApprovalCount > 0 && (
+                <span className="absolute -top-[2px] -right-[2px] flex items-center justify-center min-w-[18px] h-[18px] px-[4px] text-[11px] font-bold text-white rounded-full bg-red-500">
+                  {pendingApprovalCount > 99 ? "99+" : pendingApprovalCount}
+                </span>
+              )}
+            </Link>
+          )}
+
           {/* 通知 */}
           {isLoggedIn && (
             <Link
@@ -268,6 +301,21 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = fa
               <Search className="w-[20px] h-[20px] text-gray-600" />
             )}
           </button>
+
+          {/* 管理パネル（管理者のみ） */}
+          {isLoggedIn && isAdmin && (
+            <Link
+              href="/admin"
+              className="relative flex items-center justify-center w-[36px] h-[36px] rounded-full bg-gray-100 hover:bg-gray-200"
+            >
+              <ShieldAlert className="w-[20px] h-[20px] text-gray-600" />
+              {pendingApprovalCount > 0 && (
+                <span className="absolute -top-[1px] -right-[1px] flex items-center justify-center min-w-[16px] h-[16px] px-[3px] text-[10px] font-bold text-white rounded-full bg-red-500">
+                  {pendingApprovalCount > 99 ? "99+" : pendingApprovalCount}
+                </span>
+              )}
+            </Link>
+          )}
 
           {/* 通知 */}
           {isLoggedIn && (
