@@ -3486,8 +3486,10 @@ const ADMIN_CREDENTIALS = {
 }
 
 // デフォルト管理者メールアドレス（フォールバック: 常に管理者として認識）
+// ※ SiteConfigに未登録 or 取得失敗時でもここに記載されたメアドは必ず管理者扱いになる
 const DEFAULT_ADMIN_EMAILS = [
   'kowaki1111@gmail.com',
+  'ikuma.saito@easys-inc.com',
 ]
 
 // キャッシュ済み管理者メールリスト（SiteConfigから取得後にキャッシュ）

@@ -3,7 +3,7 @@ import { ReactNode, useState, useEffect, useRef } from "react"
 import { usePathname } from "next/navigation"
 import { HeaderNavigation } from "@/components/header-navigation"
 import { SidebarMenu } from "@/components/sidebar-menu"
-import { getUserByEmail, isAdminEmail } from "@/lib/api"
+import { getUserByEmail, getAdminEmails } from "@/lib/api"
 
 interface LayoutProps {
   children: ReactNode
@@ -88,8 +88,15 @@ export function Layout({ children, isLoggedIn: propIsLoggedIn = false, currentUs
           return
         }
 
-        // 管理者チェック
-        const adminFlag = isAdminEmail(email)
+        // 管理者チェック（SiteConfigから動的に取得した管理者リストで判定）
+        // ※ isAdminEmail(同期版) はキャッシュ未取得時に DEFAULT_ADMIN_EMAILS のみで判定してしまうため使わない
+        let adminFlag = false
+        try {
+          const adminEmails = await getAdminEmails()
+          adminFlag = adminEmails.includes(email.toLowerCase().trim())
+        } catch (err) {
+          console.error('管理者メール取得に失敗:', err)
+        }
         setIsAdmin(adminFlag)
 
         // ユーザー情報をDBから取得
