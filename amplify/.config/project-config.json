@@ -1,18 +1,17 @@
 {
-  "whyContinueWithGen1": "Prefer not to answer",
-  "projectName": "yell",
+  "providers": [
+    "awscloudformation"
+  ],
+  "projectName": "yellbasketball",
   "version": "3.1",
   "frontend": "javascript",
   "javascript": {
     "framework": "react",
     "config": {
       "SourceDir": "src",
-      "DistributionDir": ".next",
+      "DistributionDir": "build",
       "BuildCommand": "npm run-script build",
       "StartCommand": "npm run-script start"
     }
-  },
-  "providers": [
-    "awscloudformation"
-  ]
+  }
 }

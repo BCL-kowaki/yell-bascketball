@@ -524,7 +524,7 @@ export default function TeamsPage() {
 
                     {/* Team Logo - overflow-hiddenの外に配置 */}
                     <div className="absolute -bottom-[28px] left-4 z-10">
-                      <Avatar className="w-[56px] h-[56px] border-2 border-white shadow-md">
+                      <Avatar className="w-[84px] h-[84px] border-4 border-white shadow-md">
                         <AvatarImage src={team.logoUrl || undefined} />
                         <AvatarFallback className="bg-brand-gradient text-white font-bold text-sm">
                           {(team.shortName || team.name).slice(0, 2)}
