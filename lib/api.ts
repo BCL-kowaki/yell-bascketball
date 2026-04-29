@@ -47,6 +47,7 @@ export type DbUser = {
   avatar?: string | null
   coverImage?: string | null
   category?: string | null
+  category2?: string | null
   region?: string | null
   regionBlock?: string | null
   prefecture?: string | null
@@ -157,6 +158,7 @@ export type DbTeam = {
   founded?: string | null
   region?: string | null
   prefecture?: string | null
+  district?: string | null
   headcount?: number | null
   category?: string | null
   description?: string | null
@@ -277,41 +279,49 @@ export function stringifySponsors(sponsors: SponsorBanner[]): string {
 }
 
 /**
+ * メールアドレスを正規化(小文字化+トリム)
+ * 大文字小文字や前後の空白による比較ミスを防ぐ
+ */
+function normalizeEmail(email?: string | null): string {
+  return (email || '').toLowerCase().trim()
+}
+
+/**
  * 大会の管理者一覧を取得する
- * ownerEmailとcoAdminEmailsを統合して返す（重複排除）
+ * ownerEmailとcoAdminEmailsを統合して返す（重複排除・小文字正規化）
  */
 export function getTournamentAdminEmails(tournament: DbTournament): string[] {
   const admins = new Set<string>()
-  if (tournament.ownerEmail) admins.add(tournament.ownerEmail)
+  if (tournament.ownerEmail) admins.add(normalizeEmail(tournament.ownerEmail))
   if (tournament.coAdminEmails) {
-    tournament.coAdminEmails.forEach(e => { if (e) admins.add(e) })
+    tournament.coAdminEmails.forEach(e => { if (e) admins.add(normalizeEmail(e)) })
   }
-  return [...admins]
+  return [...admins].filter(Boolean)
 }
 
 /**
  * チームの管理者一覧を取得する
- * ownerEmailとeditorEmailsを統合して返す（重複排除）
+ * ownerEmailとeditorEmailsを統合して返す（重複排除・小文字正規化）
  */
 export function getTeamAdminEmails(team: DbTeam): string[] {
   const admins = new Set<string>()
-  if (team.ownerEmail) admins.add(team.ownerEmail)
+  if (team.ownerEmail) admins.add(normalizeEmail(team.ownerEmail))
   if (team.editorEmails) {
-    team.editorEmails.forEach(e => { if (e) admins.add(e) })
+    team.editorEmails.forEach(e => { if (e) admins.add(normalizeEmail(e)) })
   }
-  return [...admins]
+  return [...admins].filter(Boolean)
 }
 
 /**
  * 大会の管理者であるかチェックする
- * ownerEmail または coAdminEmails に含まれているかを確認
+ * ownerEmail または coAdminEmails に含まれているかを確認(小文字無視で比較)
  */
 export async function checkTournamentAdminPermission(tournamentId: string, userEmail: string): Promise<boolean> {
   try {
     const tournament = await getTournament(tournamentId)
     if (!tournament) return false
     const admins = getTournamentAdminEmails(tournament)
-    return admins.includes(userEmail)
+    return admins.includes(normalizeEmail(userEmail))
   } catch (error) {
     console.error('checkTournamentAdminPermission error:', error?.message)
     return false
@@ -320,11 +330,11 @@ export async function checkTournamentAdminPermission(tournamentId: string, userE
 
 /**
  * チームの管理者であるかチェックする
- * ownerEmail または editorEmails に含まれているかを確認
+ * ownerEmail または editorEmails に含まれているかを確認(小文字無視で比較)
  */
 export function checkTeamAdminPermission(team: DbTeam, userEmail: string): boolean {
   const admins = getTeamAdminEmails(team)
-  return admins.includes(userEmail)
+  return admins.includes(normalizeEmail(userEmail))
 }
 
 /**
@@ -395,7 +405,7 @@ export async function getUserByEmail(email: string): Promise<DbUser | null> {
       return null
     }
 
-    console.error('getUserByEmail error:', error?.message)
+    console.error('getUserByEmail error:', error?.message, error?.errors, error)
     return null
   }
 }
@@ -412,7 +422,9 @@ export async function updateUser(id: string, input: Partial<DbUser>): Promise<Db
     }
   `
   try {
-    const variables = { input: { id, ...input } }
+    // category2 は AppSync 反映遅延の可能性があるため、Input から一時的に除外
+    const { category2: _category2, ...inputWithoutCategory2 } = input as any
+    const variables = { input: { id, ...inputWithoutCategory2 } }
 
     // 明示的にauthModeを指定してIdentity Poolへのアクセスを回避
     const result = await client.graphql({
@@ -431,7 +443,15 @@ export async function updateUser(id: string, input: Partial<DbUser>): Promise<Db
 
     return result.data.updateUser
   } catch (error: any) {
-    console.error('updateUser error:', error?.message)
+    console.error('updateUser error message:', error?.message)
+    if (error?.errors && error.errors.length > 0) {
+      error.errors.forEach((e: any, i: number) => {
+        console.error(`updateUser GraphQL error[${i}]:`, e?.message, e?.errorType, e?.path)
+      })
+    }
+    try {
+      console.error('updateUser full JSON:', JSON.stringify(error, Object.getOwnPropertyNames(error)))
+    } catch {}
     throw error
   }
 }
@@ -803,8 +823,7 @@ export async function updatePost(id: string, input: Partial<DbPost>): Promise<Db
   `
   
   try {
-    const { videoUrl, videoName, ...inputWithoutVideo } = input
-    const sanitizedInput = { id, ...inputWithoutVideo }
+    const sanitizedInput = { id, ...input }
 
     const result = await client.graphql({
       query: mutation,
@@ -1098,7 +1117,8 @@ export async function createTeam(input: Partial<DbTeam>): Promise<DbTeam> {
     if ((input as any).founded) sanitizedInput.founded = (input as any).founded
     if (input.region) sanitizedInput.region = input.region
     if (input.prefecture) sanitizedInput.prefecture = input.prefecture
-    if ((input as any).district) sanitizedInput.district = (input as any).district
+    // district は AppSync 反映待ちのため一時的に送信しない(amplify push 完了後に有効化)
+    // if ((input as any).district) sanitizedInput.district = (input as any).district
     if ((input as any).headcount) sanitizedInput.headcount = (input as any).headcount
     if (input.category) sanitizedInput.category = input.category
     if (input.description) sanitizedInput.description = input.description
@@ -1164,6 +1184,52 @@ export async function listTeams(limit = 50, filter?: { isApproved?: boolean }): 
   }
 }
 
+/**
+ * チーム名重複チェック
+ * 同じ「チーム名 + 都道府県 + 地区」の組み合わせが既に存在するか確認
+ * 承認済み・未承認問わず全てのチームが対象(承認待ちでも重複は防ぎたい)
+ */
+export async function checkTeamNameDuplicate(
+  name: string,
+  prefecture?: string | null,
+  district?: string | null
+): Promise<boolean> {
+  // district は AppSync 反映待ちのため一時的に SELECT から外す
+  const query = /* GraphQL */ `
+    query ListTeams($filter: ModelTeamFilterInput, $limit: Int) {
+      listTeams(filter: $filter, limit: $limit) {
+        items {
+          id name prefecture
+        }
+      }
+    }
+  `
+
+  try {
+    const result = await client.graphql({
+      query,
+      variables: {
+        filter: { name: { eq: name } },
+        limit: 100,
+      },
+      authMode: 'apiKey',
+    }) as any
+
+    const items: Array<{ id: string; name: string; prefecture?: string | null }> =
+      result.data?.listTeams?.items ?? []
+
+    // 同名のチームが見つかった上で、都道府県が一致するかチェック
+    // (district は AppSync 反映後に有効化予定。今は県レベルでの重複防止)
+    return items.some(team =>
+      (team.prefecture || null) === (prefecture || null)
+    )
+  } catch (error: any) {
+    console.error('checkTeamNameDuplicate error:', error?.message)
+    // エラー時は重複なしと扱う(作成側で別エラーが出るだけ)
+    return false
+  }
+}
+
 export async function getTeam(id: string): Promise<DbTeam | null> {
   const query = /* GraphQL */ `
     query GetTeam($id: ID!) {
@@ -1210,6 +1276,8 @@ export async function updateTeam(id: string, input: Partial<DbTeam>): Promise<Db
     if (input.category) sanitizedInput.category = input.category
     if (input.region) sanitizedInput.region = input.region
     if (input.prefecture) sanitizedInput.prefecture = input.prefecture
+    // district は AppSync 反映待ちのため一時的に送信しない(amplify push 完了後に有効化)
+    // if (input.district) sanitizedInput.district = input.district
     if (input.description) sanitizedInput.description = input.description
     if (input.website) sanitizedInput.website = input.website
     if (input.instagramUrl) sanitizedInput.instagramUrl = input.instagramUrl
@@ -2393,17 +2461,49 @@ export async function getTimelinePosts(userEmail: string, limit = 50): Promise<D
     } catch (favError) {
       // お気に入り取得失敗時はフォールバック
     }
-    
-    // 3. すべての投稿を取得
+
+    // 3. 自分が運営/参加するチームが参加している大会のIDを取得
+    // → 「参加大会」のフィードを含めるため
+    let participatingTournamentIds: string[] = []
+    try {
+      const myTeams = await getMyTeams(userEmail)
+      for (const team of myTeams) {
+        const ttResult = await client.graphql({
+          query: `
+            query TournamentTeamsByTeamId($teamId: ID!) {
+              tournamentTeamsByTeamId(teamId: $teamId) {
+                items { tournamentId }
+              }
+            }
+          `,
+          variables: { teamId: team.id },
+          authMode: 'apiKey'
+        }) as any
+        const ttItems = ttResult?.data?.tournamentTeamsByTeamId?.items || []
+        participatingTournamentIds.push(
+          ...ttItems.map((tt: any) => tt.tournamentId).filter(Boolean)
+        )
+      }
+      // 重複除去
+      participatingTournamentIds = [...new Set(participatingTournamentIds)]
+    } catch (participatingError: any) {
+      console.error('getTimelinePosts: 参加大会取得失敗', participatingError?.message)
+    }
+
+    // 4. すべての投稿を取得
     const allPosts = await listPosts(1000)
-    
-    // 4. フィルタリング
+
+    // 5. フィルタリング
     // - 自分の投稿
     // - フォローしているユーザーの投稿
     // - お気に入りチームの投稿
-    // - お気に入り大会の投稿
+    // - お気に入り大会 / 参加大会の投稿(両方を1つの集合として扱う)
     const relevantEmails = [userEmail, ...followingEmails]
-    
+    const interestedTournamentIds = new Set([
+      ...favoriteTournamentIds,
+      ...participatingTournamentIds,
+    ])
+
     const filteredPosts = allPosts.filter(post => {
       // 自分またはフォローしているユーザーの投稿
       if (post.authorEmail && relevantEmails.includes(post.authorEmail)) {
@@ -2413,8 +2513,8 @@ export async function getTimelinePosts(userEmail: string, limit = 50): Promise<D
       if (post.teamId && favoriteTeamIds.includes(post.teamId)) {
         return true
       }
-      // お気に入り大会の投稿
-      if (post.tournamentId && favoriteTournamentIds.includes(post.tournamentId)) {
+      // お気に入り大会 or 参加大会の投稿
+      if (post.tournamentId && interestedTournamentIds.has(post.tournamentId)) {
         return true
       }
       return false
@@ -2560,7 +2660,8 @@ export async function createChatThread(input: {
   tournamentName: string
   initialMessage: string
 }): Promise<DbChatThread> {
-  const currentEmail = await getCurrentUserEmail()
+  const rawEmail = await getCurrentUserEmail()
+  const currentEmail = (rawEmail || '').toLowerCase().trim()
   if (!currentEmail) {
     throw new Error('オファーの送信にはログインが必要です')
   }
@@ -2586,7 +2687,7 @@ export async function createChatThread(input: {
   try {
     const now = new Date().toISOString()
     const threadInput = {
-      senderEmail: currentEmail,
+      senderEmail: currentEmail, // 既に小文字化済み
       senderName,
       teamId: input.teamId,
       teamName: input.teamName,
@@ -2878,7 +2979,61 @@ export async function getChatThreadsByTeam(teamId: string): Promise<DbChatThread
 }
 
 /**
+ * 大会IDに紐づくチャットスレッド一覧を取得
+ * 大会のオーナー/共同運営者がグループ閲覧するために使用
+ */
+export async function getChatThreadsByTournament(tournamentId: string): Promise<DbChatThread[]> {
+  const query = /* GraphQL */ `
+    query ChatThreadsByTournament($tournamentId: ID!) {
+      chatThreadsByTournament(tournamentId: $tournamentId) {
+        items {
+          ${CHAT_THREAD_FIELDS}
+        }
+      }
+    }
+  `
+
+  try {
+    const result = await client.graphql({
+      query,
+      variables: { tournamentId },
+      authMode: 'apiKey'
+    }) as any
+
+    if (result?.errors) return []
+    return result?.data?.chatThreadsByTournament?.items ?? []
+  } catch (error: any) {
+    console.error('getChatThreadsByTournament error:', error?.message)
+    return []
+  }
+}
+
+/**
+ * 自分が運営する(オーナー or 共同運営者)大会の一覧を取得
+ * メール正規化して大文字小文字無視で照合
+ */
+export async function getMyTournaments(email: string): Promise<DbTournament[]> {
+  const normalized = (email || '').toLowerCase().trim()
+  if (!normalized) return []
+
+  try {
+    const all = await listTournaments(1000)
+    return all.filter(t => {
+      const owner = (t.ownerEmail || '').toLowerCase().trim()
+      if (owner === normalized) return true
+      const coAdmins = (t.coAdminEmails || []).map(e => (e || '').toLowerCase().trim())
+      return coAdmins.includes(normalized)
+    })
+  } catch (error: any) {
+    console.error('getMyTournaments error:', error?.message)
+    return []
+  }
+}
+
+/**
  * 大会運営者が送信したチャットスレッド一覧を取得
+ * 過去データの大文字小文字混在に対応するため、
+ * 元のメールと小文字化したメールの両方で検索して合算する
  */
 export async function getChatThreadsBySender(senderEmail: string): Promise<DbChatThread[]> {
   const query = /* GraphQL */ `
@@ -2891,22 +3046,32 @@ export async function getChatThreadsBySender(senderEmail: string): Promise<DbCha
     }
   `
 
-  try {
-    const result = await client.graphql({
-      query,
-      variables: { senderEmail },
-      authMode: 'apiKey'
-    }) as any
+  const normalizedEmail = (senderEmail || '').toLowerCase().trim()
+  if (!normalizedEmail) return []
 
-    if (result.errors) {
-      return []
+  // 検索対象のメール候補(小文字化したものと、原文が違う場合は両方)
+  const candidates = new Set<string>([normalizedEmail])
+  if (senderEmail !== normalizedEmail) candidates.add(senderEmail)
+
+  const allItems: DbChatThread[] = []
+
+  for (const email of candidates) {
+    try {
+      const result = await client.graphql({
+        query,
+        variables: { senderEmail: email },
+        authMode: 'apiKey'
+      }) as any
+      if (result?.errors) continue
+      const items: DbChatThread[] = result?.data?.chatThreadsBySender?.items ?? []
+      allItems.push(...items)
+    } catch (error: any) {
+      console.error('getChatThreadsBySender error:', error?.message)
     }
-
-    return result?.data?.chatThreadsBySender?.items ?? []
-  } catch (error: any) {
-    console.error('getChatThreadsBySender error:', error?.message)
-    return []
   }
+
+  // 重複除去
+  return allItems.filter((t, i, self) => i === self.findIndex(x => x.id === t.id))
 }
 
 /**
@@ -2915,28 +3080,37 @@ export async function getChatThreadsBySender(senderEmail: string): Promise<DbCha
  * - チーム運営者として受け取ったスレッド
  */
 export async function getMyAllChatThreads(): Promise<DbChatThread[]> {
-  const currentEmail = await getCurrentUserEmail()
+  const rawEmail = await getCurrentUserEmail()
+  const currentEmail = (rawEmail || '').toLowerCase().trim()
   console.log('[getMyAllChatThreads] currentEmail:', currentEmail)
   if (!currentEmail) return []
 
   try {
-    // 1. 送信したスレッドを取得
+    // 1. 自分が直接送信したスレッドを取得(senderEmail 一致)
     const sentThreads = await getChatThreadsBySender(currentEmail)
     console.log('[getMyAllChatThreads] sentThreads:', sentThreads.length)
 
-    // 2. 自分が運営するチーム宛てのスレッドを取得
-    // まず自分がオーナーまたはエディターのチームを検索
+    // 2. 自分が運営するチーム宛てのスレッドを取得(チーム共同運営者含む)
     const myTeams = await getMyTeams(currentEmail)
-    console.log('[getMyAllChatThreads] myTeams:', myTeams.length, myTeams.map(t => ({ id: t.id, name: t.name })))
-    const receivedThreads: DbChatThread[] = []
+    console.log('[getMyAllChatThreads] myTeams:', myTeams.length)
+    const teamThreads: DbChatThread[] = []
     for (const team of myTeams) {
       const threads = await getChatThreadsByTeam(team.id)
-      console.log(`[getMyAllChatThreads] team ${team.name} (${team.id}) threads:`, threads.length)
-      receivedThreads.push(...threads)
+      teamThreads.push(...threads)
     }
 
-    // 重複を除去してマージ（lastMessageAtの降順）
-    const allThreads = [...sentThreads, ...receivedThreads]
+    // 3. 自分が運営する大会のスレッドを取得(大会共同運営者含む)
+    // → 大会オーナーが送信したオファーを共同運営者も見られるようになる
+    const myTournaments = await getMyTournaments(currentEmail)
+    console.log('[getMyAllChatThreads] myTournaments:', myTournaments.length)
+    const tournamentThreads: DbChatThread[] = []
+    for (const tournament of myTournaments) {
+      const threads = await getChatThreadsByTournament(tournament.id)
+      tournamentThreads.push(...threads)
+    }
+
+    // 重複を除去してマージ
+    const allThreads = [...sentThreads, ...teamThreads, ...tournamentThreads]
     const uniqueThreads = allThreads.filter((thread, index, self) =>
       index === self.findIndex((t) => t.id === thread.id)
     )
@@ -2957,6 +3131,10 @@ export async function getMyAllChatThreads(): Promise<DbChatThread[]> {
  * 自分がオーナーまたはエディターのチーム一覧を取得
  */
 export async function getMyTeams(email: string): Promise<DbTeam[]> {
+  // メール正規化: 大文字小文字や前後の空白で検索が漏れるのを防ぐ
+  const normalizedEmail = (email || '').toLowerCase().trim()
+  if (!normalizedEmail) return []
+
   const query = /* GraphQL */ `
     query ListTeams($filter: ModelTeamFilterInput, $limit: Int) {
       listTeams(filter: $filter, limit: $limit) {
@@ -2967,34 +3145,27 @@ export async function getMyTeams(email: string): Promise<DbTeam[]> {
     }
   `
 
+  // 全件を取得してクライアント側で大文字小文字を無視して照合する
+  // (GraphQL の eq/contains は大文字小文字を区別するため、漏れが発生していた)
   try {
-    // オーナーとして所有するチーム
-    const ownerResult = await client.graphql({
+    const allResult = await client.graphql({
       query,
-      variables: {
-        filter: { ownerEmail: { eq: email } },
-        limit: 100
-      },
+      variables: { limit: 1000 },
       authMode: 'apiKey'
     }) as any
 
-    const ownerTeams = ownerResult?.data?.listTeams?.items ?? []
+    const allTeams: DbTeam[] = allResult?.data?.listTeams?.items ?? []
 
-    // エディターとして参加するチーム
-    const editorResult = await client.graphql({
-      query,
-      variables: {
-        filter: { editorEmails: { contains: email } },
-        limit: 100
-      },
-      authMode: 'apiKey'
-    }) as any
-
-    const editorTeams = editorResult?.data?.listTeams?.items ?? []
+    // ownerEmail / editorEmails を全て小文字化して比較
+    const myTeams = allTeams.filter((team) => {
+      const ownerNormalized = (team.ownerEmail || '').toLowerCase().trim()
+      if (ownerNormalized === normalizedEmail) return true
+      const editorList = (team.editorEmails || []).map(e => (e || '').toLowerCase().trim())
+      return editorList.includes(normalizedEmail)
+    })
 
     // 重複除去
-    const allTeams = [...ownerTeams, ...editorTeams]
-    return allTeams.filter((team: DbTeam, index: number, self: DbTeam[]) =>
+    return myTeams.filter((team, index, self) =>
       index === self.findIndex((t) => t.id === team.id)
     )
   } catch (error: any) {
@@ -3139,13 +3310,16 @@ export async function updateChatThreadStatus(threadId: string, status: 'accepted
  * チャットスレッドの未読カウントをリセット
  */
 export async function markChatThreadAsRead(threadId: string): Promise<void> {
-  const currentEmail = await getCurrentUserEmail()
+  const rawEmail = await getCurrentUserEmail()
+  const currentEmail = (rawEmail || '').toLowerCase().trim()
   if (!currentEmail) return
 
   const thread = await getChatThread(threadId)
   if (!thread) return
 
-  const isSenderOriginalSender = thread.senderEmail === currentEmail
+  // メール比較も小文字化して照合
+  const threadSender = (thread.senderEmail || '').toLowerCase().trim()
+  const isSenderOriginalSender = threadSender === currentEmail
   const updateInput: any = { id: threadId }
 
   if (isSenderOriginalSender) {
@@ -3238,6 +3412,8 @@ export async function createNotification(input: {
       variables: {
         input: {
           ...input,
+          // recipientEmail は小文字化して保存(検索の一貫性確保)
+          recipientEmail: (input.recipientEmail || '').toLowerCase().trim(),
           isRead: false,
         }
       },
@@ -3333,22 +3509,33 @@ export async function getNotifications(recipientEmail: string, limit = 50): Prom
     }
   `
 
-  try {
-    const result = await client.graphql({
-      query,
-      variables: { recipientEmail, limit, sortDirection: 'DESC' },
-      authMode: 'apiKey'
-    }) as any
+  const normalized = (recipientEmail || '').toLowerCase().trim()
+  if (!normalized) return []
 
-    if (result.errors) {
-      return []
+  // 過去データの大文字小文字混在に対応するため両方検索
+  const candidates = new Set<string>([normalized])
+  if (recipientEmail !== normalized) candidates.add(recipientEmail)
+
+  const allItems: DbNotification[] = []
+  for (const email of candidates) {
+    try {
+      const result = await client.graphql({
+        query,
+        variables: { recipientEmail: email, limit, sortDirection: 'DESC' },
+        authMode: 'apiKey'
+      }) as any
+      if (result?.errors) continue
+      const items: DbNotification[] = result?.data?.notificationsByRecipient?.items ?? []
+      allItems.push(...items)
+    } catch (error: any) {
+      console.error('getNotifications error:', error?.message)
     }
-
-    return result?.data?.notificationsByRecipient?.items ?? []
-  } catch (error: any) {
-    console.error('getNotifications error:', error?.message)
-    return []
   }
+
+  // 重複除去 + 時系列降順
+  const unique = allItems.filter((n, i, self) => i === self.findIndex(x => x.id === n.id))
+  unique.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+  return unique.slice(0, limit)
 }
 
 /**

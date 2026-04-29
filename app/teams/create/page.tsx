@@ -13,9 +13,10 @@ import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { createTeam, getCurrentUserEmail, searchUsers, notifyAdminsForApproval } from "@/lib/api"
+import { createTeam, getCurrentUserEmail, searchUsers, notifyAdminsForApproval, checkTeamNameDuplicate } from "@/lib/api"
 import { uploadImageToS3 } from "@/lib/storage"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS } from "@/lib/regionData"
 
 const regions = {
   北海道: ["北海道"],
@@ -40,6 +41,7 @@ export default function CreateTeamPage() {
     founded: "",
     region: "",
     prefecture: "",
+    district: "",
     headcount: "",
     category: "",
     description: "",
@@ -50,6 +52,7 @@ export default function CreateTeamPage() {
     editors: [] as Array<{ id: string; email: string; firstName: string; lastName: string; avatar?: string }>,
   })
   const [prefectures, setPrefectures] = useState<string[]>([])
+  const [districts, setDistricts] = useState<string[]>([])
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
@@ -66,8 +69,19 @@ export default function CreateTeamPage() {
     } else {
       setPrefectures([])
     }
-    setFormData(prev => ({ ...prev, prefecture: "" }))
+    setFormData(prev => ({ ...prev, prefecture: "", district: "" }))
+    setDistricts([])
   }, [formData.region])
+
+  // 都道府県が変わったら地区リストを更新
+  useEffect(() => {
+    if (formData.prefecture) {
+      setDistricts(DISTRICTS_BY_PREFECTURE[formData.prefecture] || DEFAULT_DISTRICTS)
+    } else {
+      setDistricts([])
+    }
+    setFormData(prev => ({ ...prev, district: "" }))
+  }, [formData.prefecture])
 
   async function loadCurrentUser() {
     try {
@@ -183,6 +197,22 @@ export default function CreateTeamPage() {
     setIsSubmitting(true)
 
     try {
+      // チーム名重複チェック(同じ「チーム名 + 都道府県 + 地区」の組み合わせを防ぐ)
+      const isDuplicate = await checkTeamNameDuplicate(
+        formData.name.trim(),
+        formData.prefecture || null,
+        formData.district || null
+      )
+      if (isDuplicate) {
+        toast({
+          title: "重複エラー",
+          description: `同じ地区に「${formData.name}」というチームが既に登録されています。チーム名・都道府県・地区のいずれかを変更してください。`,
+          variant: "destructive",
+        })
+        setIsSubmitting(false)
+        return
+      }
+
       // 画像をS3にアップロード
       let logoUrl: string | undefined = undefined
       let coverImageUrl: string | undefined = undefined
@@ -207,13 +237,13 @@ export default function CreateTeamPage() {
 
       // チームをデータベースに作成
       const teamData = {
-        name: formData.name,
+        name: formData.name.trim(),
         logoUrl,
         coverImageUrl,
         category: formData.category || undefined,
         region: formData.region || undefined,
         prefecture: formData.prefecture || undefined,
-        district: undefined, // 必要に応じて追加
+        district: formData.district || undefined,
         founded: formData.founded || undefined,
         headcount: formData.headcount ? parseInt(formData.headcount) : undefined,
         description: formData.description || undefined,
@@ -249,6 +279,7 @@ export default function CreateTeamPage() {
         founded: "",
         region: "",
         prefecture: "",
+        district: "",
         headcount: "",
         category: "",
         description: "",
@@ -295,6 +326,15 @@ export default function CreateTeamPage() {
             <CardTitle className="text-2xl font-bold">新しいチームを作成</CardTitle>
           </CardHeader>
           <CardContent>
+            {/* 承認待ち案内 */}
+            <Alert className="mb-6 border-amber-200 bg-amber-50">
+              <Info className="w-4 h-4 text-amber-600" />
+              <AlertTitle className="text-amber-800">登録後の流れ</AlertTitle>
+              <AlertDescription className="text-amber-700 text-sm">
+                チーム登録は管理者による承認後に公開されます。承認待ち中はチーム一覧に表示されませんのでご了承ください。
+              </AlertDescription>
+            </Alert>
+
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="name">チーム名 <span className="text-red-500">*</span></Label>
@@ -362,6 +402,22 @@ export default function CreateTeamPage() {
                     <SelectContent>{prefectures.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              {/* 地区選択 */}
+              <div className="space-y-2">
+                <Label>地区</Label>
+                <Select
+                  onValueChange={(value) => handleSelectChange("district", value)}
+                  value={formData.district}
+                  disabled={!formData.prefecture || isSubmitting}
+                >
+                  <SelectTrigger className="bg-white"><SelectValue placeholder={formData.prefecture ? "地区を選択" : "都道府県を先に選択"} /></SelectTrigger>
+                  <SelectContent>{districts.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  チーム名は「都道府県＋地区」単位で重複登録できません。表示時は「チーム名（地区）」のように地区が併記されます。
+                </p>
               </div>
 
                <div className="space-y-2">
@@ -494,9 +550,13 @@ export default function CreateTeamPage() {
                                 {user.firstName[0]}{user.lastName[0]}
                               </AvatarFallback>
                             </Avatar>
-                            <div className="flex-1">
-                              <p className="font-medium">{user.lastName} {user.firstName}</p>
-                              <p className="text-sm text-muted-foreground">{user.email}</p>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">{user.lastName} {user.firstName}</p>
+                              {(user.prefecture || user.region) && (
+                                <p className="text-sm text-muted-foreground truncate">
+                                  {[user.region, user.prefecture].filter(Boolean).join(" / ")}
+                                </p>
+                              )}
                             </div>
                             <UserPlus className="w-4 h-4 text-primary" />
                           </div>
@@ -518,9 +578,13 @@ export default function CreateTeamPage() {
                               {editor.firstName[0]}{editor.lastName[0]}
                             </AvatarFallback>
                           </Avatar>
-                          <div>
-                            <p className="font-medium">{editor.lastName} {editor.firstName}</p>
-                            <p className="text-sm text-muted-foreground">{editor.email}</p>
+                          <div className="min-w-0">
+                            <p className="font-medium truncate">{editor.lastName} {editor.firstName}</p>
+                            {(editor.prefecture || editor.region) && (
+                              <p className="text-sm text-muted-foreground truncate">
+                                {[editor.region, editor.prefecture].filter(Boolean).join(" / ")}
+                              </p>
+                            )}
                           </div>
                         </div>
                         <Button

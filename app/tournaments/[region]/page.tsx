@@ -1,7 +1,6 @@
 "use client"
 import { useEffect, useState } from "react"
-import { useParams } from "next/navigation"
-import dynamic from "next/dynamic"
+import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -26,30 +25,31 @@ import { refreshS3Url } from "@/lib/storage"
 // UUID形式のチェック（例: 31a08672-9241-4999-b0f4-03c3a3b00c02）
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-// 大会詳細ページコンポーネントを動的にインポート
-const TournamentDetailPage = dynamic(() => import("../_id_backup/page"), {
-  loading: () => (
-    <Layout>
-      <div className="max-w-6xl mx-auto pb-20 px-4 pt-6">
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">読み込み中...</p>
-        </div>
-      </div>
-    </Layout>
-  ),
-  ssr: false
-})
-
 export default function RegionTournamentsPage() {
   const params = useParams()
+  const router = useRouter()
   const regionSlug = params.region as string
+  const isUuid = regionSlug && UUID_REGEX.test(regionSlug)
 
-  // UUID形式の場合は、大会詳細ページコンポーネントを表示
+  // UUID形式の場合は、大会詳細ページへリダイレクト
   // Next.jsのルーティングで[region]と[id]が競合しているため、
-  // このページ内でUUIDの場合の処理を行う
-  if (regionSlug && UUID_REGEX.test(regionSlug)) {
-    console.log('RegionTournamentsPage: UUID detected, rendering TournamentDetailPage component')
-    return <TournamentDetailPage />
+  // /tournaments/{UUID} を /tournaments/detail/{UUID} に振り替える
+  useEffect(() => {
+    if (isUuid) {
+      router.replace(`/tournaments/detail/${regionSlug}`)
+    }
+  }, [isUuid, regionSlug, router])
+
+  if (isUuid) {
+    return (
+      <Layout>
+        <div className="max-w-6xl mx-auto pb-20 px-4 pt-6">
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">読み込み中...</p>
+          </div>
+        </div>
+      </Layout>
+    )
   }
 
   const regionName = REGION_SLUG_TO_NAME[regionSlug]

@@ -1,12 +1,17 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ImageIcon, Send, Loader2, FileText, Video, X } from "lucide-react"
-import { createPost as createDbPost } from "@/lib/api"
+import { createPost as createDbPost, updatePost, type DbPost } from "@/lib/api"
 import { uploadImageToS3, uploadPdfToS3, uploadVideoToS3 } from "@/lib/storage"
 import { useToast } from "@/hooks/use-toast"
+
+// ファイルサイズ上限(バイト)
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
+const MAX_PDF_SIZE = 500 * 1024 * 1024 // 500MB
+const MAX_VIDEO_SIZE = 500 * 1024 * 1024 // 500MB
 
 type TournamentPostFormProps = {
   currentUserEmail: string
@@ -15,6 +20,9 @@ type TournamentPostFormProps = {
   tournamentId: string
   isAdmin: boolean // オーナーまたは共同管理者かどうか
   onPostCreated: () => void
+  // 編集モード用
+  editingPost?: DbPost | null
+  onCancelEdit?: () => void
 }
 
 export function TournamentPostForm({
@@ -23,20 +31,55 @@ export function TournamentPostForm({
   currentUserAvatar,
   tournamentId,
   isAdmin,
-  onPostCreated
+  onPostCreated,
+  editingPost,
+  onCancelEdit,
 }: TournamentPostFormProps) {
   const { toast } = useToast()
+  const isEditMode = !!editingPost
   const [postContent, setPostContent] = useState("")
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [selectedPdf, setSelectedPdf] = useState<File | null>(null)
+  const [pdfNameOnly, setPdfNameOnly] = useState<string | null>(null) // 既存PDFのファイル名表示用
   const [selectedVideo, setSelectedVideo] = useState<File | null>(null)
   const [videoPreview, setVideoPreview] = useState<string | null>(null)
   const [isPosting, setIsPosting] = useState(false)
 
+  // 編集モード切り替え時に既存値を反映
+  useEffect(() => {
+    if (editingPost) {
+      setPostContent(editingPost.content || "")
+      setImagePreview(editingPost.imageUrl || null)
+      setVideoPreview(editingPost.videoUrl || null)
+      setPdfNameOnly(editingPost.pdfName || null)
+      // 新規ファイルはクリア(既存ファイル維持)
+      setSelectedImage(null)
+      setSelectedPdf(null)
+      setSelectedVideo(null)
+    } else {
+      // 新規投稿モード
+      setPostContent("")
+      setSelectedImage(null)
+      setImagePreview(null)
+      setSelectedPdf(null)
+      setPdfNameOnly(null)
+      setSelectedVideo(null)
+      setVideoPreview(null)
+    }
+  }, [editingPost])
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      if (file.size > MAX_IMAGE_SIZE) {
+        toast({
+          title: "ファイルサイズエラー",
+          description: `画像は${MAX_IMAGE_SIZE / 1024 / 1024}MB以下にしてください`,
+          variant: "destructive",
+        })
+        return
+      }
       setSelectedImage(file)
       const reader = new FileReader()
       reader.onloadend = () => {
@@ -54,17 +97,35 @@ export function TournamentPostForm({
   const handlePdfSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      if (file.size > MAX_PDF_SIZE) {
+        toast({
+          title: "ファイルサイズエラー",
+          description: `PDFは${MAX_PDF_SIZE / 1024 / 1024}MB以下にしてください`,
+          variant: "destructive",
+        })
+        return
+      }
       setSelectedPdf(file)
+      setPdfNameOnly(null) // 既存PDF名を上書き表示
     }
   }
 
   const handleRemovePdf = () => {
     setSelectedPdf(null)
+    setPdfNameOnly(null)
   }
 
   const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      if (file.size > MAX_VIDEO_SIZE) {
+        toast({
+          title: "ファイルサイズエラー",
+          description: `動画は${MAX_VIDEO_SIZE / 1024 / 1024}MB以下にしてください`,
+          variant: "destructive",
+        })
+        return
+      }
       setSelectedVideo(file)
       const reader = new FileReader()
       reader.onloadend = () => {
@@ -80,10 +141,16 @@ export function TournamentPostForm({
   }
 
   const handleSubmitPost = async () => {
-    if (!postContent.trim() && !selectedImage && !selectedPdf && !selectedVideo) {
+    const hasContent =
+      postContent.trim() ||
+      selectedImage ||
+      selectedPdf ||
+      selectedVideo ||
+      (isEditMode && (imagePreview || pdfNameOnly || videoPreview))
+    if (!hasContent) {
       toast({
         title: "エラー",
-        description: "投稿内容または画像を入力してください",
+        description: "投稿内容またはファイルを入力してください",
         variant: "destructive",
       })
       return
@@ -92,59 +159,89 @@ export function TournamentPostForm({
     try {
       setIsPosting(true)
 
-      let imageUrl: string | null = null
-      let pdfUrl: string | null = null
-      let videoUrl: string | null = null
+      // 既存値ベースに、新規ファイルがあれば差し替え
+      let imageUrl: string | null | undefined = isEditMode ? editingPost?.imageUrl : null
+      let pdfUrl: string | null | undefined = isEditMode ? editingPost?.pdfUrl : null
+      let pdfName: string | null | undefined = isEditMode ? editingPost?.pdfName : null
+      let videoUrl: string | null | undefined = isEditMode ? editingPost?.videoUrl : null
+      let videoName: string | null | undefined = isEditMode ? editingPost?.videoName : null
 
-      // 画像をS3にアップロード
+      // 画像
       if (selectedImage) {
         imageUrl = await uploadImageToS3(selectedImage, `tournament-${tournamentId}`)
+      } else if (isEditMode && !imagePreview) {
+        // プレビューが消えている = 削除
+        imageUrl = null
       }
 
-      // PDFをS3にアップロード
+      // PDF
       if (selectedPdf) {
         pdfUrl = await uploadPdfToS3(selectedPdf, `tournament-${tournamentId}`)
+        pdfName = selectedPdf.name
+      } else if (isEditMode && !pdfNameOnly) {
+        pdfUrl = null
+        pdfName = null
       }
 
-      // 動画をS3にアップロード
+      // 動画
       if (selectedVideo) {
         videoUrl = await uploadVideoToS3(selectedVideo, `tournament-${tournamentId}`)
+        videoName = selectedVideo.name
+      } else if (isEditMode && !videoPreview) {
+        videoUrl = null
+        videoName = null
       }
 
-      // 投稿を作成
-      await createDbPost({
-        content: postContent,
-        imageUrl: imageUrl || undefined,
-        pdfUrl: pdfUrl || undefined,
-        pdfName: selectedPdf?.name,
-        videoUrl: videoUrl || undefined,
-        videoName: selectedVideo?.name,
-        authorEmail: currentUserEmail,
-        tournamentId: tournamentId,
-        likesCount: 0,
-        commentsCount: 0,
-      })
-
-      toast({
-        title: "投稿しました",
-        description: "投稿が正常に作成されました",
-      })
+      if (isEditMode && editingPost) {
+        // 既存投稿を更新
+        await updatePost(editingPost.id, {
+          content: postContent,
+          imageUrl: imageUrl ?? null,
+          pdfUrl: pdfUrl ?? null,
+          pdfName: pdfName ?? null,
+          videoUrl: videoUrl ?? null,
+          videoName: videoName ?? null,
+        })
+        toast({
+          title: "投稿を更新しました",
+        })
+      } else {
+        // 新規作成
+        await createDbPost({
+          content: postContent,
+          imageUrl: imageUrl || undefined,
+          pdfUrl: pdfUrl || undefined,
+          pdfName: pdfName || undefined,
+          videoUrl: videoUrl || undefined,
+          videoName: videoName || undefined,
+          authorEmail: currentUserEmail,
+          tournamentId: tournamentId,
+          likesCount: 0,
+          commentsCount: 0,
+        })
+        toast({
+          title: "投稿しました",
+          description: "投稿が正常に作成されました",
+        })
+      }
 
       // フォームをリセット
       setPostContent("")
       setSelectedImage(null)
       setImagePreview(null)
       setSelectedPdf(null)
+      setPdfNameOnly(null)
       setSelectedVideo(null)
       setVideoPreview(null)
 
       // 親コンポーネントに通知
       onPostCreated()
+      onCancelEdit?.()
     } catch (error: any) {
-      console.error("Failed to create post:", error)
+      console.error("Failed to save post:", error)
       toast({
         title: "エラー",
-        description: "投稿の作成に失敗しました",
+        description: isEditMode ? "投稿の更新に失敗しました" : "投稿の作成に失敗しました",
         variant: "destructive",
       })
     } finally {
@@ -154,6 +251,20 @@ export function TournamentPostForm({
 
   return (
     <div className="bg-card rounded-lg shadow p-4 mb-4">
+      {isEditMode && (
+        <div className="mb-3 flex items-center justify-between gap-2 px-3 py-2 bg-blue-50 rounded-lg">
+          <span className="text-sm font-medium text-blue-700">投稿を編集中</span>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onCancelEdit}
+            disabled={isPosting}
+            className="text-blue-700 hover:text-blue-900 h-7"
+          >
+            キャンセル
+          </Button>
+        </div>
+      )}
       <div className="flex gap-3">
         <Avatar className="w-10 h-10">
           <AvatarImage src={currentUserAvatar} alt={currentUserName} />
@@ -197,11 +308,13 @@ export function TournamentPostForm({
             </div>
           )}
 
-          {selectedPdf && (
+          {(selectedPdf || pdfNameOnly) && (
             <div className="mb-3 p-3 bg-gray-50 rounded-lg flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-red-600" />
-                <span className="text-sm font-medium">{selectedPdf.name}</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <FileText className="w-5 h-5 text-red-600 flex-shrink-0" />
+                <span className="text-sm font-medium truncate">
+                  {selectedPdf?.name || pdfNameOnly}
+                </span>
               </div>
               <Button
                 size="sm"
@@ -214,7 +327,7 @@ export function TournamentPostForm({
             </div>
           )}
 
-          {videoPreview && selectedVideo && (
+          {videoPreview && (
             <div className="relative mb-3">
               <video
                 src={videoPreview}
@@ -232,6 +345,11 @@ export function TournamentPostForm({
               </Button>
             </div>
           )}
+
+          <p className="text-xs text-muted-foreground mb-2">
+            添付可能: 画像 (最大{MAX_IMAGE_SIZE / 1024 / 1024}MB) / PDF (最大
+            {MAX_PDF_SIZE / 1024 / 1024}MB) / 動画 (最大{MAX_VIDEO_SIZE / 1024 / 1024}MB)
+          </p>
 
           <div className="flex items-center justify-between">
             <div className="flex gap-2">
@@ -304,18 +422,18 @@ export function TournamentPostForm({
 
             <Button
               onClick={handleSubmitPost}
-              disabled={isPosting || (!postContent.trim() && !selectedImage && !selectedPdf && !selectedVideo)}
+              disabled={isPosting}
               className="gap-2"
             >
               {isPosting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  投稿中...
+                  {isEditMode ? "更新中..." : "投稿中..."}
                 </>
               ) : (
                 <>
                   <Send className="w-4 h-4" />
-                  投稿
+                  {isEditMode ? "更新" : "投稿"}
                 </>
               )}
             </Button>

@@ -537,12 +537,17 @@ export default function TeamsPage() {
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg font-bold text-gray-900 group-hover:text-[#e84b8a] transition-colors">
                         {team.name}
+                        {team.district && (
+                          <span className="text-sm font-normal text-gray-500 ml-1">（{team.district}）</span>
+                        )}
                       </CardTitle>
                       <ChevronRight className="w-5 h-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <MapPin className="w-4 h-4" />
-                      <span>{team.prefecture || team.region || "未設定"}</span>
+                      <span>
+                        {[team.prefecture, team.district].filter(Boolean).join(" / ") || team.region || "未設定"}
+                      </span>
                       {team.category && (
                         <>
                           <span>•</span>

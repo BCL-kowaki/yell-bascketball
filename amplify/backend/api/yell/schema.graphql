@@ -11,6 +11,7 @@ type User @model @auth(rules: [{allow: public}]) {
   avatar: String
   coverImage: String
   category: String
+  category2: String
   region: String
   regionBlock: String
   prefecture: String
@@ -65,6 +66,7 @@ type Team @model @auth(rules: [{allow: public}]) {
   founded: String
   region: String
   prefecture: String
+  district: String
   headcount: Int
   category: String
   description: String

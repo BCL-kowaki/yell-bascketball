@@ -3,27 +3,20 @@
 import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
-import { getUserByEmail, updateUser } from "@/lib/api"
+import { getUserByEmail, updateUser, getCurrentUserEmail } from "@/lib/api"
 import { generateClient } from 'aws-amplify/api'
 import { createUser } from '@/src/graphql/mutations'
-import { PREFECTURES_BY_REGION, REGION_BLOCKS } from "@/lib/regionData"
+import { PREFECTURES_BY_REGION, REGION_BLOCKS, CATEGORIES, CATEGORIES2 } from "@/lib/regionData"
 import { useToast } from "@/hooks/use-toast"
-
-// ユーザーカテゴリ
-const USER_CATEGORIES = [
-  { value: "general", label: "一般ユーザー" },
-  { value: "organizer", label: "大会運営者" },
-  { value: "team_manager", label: "チーム運営者" },
-  { value: "player", label: "選手" },
-]
 
 function SetupProfileForm() {
   ensureAmplifyConfigured()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const email = searchParams.get("email") || ""
+  const queryEmail = searchParams.get("email") || ""
 
   const { toast } = useToast()
+  const [email, setEmail] = useState(queryEmail)
   const [isLoading, setIsLoading] = useState(false)
   const [isSkipping, setIsSkipping] = useState(false)
 
@@ -33,10 +26,31 @@ function SetupProfileForm() {
     username: "",
     prefecture: "",
     category: "",
+    category2: "",
   })
 
   const [selectedRegion, setSelectedRegion] = useState("")
   const [availablePrefectures, setAvailablePrefectures] = useState<string[]>([])
+
+  // emailがクエリにない場合はCognitoセッションから取得
+  useEffect(() => {
+    if (!email) {
+      ;(async () => {
+        try {
+          const sessionEmail = await getCurrentUserEmail()
+          if (sessionEmail) {
+            setEmail(sessionEmail)
+          } else {
+            toast({ title: "ログインが必要です", description: "ログインページへ移動します", variant: "destructive" })
+            router.push('/login')
+          }
+        } catch (err) {
+          console.error('Failed to get email from session:', err)
+          router.push('/login')
+        }
+      })()
+    }
+  }, [email, router, toast])
 
   useEffect(() => {
     if (selectedRegion && PREFECTURES_BY_REGION[selectedRegion]) {
@@ -87,6 +101,7 @@ function SetupProfileForm() {
           lastName: formData.lastName,
           prefecture: formData.prefecture || null,
           category: formData.category || null,
+          category2: formData.category2 || null,
           region: selectedRegion || null,
         })
       }
@@ -364,32 +379,63 @@ function SetupProfileForm() {
             )}
           </div>
 
-          {/* カテゴリ */}
-          <div style={{ marginBottom: "24px", border: "none", outline: "none" }}>
+          {/* カテゴリ1: 年代 */}
+          <div style={{ marginBottom: "16px", border: "none", outline: "none" }}>
             <label style={{ fontSize: "13px", fontWeight: 600, color: "#333", marginBottom: "8px", display: "block", border: "none", outline: "none" }}>
-              カテゴリ（任意）
+              カテゴリ・年代（任意）
             </label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", border: "none", outline: "none" }}>
-              {USER_CATEGORIES.map((cat) => (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", border: "none", outline: "none" }}>
+              {CATEGORIES.map((cat) => (
                 <div
-                  key={cat.value}
-                  onClick={() => setFormData({ ...formData, category: formData.category === cat.value ? "" : cat.value })}
+                  key={cat}
+                  onClick={() => setFormData({ ...formData, category: formData.category === cat ? "" : cat })}
                   style={{
-                    padding: "12px 8px",
+                    padding: "10px 4px",
                     borderRadius: "10px",
                     textAlign: "center",
-                    fontSize: "13px",
-                    fontWeight: formData.category === cat.value ? 700 : 500,
+                    fontSize: "12px",
+                    fontWeight: formData.category === cat ? 700 : 500,
                     cursor: "pointer",
-                    backgroundColor: formData.category === cat.value ? "#fcf4e7" : "#f5f5f5",
-                    color: formData.category === cat.value ? "#f06a4e" : "#666",
-                    border: formData.category === cat.value ? "2px solid #f06a4e" : "2px solid transparent",
+                    backgroundColor: formData.category === cat ? "#fcf4e7" : "#f5f5f5",
+                    color: formData.category === cat ? "#f06a4e" : "#666",
+                    border: formData.category === cat ? "2px solid #f06a4e" : "2px solid transparent",
                     outline: "none",
                     transition: "all 0.15s ease",
                     boxSizing: "border-box",
                   }}
                 >
-                  {cat.label}
+                  {cat}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* カテゴリ2: 役割 */}
+          <div style={{ marginBottom: "24px", border: "none", outline: "none" }}>
+            <label style={{ fontSize: "13px", fontWeight: 600, color: "#333", marginBottom: "8px", display: "block", border: "none", outline: "none" }}>
+              カテゴリ・役割（任意）
+            </label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", border: "none", outline: "none" }}>
+              {CATEGORIES2.map((cat) => (
+                <div
+                  key={cat}
+                  onClick={() => setFormData({ ...formData, category2: formData.category2 === cat ? "" : cat })}
+                  style={{
+                    padding: "10px 4px",
+                    borderRadius: "10px",
+                    textAlign: "center",
+                    fontSize: "12px",
+                    fontWeight: formData.category2 === cat ? 700 : 500,
+                    cursor: "pointer",
+                    backgroundColor: formData.category2 === cat ? "#fcf4e7" : "#f5f5f5",
+                    color: formData.category2 === cat ? "#f06a4e" : "#666",
+                    border: formData.category2 === cat ? "2px solid #f06a4e" : "2px solid transparent",
+                    outline: "none",
+                    transition: "all 0.15s ease",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  {cat}
                 </div>
               ))}
             </div>

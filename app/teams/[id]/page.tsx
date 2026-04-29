@@ -1358,7 +1358,12 @@ export default function TeamDetailPage() {
           <div className="hidden md:flex items-start pt-[20px]" style={{ minHeight: '80px' }}>
             <div className="shrink-0" style={{ width: '184px' }} />
             <div className="flex-1 min-w-0 pt-[4px]">
-              <h1 className="text-[28px] font-extrabold leading-[32px]">{team.name}</h1>
+              <h1 className="text-[28px] font-extrabold leading-[32px]">
+                {team.name}
+                {team.district && (
+                  <span className="text-[18px] font-normal text-muted-foreground ml-[4px]">（{team.district}）</span>
+                )}
+              </h1>
               {team.shortName && <p className="text-[15px] text-muted-foreground mt-[2px]">{team.shortName}</p>}
               <div className="flex items-center gap-[8px] mt-[4px]">
                 {team.category && <Badge className="text-[13px]">{team.category}</Badge>}
@@ -1395,7 +1400,12 @@ export default function TeamDetailPage() {
 
           {/* モバイル版: 中央揃え */}
           <div className="flex md:hidden flex-col items-center pt-[76px] pb-[12px]">
-            <h1 className="text-[24px] font-extrabold text-center">{team.name}</h1>
+            <h1 className="text-[24px] font-extrabold text-center">
+              {team.name}
+              {team.district && (
+                <span className="text-[15px] font-normal text-muted-foreground ml-[4px]">（{team.district}）</span>
+              )}
+            </h1>
             {team.shortName && <p className="text-[14px] text-muted-foreground">{team.shortName}</p>}
             {team.category && <Badge className="mt-[4px]">{team.category}</Badge>}
             <div className="mt-[12px] w-full flex gap-[8px]">
@@ -1427,7 +1437,10 @@ export default function TeamDetailPage() {
           <div className="flex flex-wrap items-center gap-x-[12px] gap-y-[4px] text-[15px] text-muted-foreground pb-[16px] md:pl-[184px]">
             {team.description && <p className="w-full mb-[4px]">{team.description}</p>}
             {team.prefecture && (
-              <span className="flex items-center gap-[4px]"><MapPin className="w-[16px] h-[16px]" />{team.region && `${team.region} / `}{team.prefecture}</span>
+              <span className="flex items-center gap-[4px]">
+                <MapPin className="w-[16px] h-[16px]" />
+                {team.region && `${team.region} / `}{team.prefecture}{team.district && ` / ${team.district}`}
+              </span>
             )}
             {team.founded && (
               <span className="flex items-center gap-[4px]"><Calendar className="w-[16px] h-[16px]" />設立: {team.founded}</span>
@@ -2049,9 +2062,13 @@ export default function TeamDetailPage() {
                                       {user.firstName[0]}{user.lastName[0]}
                                     </AvatarFallback>
                                   </Avatar>
-                                  <div>
-                                    <p className="font-medium text-sm">{user.firstName} {user.lastName}</p>
-                                    <p className="text-xs text-gray-500">{user.email}</p>
+                                  <div className="min-w-0">
+                                    <p className="font-medium text-sm truncate">{user.firstName} {user.lastName}</p>
+                                    {(user.prefecture || user.region) && (
+                                      <p className="text-xs text-gray-500 truncate">
+                                        {[user.region, user.prefecture].filter(Boolean).join(" / ")}
+                                      </p>
+                                    )}
                                   </div>
                                 </div>
                                 <Button
@@ -2203,12 +2220,13 @@ export default function TeamDetailPage() {
                         </div>
                       )}
 
-                      {(team.region || team.prefecture) && (
+                      {(team.region || team.prefecture || team.district) && (
                         <div>
                           <h4 className="font-medium mb-2">活動地域</h4>
                           <div className="text-muted-foreground space-y-1">
                             {team.region && <p>地域ブロック: {team.region}</p>}
                             {team.prefecture && <p>都道府県: {team.prefecture}</p>}
+                            {team.district && <p>地区: {team.district}</p>}
                           </div>
                         </div>
                       )}
@@ -2350,7 +2368,7 @@ export default function TeamDetailPage() {
                     if (!tt.tournament) return null
                     const tournament = tt.tournament
                     return (
-                      <Link key={tt.id} href={`/tournaments/${tournament.id}`}>
+                      <Link key={tt.id} href={`/tournaments/detail/${tournament.id}`}>
                         <Card className="border-0 shadow-sm bg-white hover:shadow-xl transition-all duration-300 cursor-pointer group h-full overflow-hidden rounded-none sm:rounded-xl">
                           {/* カバー画像 */}
                           <div className="relative w-full h-32 overflow-hidden">

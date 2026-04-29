@@ -80,7 +80,7 @@ export default function LandingPage() {
             src="/images/logo.png"
             alt="YeLL Basketball"
             style={{
-              width: "200px",
+              width: "150px",
               height: "auto",
               filter: "brightness(0) invert(1)",
               border: "none",
@@ -128,7 +128,7 @@ export default function LandingPage() {
           }}
         >
           <Link
-            href="/welcome"
+            href="/tournaments"
             prefetch={true}
             style={{
               display: "block",
@@ -151,11 +151,11 @@ export default function LandingPage() {
               userSelect: "none",
             }}
           >
-            Yellを楽しむ
+            大会情報を見る
           </Link>
 
           <Link
-            href="/login"
+            href="/profile"
             prefetch={true}
             style={{
               display: "block",
@@ -178,7 +178,32 @@ export default function LandingPage() {
               userSelect: "none",
             }}
           >
-            Yellをはじめる
+            マイページ
+          </Link>
+
+          {/* 未登録ユーザー向け案内 */}
+          <Link
+            href="/register"
+            prefetch={true}
+            style={{
+              display: "block",
+              marginTop: "4px",
+              padding: "8px 16px",
+              color: "rgba(255, 255, 255, 0.95)",
+              fontSize: "14px",
+              fontWeight: 500,
+              textAlign: "center",
+              textDecoration: "underline",
+              textUnderlineOffset: "4px",
+              textShadow: "0 1px 4px rgba(0,0,0,0.2)",
+              cursor: "pointer",
+              border: "none",
+              outline: "none",
+              WebkitTapHighlightColor: "transparent",
+              userSelect: "none",
+            }}
+          >
+            はじめての方はこちら（新規登録）
           </Link>
         </div>
       </div>

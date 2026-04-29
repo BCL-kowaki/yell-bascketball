@@ -9,8 +9,7 @@ import {
   Plus,
   Filter,
   MapPin,
-  Clock,
-  Navigation2
+  Clock
 } from "lucide-react"
 import { Layout } from "@/components/layout"
 import { listTournaments, DbTournament, getCurrentUserEmail } from "@/lib/api"
@@ -22,9 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { CATEGORIES, PREFECTURES_BY_REGION } from "@/lib/regionData"
-import { REGION_SLUG_TO_NAME, REGION_NAME_TO_SLUG, PREFECTURE_NAME_TO_SLUG } from "@/lib/regionMapping"
-import { getCurrentPosition, getNearestPrefecture } from "@/lib/geolocation"
+import { CATEGORIES } from "@/lib/regionData"
+import { REGION_SLUG_TO_NAME } from "@/lib/regionMapping"
 
 // ハードコードされた地域リスト（Regionテーブルが空の場合に使用）
 const REGIONS = [
@@ -47,8 +45,6 @@ export default function TournamentsPage() {
   const [regionCounts, setRegionCounts] = useState<Record<string, number>>({})
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
-  const [currentLocation, setCurrentLocation] = useState<{ prefecture: string; region: string } | null>(null)
-  const [locationLoading, setLocationLoading] = useState(true)
 
   useEffect(() => {
     loadTournaments()
@@ -62,19 +58,6 @@ export default function TournamentsPage() {
       }
     }
     checkAuth()
-    // GPS位置情報から現在地を取得
-    const detectLocation = async () => {
-      try {
-        const pos = await getCurrentPosition()
-        const loc = getNearestPrefecture(pos.lat, pos.lng)
-        setCurrentLocation(loc)
-      } catch {
-        // 位置情報の取得に失敗（拒否・非対応）→そのまま通常表示
-      } finally {
-        setLocationLoading(false)
-      }
-    }
-    detectLocation()
   }, [])
 
   useEffect(() => {
@@ -126,27 +109,11 @@ export default function TournamentsPage() {
     setRegionCounts(counts)
   }
 
-  // 現在地の地域をトップに並べ替え
-  const sortedRegions = currentLocation
-    ? [
-        ...REGIONS.filter(r => r.name === currentLocation.region),
-        ...REGIONS.filter(r => r.name !== currentLocation.region),
-      ]
-    : REGIONS
-
-  // 現在地の都道府県のslug
-  const currentPrefectureSlug = currentLocation
-    ? PREFECTURE_NAME_TO_SLUG[currentLocation.prefecture]
-    : null
-  const currentRegionSlug = currentLocation
-    ? REGION_NAME_TO_SLUG[currentLocation.region]
-    : null
-
   return (
     <Layout>
       <div className="max-w-7xl mx-auto py-4">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-2">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-2 px-2 md:px-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
             <h1 className="text-2xl sm:text-3xl font-bold">大会一覧</h1>
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
@@ -183,30 +150,9 @@ export default function TournamentsPage() {
           </Button>
         </div>
 
-        {/* 現在地バナー */}
-        {currentLocation && currentRegionSlug && currentPrefectureSlug && (
-          <div className="mb-4">
-            <Link href={`/tournaments/${currentRegionSlug}/${currentPrefectureSlug}`}>
-              <div className="rounded-lg p-4 border border-[#e8d6c0] hover:shadow-md transition-all cursor-pointer" style={{ backgroundColor: "#fcf4e7" }}>
-                <div className="flex items-center gap-2 mb-1">
-                  <Navigation2 className="w-4 h-4" style={{ color: "#f06a4e" }} />
-                  <span className="text-xs font-medium" style={{ color: "#888" }}>現在地付近</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-lg font-bold" style={{ color: "#1e1e1e" }}>{currentLocation.prefecture}の大会を見る</p>
-                    <p className="text-sm" style={{ color: "#888" }}>{currentLocation.region}エリア</p>
-                  </div>
-                  <ChevronRight className="w-5 h-5" style={{ color: "#f06a4e" }} />
-                </div>
-              </div>
-            </Link>
-          </div>
-        )}
-
         {/* Regions Section */}
         <div className="mb-12">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 px-2 md:px-6">
             <MapPin className="w-5 h-5" style={{ color: "#f06a4e" }} />
             <h2 className="text-xl font-bold" style={{ color: "#1e1e1e" }}>地域から探す</h2>
           </div>
@@ -218,19 +164,14 @@ export default function TournamentsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-              {sortedRegions.map((region) => {
+              {REGIONS.map((region) => {
                 const count = regionCounts[region.slug] || 0
-                const isCurrentRegion = currentLocation?.region === region.name
                 return (
                   <Link key={region.id} href={`/tournaments/${region.slug}`}>
-                    <Card
-                      className={`hover:shadow-md transition-all duration-300 cursor-pointer group h-full ${isCurrentRegion ? "border-[#f06a4e]/30" : ""}`}
-                      style={isCurrentRegion ? { backgroundColor: "#fcf4e7" } : {}}
-                    >
+                    <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group h-full">
                       <CardHeader className="pt-3 pb-3">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            {isCurrentRegion && <Navigation2 className="w-4 h-4" style={{ color: "#f06a4e" }} />}
                             <CardTitle className="text-xl font-bold" style={{ color: "#1e1e1e" }}>
                               {region.name}
                             </CardTitle>

@@ -68,3 +68,9 @@ amplifytools.xcconfig
 .secret-*
 **.sample
 #amplify-do-not-edit-end
+
+# Amplify push一時ファイル(2026-04のpush関連)
+amplify-codegen-temp/
+amplify-push-debug.log
+amplify/backend/api/yell/build.bak.*/
+amplify/backend/api/yell/schema.graphql.bak

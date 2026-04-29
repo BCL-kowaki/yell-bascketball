@@ -126,8 +126,8 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = fa
     >
       {/* === FB風1段ヘッダー（PC） === */}
       <div className="hidden lg:flex items-center h-[56px] px-[16px]" style={{ width: '100%' }}>
-        {/* 左: ロゴ */}
-        <Link href="/tournaments" className="shrink-0 mr-[8px]">
+        {/* 左: ロゴ（クリックでトップページへ） */}
+        <Link href="/" className="shrink-0 mr-[8px]">
           <img src="/images/symbol.png" alt="YeLL" className="h-[40px] w-auto" />
         </Link>
 
@@ -283,8 +283,8 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = fa
       <div
         className="flex lg:hidden items-center justify-between h-[56px] px-[12px]"
       >
-        {/* ロゴ */}
-        <Link href="/tournaments" className="shrink-0">
+        {/* ロゴ（クリックでトップページへ） */}
+        <Link href="/" className="shrink-0">
           <img src="/images/symbol.png" alt="YeLL" className="h-[36px] w-auto" />
         </Link>
 

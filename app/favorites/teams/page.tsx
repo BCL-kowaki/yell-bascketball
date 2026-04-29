@@ -21,11 +21,24 @@ import {
 } from "lucide-react"
 import { Layout } from "@/components/layout"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getUserFavorites, getCurrentUserEmail, type DbTeam } from "@/lib/api"
+import { getUserFavorites, getCurrentUserEmail, toggleFavoriteTeam, type DbTeam } from "@/lib/api"
 import { REGION_BLOCKS, PREFECTURES_BY_REGION } from "@/lib/regionData"
 import { refreshS3Url } from "@/lib/storage"
+import { useToast } from "@/hooks/use-toast"
+import { X } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 export default function FavoriteTeamsPage() {
+  const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedRegion, setSelectedRegion] = useState("all")
@@ -33,6 +46,30 @@ export default function FavoriteTeamsPage() {
   const [teams, setTeams] = useState<DbTeam[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [removingId, setRemovingId] = useState<string | null>(null)
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
+
+  // お気に入りを解除
+  const handleRemoveFavorite = async (teamId: string) => {
+    if (!userEmail) return
+    try {
+      setRemovingId(teamId)
+      await toggleFavoriteTeam(teamId, userEmail)
+      // 一覧から即時除外
+      setTeams(prev => prev.filter(t => t.id !== teamId))
+      toast({ title: "お気に入りから削除しました" })
+    } catch (error: any) {
+      console.error("Failed to remove favorite:", error)
+      toast({
+        title: "エラー",
+        description: "お気に入りの解除に失敗しました",
+        variant: "destructive",
+      })
+    } finally {
+      setRemovingId(null)
+      setConfirmRemoveId(null)
+    }
+  }
 
   useEffect(() => {
     loadFavoriteTeams()
@@ -259,37 +296,78 @@ export default function FavoriteTeamsPage() {
         ) : (
           <div className="space-y-2">
             {filteredTeams.map((team) => (
-              <Link key={team.id} href={`/teams/${team.id}`}>
-                <Card className="border-0 shadow-sm hover:bg-gray-50 transition-colors cursor-pointer bg-white">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="w-12 h-12">
-                        <AvatarImage src={team.logoUrl || undefined} />
-                        <AvatarFallback>
-                          {team.name[0] || "T"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-base text-gray-900 truncate">{team.name}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          {team.prefecture && (
-                            <p className="text-xs text-gray-500">{team.prefecture}</p>
-                          )}
-                          {team.category && (
-                            <>
-                              {team.prefecture && <span className="text-xs text-gray-400">•</span>}
-                              <p className="text-xs text-gray-500">{team.category}</p>
-                            </>
-                          )}
+              <div key={team.id} className="relative">
+                <Link href={`/teams/${team.id}`}>
+                  <Card className="border-0 shadow-sm hover:bg-gray-50 transition-colors cursor-pointer bg-white">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="w-12 h-12">
+                          <AvatarImage src={team.logoUrl || undefined} />
+                          <AvatarFallback>
+                            {team.name[0] || "T"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0 pr-8">
+                          <p className="font-semibold text-base text-gray-900 truncate">{team.name}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            {team.prefecture && (
+                              <p className="text-xs text-gray-500">{team.prefecture}</p>
+                            )}
+                            {team.category && (
+                              <>
+                                {team.prefecture && <span className="text-xs text-gray-400">•</span>}
+                                <p className="text-xs text-gray-500">{team.category}</p>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+                    </CardContent>
+                  </Card>
+                </Link>
+                {/* お気に入り解除ボタン */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setConfirmRemoveId(team.id)
+                  }}
+                  disabled={removingId === team.id}
+                  aria-label="お気に入りから削除"
+                  className="absolute top-3 right-3 z-10 flex items-center justify-center w-8 h-8 rounded-full bg-white shadow-sm border border-gray-200 hover:bg-red-50 hover:border-red-300 transition-colors disabled:opacity-50"
+                >
+                  {removingId === team.id ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                  ) : (
+                    <X className="w-4 h-4 text-gray-500 hover:text-red-500" />
+                  )}
+                </button>
+              </div>
             ))}
           </div>
         )}
+
+        {/* 削除確認ダイアログ */}
+        <AlertDialog open={!!confirmRemoveId} onOpenChange={(open) => !open && setConfirmRemoveId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>お気に入りから削除しますか？</AlertDialogTitle>
+              <AlertDialogDescription>
+                このチームをお気に入りから削除します。再度お気に入りに登録することは可能です。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>キャンセル</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => confirmRemoveId && handleRemoveFavorite(confirmRemoveId)}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                削除する
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </Layout>
   )

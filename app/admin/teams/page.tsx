@@ -76,6 +76,17 @@ export default function AdminTeamsPage() {
       await adminUpdateTeamApproval(id, approved)
       setTeams(prev => prev.map(t => t.id === id ? { ...t, isApproved: approved } : t))
       toast({ title: approved ? "チームを承認しました" : "チームを未承認に戻しました" })
+
+      // オーナーへ承認結果通知(Web Push + DB通知)
+      try {
+        const target = teams.find(t => t.id === id)
+        if (target?.ownerEmail) {
+          const { notifyTeamApprovalResult } = await import('@/lib/push-sender')
+          await notifyTeamApprovalResult(target.ownerEmail, id, target.name || 'チーム', approved)
+        }
+      } catch (notifyErr: any) {
+        console.error('チーム承認通知エラー:', notifyErr?.message)
+      }
     } catch (error: any) {
       toast({ title: "エラー", description: error?.message, variant: "destructive" })
     }

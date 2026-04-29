@@ -9,7 +9,6 @@ import {
   ChevronRight,
   ChevronLeft,
   MapPin,
-  Users,
   Trophy,
   Calendar,
   Shield,
@@ -25,7 +24,7 @@ import { OFFICIAL_AREAS_BY_PREFECTURE } from "@/lib/regionData"
 // 大会カード
 function TournamentCard({ tournament }: { tournament: DbTournament }) {
   return (
-    <Link href={`/tournaments/${tournament.id}`}>
+    <Link href={`/tournaments/detail/${tournament.id}`}>
       <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group h-full overflow-hidden py-0">
         {tournament.coverImage && (
           <div className="relative w-full h-32 overflow-hidden">
@@ -70,12 +69,6 @@ function TournamentCard({ tournament }: { tournament: DbTournament }) {
           {tournament.description && (
             <p className="text-sm text-gray-600 line-clamp-2">{tournament.description}</p>
           )}
-          <div className="pt-3 border-t border-gray-100">
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <Users className="w-3 h-3" />
-              <span>主催: {tournament.ownerEmail}</span>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </Link>
@@ -101,7 +94,16 @@ export default function PrefectureTournamentsPage() {
   const [selectedArea, setSelectedArea] = useState<string | null>(null)
   const [selectedSubArea, setSelectedSubArea] = useState<string | null>(null)
 
+  // {prefecture}にUUIDが入っている古いリンクからのアクセスは大会詳細ページへリダイレクト
+  // (例: /tournaments/九州・沖縄/9b10c08b-... → /tournaments/detail/9b10c08b-...)
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  const isUuidPrefecture = prefectureSlug && UUID_REGEX.test(prefectureSlug)
+
   useEffect(() => {
+    if (isUuidPrefecture) {
+      router.replace(`/tournaments/detail/${prefectureSlug}`)
+      return
+    }
     if (regionName && prefectureName) {
       loadTournaments()
     }
@@ -114,7 +116,7 @@ export default function PrefectureTournamentsPage() {
       }
     }
     checkAuth()
-  }, [regionName, prefectureName])
+  }, [regionName, prefectureName, isUuidPrefecture, prefectureSlug])
 
   async function loadTournaments() {
     if (!regionName || !prefectureName) return
@@ -230,6 +232,19 @@ export default function PrefectureTournamentsPage() {
     return `${regionName}エリアに戻る`
   }
 
+  // UUID形式の場合はリダイレクト中のローディング表示
+  if (isUuidPrefecture) {
+    return (
+      <Layout>
+        <div className="max-w-7xl mx-auto py-6">
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">大会詳細を読み込み中...</p>
+          </div>
+        </div>
+      </Layout>
+    )
+  }
+
   if (!regionName || !prefectureName) {
     return (
       <Layout>
@@ -249,7 +264,7 @@ export default function PrefectureTournamentsPage() {
     <Layout>
       <div className="max-w-7xl mx-auto py-6">
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 mb-2 text-sm flex-wrap">
+        <div className="flex items-center gap-2 mb-2 text-sm flex-wrap px-2 md:px-6">
           {getBreadcrumbItems().map((item, i, arr) => (
             <span key={i} className="flex items-center gap-2">
               {i > 0 && <ChevronRight className="w-4 h-4 text-gray-400" />}
@@ -303,7 +318,7 @@ export default function PrefectureTournamentsPage() {
         </div>
 
         {/* Header - コンパクト1行表示 */}
-        <div className="mb-4">
+        <div className="mb-4 px-2 md:px-6">
           <div className="rounded-lg px-4 py-2 border border-[#e8d6c0] flex items-center gap-2" style={{ backgroundColor: "#fcf4e7" }}>
             <MapPin className="w-4 h-4 flex-shrink-0" style={{ color: "#f06a4e" }} />
             <h1 className="text-base font-bold" style={{ color: "#1e1e1e" }}>

@@ -15,7 +15,7 @@
     "smsAuthenticationMessage": "Your authentication code is {####}",
     "smsVerificationMessage": "Your verification code is {####}",
     "emailVerificationSubject": "【YeLL公式】新規登録メールアドレス確認コード: {####}",
-    "emailVerificationMessage": "YeLL運営本部です。<br><br>YeLLへのご登録ありがとうございます。<br><br>ご本人様認証として、以下の確認コードをご入力ください。<br><br>━━━━━━━━━━━━━━━━<br><br>&nbsp;&nbsp;確認コード：{####}<br><br>━━━━━━━━━━━━━━━━<br><br>※このコードは10分間有効です。<br>※このメールに心当たりがない場合は、無視していただいて構いません。<br><br>今後ともYeLLをよろしくお願いいたします。<br><br>YeLL運営チーム",
+    "emailVerificationMessage": "YeLL運営本部です。\n\nこの度は、YeLLへのご登録ありがとうございます。\n\nメールアドレスの確認のため、以下の確認コードをご入力ください。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n確認コード: {####}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n※このコードは10分間有効です。\n※このメールに心当たりがない場合は、無視していただいて構いません。\n\n今後ともYeLLをよろしくお願いいたします。\n\nYeLL運営チーム",
     "defaultPasswordPolicy": false,
     "passwordPolicyMinLength": 8,
     "passwordPolicyCharacters": [],

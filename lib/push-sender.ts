@@ -263,3 +263,81 @@ export async function notifyNewTeamPost(
     console.error('[push-sender] notifyNewTeamPost エラー:', error?.message, error)
   }
 }
+
+/**
+ * 大会の承認/却下結果をオーナーに通知
+ */
+export async function notifyTournamentApprovalResult(
+  ownerEmail: string,
+  tournamentId: string,
+  tournamentName: string,
+  approved: boolean
+): Promise<void> {
+  if (!ownerEmail) return
+
+  const title = approved
+    ? `大会「${tournamentName}」が承認されました`
+    : `大会「${tournamentName}」が承認されませんでした`
+  const body = approved
+    ? '管理者により承認され、大会一覧に公開されました。'
+    : '管理者により承認が見送られました。詳細は管理者にお問い合わせください。'
+
+  try {
+    // プッシュ通知
+    await sendPushToUsers([ownerEmail], {
+      title,
+      body,
+      url: `/tournaments/detail/${tournamentId}`,
+      tag: `tournament-approval-${tournamentId}`,
+    })
+    // DB通知
+    await createNotificationsForUsers([ownerEmail], {
+      type: approved ? 'tournament_approved' : 'tournament_rejected',
+      title,
+      message: body,
+      relatedId: tournamentId,
+      relatedType: 'tournament',
+    })
+  } catch (error: any) {
+    console.error('[push-sender] notifyTournamentApprovalResult エラー:', error?.message, error)
+  }
+}
+
+/**
+ * チームの承認/却下結果をオーナーに通知
+ */
+export async function notifyTeamApprovalResult(
+  ownerEmail: string,
+  teamId: string,
+  teamName: string,
+  approved: boolean
+): Promise<void> {
+  if (!ownerEmail) return
+
+  const title = approved
+    ? `チーム「${teamName}」が承認されました`
+    : `チーム「${teamName}」が承認されませんでした`
+  const body = approved
+    ? '管理者により承認され、チーム一覧に公開されました。'
+    : '管理者により承認が見送られました。詳細は管理者にお問い合わせください。'
+
+  try {
+    // プッシュ通知
+    await sendPushToUsers([ownerEmail], {
+      title,
+      body,
+      url: `/teams/${teamId}`,
+      tag: `team-approval-${teamId}`,
+    })
+    // DB通知
+    await createNotificationsForUsers([ownerEmail], {
+      type: approved ? 'team_approved' : 'team_rejected',
+      title,
+      message: body,
+      relatedId: teamId,
+      relatedType: 'team',
+    })
+  } catch (error: any) {
+    console.error('[push-sender] notifyTeamApprovalResult エラー:', error?.message, error)
+  }
+}

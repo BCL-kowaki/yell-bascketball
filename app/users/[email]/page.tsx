@@ -780,8 +780,14 @@ export default function UserPage() {
                 )}
                 {user.category && (
                   <div>
-                    <h4 className="font-medium mb-2">カテゴリ</h4>
+                    <h4 className="font-medium mb-2">カテゴリ（年代）</h4>
                     <p className="text-muted-foreground">{user.category}</p>
+                  </div>
+                )}
+                {user.category2 && (
+                  <div>
+                    <h4 className="font-medium mb-2">カテゴリ（役割）</h4>
+                    <p className="text-muted-foreground">{user.category2}</p>
                   </div>
                 )}
                 {(user.region || user.prefecture || user.district) && (
@@ -796,7 +802,7 @@ export default function UserPage() {
                 )}
                 {user.teams && user.teams.length > 0 && (
                   <div>
-                    <h4 className="font-medium mb-2">出身チーム</h4>
+                    <h4 className="font-medium mb-2">所属チームまたは出身チーム</h4>
                     <div className="flex flex-wrap gap-2">
                       {user.teams.map((team) => (
                         <span key={team} className="bg-gray-100 px-3 py-1 rounded-full text-sm">

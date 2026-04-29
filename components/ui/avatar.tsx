@@ -12,8 +12,9 @@ function Avatar({
   return (
     <AvatarPrimitive.Root
       data-slot="avatar"
+      // bg-white: 透過PNG画像が設定された場合に下のレイヤーが透けないよう白背景を敷く
       className={cn(
-        "relative flex size-8 shrink-0 overflow-hidden rounded-full",
+        "relative flex size-8 shrink-0 overflow-hidden rounded-full bg-white",
         className
       )}
       {...props}
@@ -28,7 +29,8 @@ function AvatarImage({
   return (
     <AvatarPrimitive.Image
       data-slot="avatar-image"
-      className={cn("aspect-square size-full object-cover", className)}
+      // bg-white: 透過PNG画像でも背景が白になるよう保険として指定
+      className={cn("aspect-square size-full object-cover bg-white", className)}
       {...props}
     />
   )

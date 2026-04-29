@@ -6,7 +6,7 @@ import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
 import { getUserByEmail, updateUser, listPosts, createPost as createDbPost, getCurrentUserEmail, searchTeams, followUser, unfollowUser, checkFollowStatus, getFollowCounts, getUserFavorites, getCommentsByPost, addComment as addDbComment, updatePostCounts, toggleLike as toggleDbLike, getMyManagedTournaments, getMyTeams, getMyTeamTournaments, getSiteBanners, type DbUser, type DbPost, type DbTeam, type DbTournament, type SponsorBanner } from "@/lib/api"
 import { uploadImageToS3, uploadPdfToS3, uploadVideoToS3, refreshS3Url } from "@/lib/storage"
 import SponsorSidebar, { MobileSnsCard } from "@/components/sponsor-sidebar"
-import { CATEGORIES, REGION_BLOCKS, PREFECTURES_BY_REGION, DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS } from "@/lib/regionData"
+import { CATEGORIES, CATEGORIES2, REGION_BLOCKS, PREFECTURES_BY_REGION, DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS } from "@/lib/regionData"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -33,6 +33,7 @@ export default function ProfilePage() {
     lastName: "",
     bio: "",
     category: "",
+    category2: "",
     region: "",
     prefecture: "",
     district: "",
@@ -209,8 +210,8 @@ export default function ProfilePage() {
         } catch (createError) {
           console.error('Failed to create user in DB:', createError)
         }
-        // プロフィール設定ページへ
-        window.location.href = '/setup-profile'
+        // プロフィール設定ページへ(emailをクエリに渡す)
+        window.location.href = `/setup-profile?email=${encodeURIComponent(email)}`
         return
       }
       
@@ -922,6 +923,7 @@ export default function ProfilePage() {
         avatar: avatarUrl,
         coverImage: coverImageUrl,
         category: editForm.category || null,
+        category2: editForm.category2 || null,
         region: editForm.region || null,
         prefecture: editForm.prefecture || null,
         district: editForm.district || null,
@@ -973,6 +975,7 @@ export default function ProfilePage() {
         instagramUrl: user.instagramUrl || "",
         bio: user.bio || "",
         category: user.category || "",
+        category2: user.category2 || "",
         region: user.region || "",
         prefecture: user.prefecture || "",
         district: user.district || "",
@@ -1514,8 +1517,14 @@ export default function ProfilePage() {
                   )}
                   {user.category && (
                     <div>
-                      <h4 className="font-medium mb-2">カテゴリ</h4>
+                      <h4 className="font-medium mb-2">カテゴリ（年代）</h4>
                       <p className="text-muted-foreground">{user.category}</p>
+                    </div>
+                  )}
+                  {user.category2 && (
+                    <div>
+                      <h4 className="font-medium mb-2">カテゴリ（役割）</h4>
+                      <p className="text-muted-foreground">{user.category2}</p>
                     </div>
                   )}
                   {(user.region || user.prefecture || user.district) && (
@@ -1530,7 +1539,7 @@ export default function ProfilePage() {
                   )}
                   {user.teams && user.teams.length > 0 && (
                     <div>
-                      <h4 className="font-medium mb-2">出身チーム</h4>
+                      <h4 className="font-medium mb-2">所属チームまたは出身チーム</h4>
                       <div className="flex flex-wrap gap-2">
                         {user.teams.map((team) => (
                           <span key={team} className="bg-gray-100 px-3 py-1 rounded-full text-sm">
@@ -1618,7 +1627,7 @@ export default function ProfilePage() {
                       ) : (
                         <div className="space-y-3">
                           {upcomingTournaments.map((tournament) => (
-                            <Link key={tournament.id} href={`/tournaments/${tournament.id}`}>
+                            <Link key={tournament.id} href={`/tournaments/detail/${tournament.id}`}>
                               <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100">
                                 <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                                   {tournament.iconUrl ? (
@@ -1686,7 +1695,7 @@ export default function ProfilePage() {
                       ) : (
                         <div className="space-y-3">
                           {pastTournaments.map((tournament) => (
-                            <Link key={tournament.id} href={`/tournaments/${tournament.id}`}>
+                            <Link key={tournament.id} href={`/tournaments/detail/${tournament.id}`}>
                               <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100">
                                 <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                                   {tournament.iconUrl ? (
@@ -1765,7 +1774,7 @@ export default function ProfilePage() {
                       ) : (
                         <div className="space-y-3">
                           {managedTournaments.map((tournament) => (
-                            <Link key={tournament.id} href={`/tournaments/${tournament.id}`}>
+                            <Link key={tournament.id} href={`/tournaments/detail/${tournament.id}`}>
                               <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100">
                                 <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                                   {tournament.iconUrl ? (
@@ -2085,15 +2094,30 @@ export default function ProfilePage() {
                   />
             </div>
 
-                  {/* カテゴリ選択 */}
+                  {/* カテゴリ1（年代・プレー区分） */}
                   <div>
-              <Label>カテゴリ</Label>
+                    <Label>カテゴリ（年代）</Label>
                     <Select value={editForm.category} onValueChange={(value) => setEditForm({ ...editForm, category: value })}>
-                <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="カテゴリを選択" />
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="年代を選択" />
                       </SelectTrigger>
                       <SelectContent>
                         {CATEGORIES.map((cat) => (
+                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* カテゴリ2（役割・立場） */}
+                  <div>
+                    <Label>カテゴリ（役割）</Label>
+                    <Select value={editForm.category2} onValueChange={(value) => setEditForm({ ...editForm, category2: value })}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="役割を選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CATEGORIES2.map((cat) => (
                           <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                         ))}
                       </SelectContent>
@@ -2149,9 +2173,9 @@ export default function ProfilePage() {
                     </div>
                   )}
 
-                  {/* 出身チーム選択 */}
+                  {/* 所属チームまたは出身チーム選択 */}
                   <div>
-              <Label>出身チーム（複数選択可）</Label>
+              <Label>所属チームまたは出身チーム（複数選択可）</Label>
 
                     {/* 選択済みチーム */}
                     {editForm.teams.length > 0 && (

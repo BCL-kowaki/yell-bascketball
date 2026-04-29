@@ -20,11 +20,24 @@ import {
 } from "lucide-react"
 import { Layout } from "@/components/layout"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getUserFavorites, getCurrentUserEmail, type DbTournament } from "@/lib/api"
+import { getUserFavorites, getCurrentUserEmail, toggleFavoriteTournament, type DbTournament } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { X } from "lucide-react"
 import { REGION_BLOCKS, PREFECTURES_BY_REGION, CATEGORIES } from "@/lib/regionData"
 import { refreshS3Url } from "@/lib/storage"
 
 export default function FavoriteTournamentsPage() {
+  const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedRegion, setSelectedRegion] = useState("all")
@@ -32,6 +45,30 @@ export default function FavoriteTournamentsPage() {
   const [tournaments, setTournaments] = useState<DbTournament[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [removingId, setRemovingId] = useState<string | null>(null)
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
+
+  // お気に入りを解除
+  const handleRemoveFavorite = async (tournamentId: string) => {
+    if (!userEmail) return
+    try {
+      setRemovingId(tournamentId)
+      await toggleFavoriteTournament(tournamentId, userEmail)
+      // 一覧から即時除外
+      setTournaments(prev => prev.filter(t => t.id !== tournamentId))
+      toast({ title: "お気に入りから削除しました" })
+    } catch (error: any) {
+      console.error("Failed to remove favorite:", error)
+      toast({
+        title: "エラー",
+        description: "お気に入りの解除に失敗しました",
+        variant: "destructive",
+      })
+    } finally {
+      setRemovingId(null)
+      setConfirmRemoveId(null)
+    }
+  }
 
   useEffect(() => {
     loadFavoriteTournaments()
@@ -273,37 +310,78 @@ export default function FavoriteTournamentsPage() {
         ) : (
           <div className="space-y-2">
             {filteredTournaments.map((tournament) => (
-              <Link key={tournament.id} href={`/tournaments/${tournament.id}`}>
-                <Card className="border-0 shadow-sm hover:bg-gray-50 transition-colors cursor-pointer bg-white">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="w-12 h-12">
-                        <AvatarImage src={tournament.iconUrl || undefined} />
-                        <AvatarFallback className="bg-[#fcf4e7]">
-                          <Trophy className="w-6 h-6 text-[#e84b8a]" />
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-base text-gray-900 truncate">{tournament.name}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          {tournament.prefecture && (
-                            <p className="text-xs text-gray-500">{tournament.prefecture}</p>
-                          )}
-                          {tournament.category && (
-                            <>
-                              {tournament.prefecture && <span className="text-xs text-gray-400">•</span>}
-                              <p className="text-xs text-gray-500">{tournament.category}</p>
-                            </>
-                          )}
+              <div key={tournament.id} className="relative">
+                <Link href={`/tournaments/detail/${tournament.id}`}>
+                  <Card className="border-0 shadow-sm hover:bg-gray-50 transition-colors cursor-pointer bg-white">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="w-12 h-12">
+                          <AvatarImage src={tournament.iconUrl || undefined} />
+                          <AvatarFallback className="bg-[#fcf4e7]">
+                            <Trophy className="w-6 h-6 text-[#e84b8a]" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0 pr-8">
+                          <p className="font-semibold text-base text-gray-900 truncate">{tournament.name}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            {tournament.prefecture && (
+                              <p className="text-xs text-gray-500">{tournament.prefecture}</p>
+                            )}
+                            {tournament.category && (
+                              <>
+                                {tournament.prefecture && <span className="text-xs text-gray-400">•</span>}
+                                <p className="text-xs text-gray-500">{tournament.category}</p>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+                    </CardContent>
+                  </Card>
+                </Link>
+                {/* お気に入り解除ボタン(Linkの外でカードに重ねて配置) */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setConfirmRemoveId(tournament.id)
+                  }}
+                  disabled={removingId === tournament.id}
+                  aria-label="お気に入りから削除"
+                  className="absolute top-3 right-3 z-10 flex items-center justify-center w-8 h-8 rounded-full bg-white shadow-sm border border-gray-200 hover:bg-red-50 hover:border-red-300 transition-colors disabled:opacity-50"
+                >
+                  {removingId === tournament.id ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                  ) : (
+                    <X className="w-4 h-4 text-gray-500 hover:text-red-500" />
+                  )}
+                </button>
+              </div>
             ))}
           </div>
         )}
+
+        {/* 削除確認ダイアログ */}
+        <AlertDialog open={!!confirmRemoveId} onOpenChange={(open) => !open && setConfirmRemoveId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>お気に入りから削除しますか？</AlertDialogTitle>
+              <AlertDialogDescription>
+                この大会をお気に入りから削除します。再度お気に入りに登録することは可能です。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>キャンセル</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => confirmRemoveId && handleRemoveFavorite(confirmRemoveId)}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                削除する
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </Layout>
   )

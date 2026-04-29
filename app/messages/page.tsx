@@ -22,6 +22,8 @@ import { Layout } from "@/components/layout"
 import {
   getCurrentUserEmail,
   getMyAllChatThreads,
+  getMyTeams,
+  getMyTournaments,
   getTeam,
   type DbChatThread
 } from "@/lib/api"
@@ -32,6 +34,8 @@ export default function MessagesPage() {
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [threads, setThreads] = useState<DbChatThread[]>([])
+  // 自分が運営する大会・チームのIDセット(送信側/受信側判定用)
+  const [myTournamentIds, setMyTournamentIds] = useState<Set<string>>(new Set())
   // チームIDからロゴURLへのマップ
   const [teamLogos, setTeamLogos] = useState<Map<string, string>>(new Map())
 
@@ -42,6 +46,10 @@ export default function MessagesPage() {
         console.log('[MessagesPage] currentUserEmail:', email)
         setCurrentUserEmail(email || null)
         if (email) {
+          // 自分が運営する大会IDを取得(共同運営者として参加する大会も含む)
+          const myTournaments = await getMyTournaments(email)
+          setMyTournamentIds(new Set(myTournaments.map(t => t.id)))
+
           const allThreads = await getMyAllChatThreads()
           console.log('[MessagesPage] allThreads:', allThreads.length, allThreads.map(t => ({ id: t.id, teamName: t.teamName, senderEmail: t.senderEmail })))
           setThreads(allThreads)
@@ -103,12 +111,16 @@ export default function MessagesPage() {
     }
   }
 
-  // 相手の名前を取得（送信者か受信チームか）
+  // 相手の名前を取得(送信側か受信側か)
+  // 「送信側」 = 自分が大会オーナー or 大会共同運営者(myTournamentIds に含まれる)
+  // 「受信側」 = 上記以外(チーム管理者として参加)
   const getDisplayInfo = (thread: DbChatThread) => {
-    const isSender = thread.senderEmail === currentUserEmail
+    const myEmailNorm = (currentUserEmail || '').toLowerCase().trim()
+    const threadSenderNorm = (thread.senderEmail || '').toLowerCase().trim()
+    const isSender = myTournamentIds.has(thread.tournamentId) || threadSenderNorm === myEmailNorm
     return {
       name: isSender ? thread.teamName : thread.senderName,
-      subtitle: isSender ? `${thread.tournamentName}` : `${thread.tournamentName}`,
+      subtitle: `${thread.tournamentName}`,
       unreadCount: isSender ? (thread.senderUnreadCount || 0) : (thread.teamUnreadCount || 0),
       role: isSender ? "送信" : "受信",
     }

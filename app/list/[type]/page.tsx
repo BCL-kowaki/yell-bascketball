@@ -502,8 +502,8 @@ export default function ListPage() {
                           onClick={() => router.push(`/tournaments/${tournament.regionBlock}/${tournament.id}`)}
                         >
                           <CardContent className="p-4">
-                            <Link 
-                              href={`/tournaments/${tournament.regionBlock}/${tournament.id}`}
+                            <Link
+                              href={`/tournaments/detail/${tournament.id}`}
                               className="flex items-center gap-3 hover:opacity-80 transition-opacity"
                             >
                               <Avatar className="w-12 h-12">

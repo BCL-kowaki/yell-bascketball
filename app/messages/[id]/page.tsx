@@ -34,6 +34,7 @@ import {
   updateChatThreadStatus,
   markChatThreadAsRead,
   getTeam,
+  getTournament,
   getPushSubscriptionsByUser,
   type DbChatThread,
   type DbChatMessage,
@@ -95,6 +96,7 @@ export default function ChatDetailPage() {
   const [newMessage, setNewMessage] = useState("")
   const [isSending, setIsSending] = useState(false)
   const [isTeamAdmin, setIsTeamAdmin] = useState(false)
+  const [isTournamentAdmin, setIsTournamentAdmin] = useState(false)
   const [team, setTeam] = useState<DbTeam | null>(null)
   const [teamLogoUrl, setTeamLogoUrl] = useState<string | null>(null)
   // メディア添付用
@@ -149,12 +151,33 @@ export default function ChatDetailPage() {
           } catch { /* ロゴ取得失敗は無視 */ }
         }
 
-        // チーム管理者かチェック（ownerEmail + editorEmails統合）
+        // 自分のメールを正規化(大文字小文字差を吸収)
+        const myEmailNorm = (email || '').toLowerCase().trim()
+
+        // チーム管理者かチェック(ownerEmail + editorEmails、小文字無視)
         if (teamData) {
-          const adminEmails = new Set<string>()
-          if (teamData.ownerEmail) adminEmails.add(teamData.ownerEmail)
-          if (teamData.editorEmails) teamData.editorEmails.forEach((e: string) => { if (e) adminEmails.add(e) })
-          setIsTeamAdmin(adminEmails.has(email))
+          const teamAdmins = new Set<string>()
+          if (teamData.ownerEmail) teamAdmins.add(teamData.ownerEmail.toLowerCase().trim())
+          if (teamData.editorEmails) teamData.editorEmails.forEach((e: string) => {
+            if (e) teamAdmins.add(e.toLowerCase().trim())
+          })
+          setIsTeamAdmin(teamAdmins.has(myEmailNorm))
+        }
+
+        // 大会管理者かチェック(ownerEmail + coAdminEmails、小文字無視)
+        // → 大会の共同運営者もこのスレッドの送信側として扱う
+        try {
+          const tournamentData = await getTournament(threadData.tournamentId)
+          if (tournamentData) {
+            const tournamentAdmins = new Set<string>()
+            if (tournamentData.ownerEmail) tournamentAdmins.add(tournamentData.ownerEmail.toLowerCase().trim())
+            if (tournamentData.coAdminEmails) tournamentData.coAdminEmails.forEach((e: string) => {
+              if (e) tournamentAdmins.add(e.toLowerCase().trim())
+            })
+            setIsTournamentAdmin(tournamentAdmins.has(myEmailNorm))
+          }
+        } catch (err) {
+          console.error('[messages/[id]] 大会情報取得エラー:', err)
         }
 
         // メッセージ一覧を取得
@@ -414,7 +437,11 @@ export default function ChatDetailPage() {
     )
   }
 
-  const isSender = thread.senderEmail === currentUserEmail
+  // 「送信側」 = 大会運営者(オーナー or 共同運営者) として扱う
+  // (元の senderEmail だけでなく、大会管理者全員を送信側として扱うことでグループチャット対応)
+  const myEmailNorm = (currentUserEmail || '').toLowerCase().trim()
+  const threadSenderNorm = (thread.senderEmail || '').toLowerCase().trim()
+  const isSender = isTournamentAdmin || threadSenderNorm === myEmailNorm
   const otherName = isSender ? thread.teamName : thread.senderName
 
   return (

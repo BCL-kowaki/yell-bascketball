@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
-import { getUserByEmail, createTournament, searchUsers, createTournamentInvitation, getCurrentUserEmail, notifyAdminsForApproval, type DbUser } from "@/lib/api"
+import { getUserByEmail, createTournament, searchUsers, createTournamentInvitation, getCurrentUserEmail, notifyAdminsForApproval, isAdminEmail, type DbUser } from "@/lib/api"
 import { uploadImageToS3 } from "@/lib/storage"
 import { CATEGORIES, REGION_BLOCKS, PREFECTURES_BY_REGION, DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS } from "@/lib/regionData"
 import { Button } from "@/components/ui/button"
@@ -24,8 +24,9 @@ export default function CreateTournamentPage() {
   const [currentUser, setCurrentUser] = useState<DbUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [isSiteAdmin, setIsSiteAdmin] = useState(false)
 
-  // 一般ユーザーはカップ戦のみ作成可能（公式戦は管理者パネルから登録）
+  // 大会種別: 一般ユーザーはカップ戦固定、サイト管理者はカップ戦/公式戦から選択可能
   const [formData, setFormData] = useState({
     tournamentType: "cup" as string,
     name: "",
@@ -89,6 +90,15 @@ export default function CreateTournamentPage() {
         })
         router.push('/login')
         return
+      }
+
+      // サイト管理者判定（管理者は公式戦も登録可能）
+      try {
+        const adminFlag = await isAdminEmail(email)
+        setIsSiteAdmin(adminFlag)
+      } catch (err) {
+        console.error('管理者判定エラー:', err)
+        setIsSiteAdmin(false)
       }
 
       const userData = await getUserByEmail(email)
@@ -182,8 +192,9 @@ export default function CreateTournamentPage() {
       return
     }
 
-    // 一般ユーザーはカップ戦固定（念のためバリデーション）
-    if (formData.tournamentType !== "cup") {
+    // 一般ユーザーはカップ戦のみ登録可能（サイト管理者はカップ戦/公式戦の両方OK）
+    const allowedTypes = isSiteAdmin ? ["cup", "official"] : ["cup"]
+    if (!allowedTypes.includes(formData.tournamentType)) {
       toast({
         title: "エラー",
         description: "一般ユーザーはカップ戦のみ登録可能です",
@@ -229,7 +240,7 @@ export default function CreateTournamentPage() {
         regionBlock: formData.regionBlock || null,
         prefecture: formData.prefecture || null,
         district: formData.district || null,
-        tournamentType: "cup",
+        tournamentType: formData.tournamentType,
         area: null,
         subArea: null,
         description: formData.description || null,
@@ -317,22 +328,51 @@ export default function CreateTournamentPage() {
               <CardTitle>基本情報</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* 大会タイプ（一般ユーザーはカップ戦固定） */}
-              <div>
-                <label className="text-sm font-medium mb-3 block">大会タイプ</label>
-                <div className="p-4 rounded-lg border-2 border-[#f06a4e] bg-[#fcf4e7]">
-                  <div className="flex items-center gap-3">
-                    <Flag className="w-6 h-6 text-[#f06a4e]" />
-                    <div>
-                      <span className="font-bold text-[#f06a4e]">カップ戦</span>
-                      <p className="text-xs text-gray-500 mt-0.5">チーム・個人主催のカップ戦</p>
-                    </div>
+              {/* 大会タイプ（サイト管理者のみ選択可能。一般ユーザーには表示しない） */}
+              {isSiteAdmin && (
+                <div>
+                  <label className="text-sm font-medium mb-3 block">大会タイプ</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, tournamentType: "cup" })}
+                      className={`p-4 rounded-lg border-2 text-left transition-all ${
+                        formData.tournamentType === "cup"
+                          ? "border-[#f06a4e] bg-[#fcf4e7]"
+                          : "border-gray-200 bg-white hover:border-gray-300"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Flag className={`w-6 h-6 ${formData.tournamentType === "cup" ? "text-[#f06a4e]" : "text-gray-400"}`} />
+                        <div>
+                          <span className={`font-bold ${formData.tournamentType === "cup" ? "text-[#f06a4e]" : "text-gray-700"}`}>カップ戦</span>
+                          <p className="text-xs text-gray-500 mt-0.5">チーム・個人主催のカップ戦</p>
+                        </div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, tournamentType: "official" })}
+                      className={`p-4 rounded-lg border-2 text-left transition-all ${
+                        formData.tournamentType === "official"
+                          ? "border-[#f06a4e] bg-[#fcf4e7]"
+                          : "border-gray-200 bg-white hover:border-gray-300"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Flag className={`w-6 h-6 ${formData.tournamentType === "official" ? "text-[#f06a4e]" : "text-gray-400"}`} />
+                        <div>
+                          <span className={`font-bold ${formData.tournamentType === "official" ? "text-[#f06a4e]" : "text-gray-700"}`}>公式戦</span>
+                          <p className="text-xs text-gray-500 mt-0.5">運営本部主催の公式戦</p>
+                        </div>
+                      </div>
+                    </button>
                   </div>
+                  <p className="text-xs text-gray-400 mt-2">
+                    ※ サイト管理者のみ大会種別を選択できます
+                  </p>
                 </div>
-                <p className="text-xs text-gray-400 mt-2">
-                  ※ 公式戦の登録はYeLL運営者にお問い合わせください
-                </p>
-              </div>
+              )}
 
               {/* 壁紙画像 */}
               <div>
@@ -482,7 +522,7 @@ export default function CreateTournamentPage() {
                   </Avatar>
                   <div>
                     <p className="font-medium">{displayName}</p>
-                    <p className="text-sm text-muted-foreground">{currentUser.email}</p>
+                    <p className="text-sm text-muted-foreground">あなた</p>
                   </div>
                   <Badge className="ml-auto">管理者</Badge>
                 </div>
@@ -532,9 +572,13 @@ export default function CreateTournamentPage() {
                             {user.firstName[0]}{user.lastName[0]}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="flex-1">
-                          <p className="font-medium">{user.lastName} {user.firstName}</p>
-                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{user.lastName} {user.firstName}</p>
+                          {(user.prefecture || user.region) && (
+                            <p className="text-sm text-muted-foreground truncate">
+                              {[user.region, user.prefecture].filter(Boolean).join(" / ")}
+                            </p>
+                          )}
                         </div>
                         <UserPlus className="w-4 h-4 text-primary" />
                       </div>
@@ -554,9 +598,13 @@ export default function CreateTournamentPage() {
                             {admin.firstName[0]}{admin.lastName[0]}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="flex-1">
-                          <p className="font-medium">{admin.lastName} {admin.firstName}</p>
-                          <p className="text-sm text-muted-foreground">{admin.email}</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{admin.lastName} {admin.firstName}</p>
+                          {(admin.prefecture || admin.region) && (
+                            <p className="text-sm text-muted-foreground truncate">
+                              {[admin.region, admin.prefecture].filter(Boolean).join(" / ")}
+                            </p>
+                          )}
                         </div>
                         <Button
                           type="button"
