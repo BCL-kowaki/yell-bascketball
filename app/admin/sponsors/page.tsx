@@ -5,7 +5,7 @@ import Link from "next/link"
 import { ChevronLeft, Save, Loader2, Megaphone } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { isAdminLoggedIn, isSystemAdmin, getCurrentUserEmail, getSiteSponsors, updateSiteSponsors, type SponsorBanner } from "@/lib/api"
+import { isAdminLoggedIn, isAdminEmail, getCurrentUserEmail, getSiteSponsors, updateSiteSponsors, type SponsorBanner } from "@/lib/api"
 import SponsorBannerEditor from "@/components/sponsor-banner-editor"
 import SponsorBannerDisplay from "@/components/sponsor-banner-display"
 
@@ -32,7 +32,7 @@ export default function AdminSponsorsPage() {
       }
 
       const email = await getCurrentUserEmail()
-      if (email && isSystemAdmin(email)) {
+      if (email && isAdminEmail(email)) {
         setIsAuthorized(true)
         setCurrentEmail(email)
         await loadSponsors()

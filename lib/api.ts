@@ -323,7 +323,7 @@ export async function checkTournamentAdminPermission(tournamentId: string, userE
     const admins = getTournamentAdminEmails(tournament)
     return admins.includes(normalizeEmail(userEmail))
   } catch (error) {
-    console.error('checkTournamentAdminPermission error:', error?.message)
+    console.error('checkTournamentAdminPermission error:', error instanceof Error ? error.message : error)
     return false
   }
 }
@@ -350,7 +350,7 @@ export async function getEmailFromSession(): Promise<string | undefined> {
     }
     return undefined
   } catch (error) {
-    console.error('getEmailFromSession error:', error?.message)
+    console.error('getEmailFromSession error:', error instanceof Error ? error.message : error)
     return undefined
   }
 }
@@ -370,12 +370,30 @@ export async function getCurrentUserEmail(): Promise<string | undefined> {
     const attributes = await fetchUserAttributes()
     return attributes.email || attributes.preferred_username || undefined
   } catch (error) {
-    console.error('getCurrentUserEmail error:', error?.message)
+    console.error('getCurrentUserEmail error:', error instanceof Error ? error.message : error)
     return undefined
   }
 }
 
 export async function getUserByEmail(email: string): Promise<DbUser | null> {
+  const items = await listUsersByEmail(email)
+  if (items.length === 0) return null
+  // 重複検出時は警告を出し、最も「データが充実した」レコードを優先返却
+  if (items.length > 1) {
+    console.warn(
+      `[getUserByEmail] 同一メールの User が ${items.length} 件存在します: ${email}`,
+      items.map(u => ({ id: u.id, name: `${u.lastName}${u.firstName}`, createdAt: u.createdAt }))
+    )
+    return pickPrimaryUser(items)
+  }
+  return items[0]
+}
+
+/**
+ * 指定メールアドレスの全 User レコードを取得（重複検出・マージ用）
+ * 通常用途では getUserByEmail を使い、こちらは管理者画面・get-or-create でのみ使用する。
+ */
+export async function listUsersByEmail(email: string): Promise<DbUser[]> {
   const query = /* GraphQL */ `
     query ListUsers($filter: ModelUserFilterInput) {
       listUsers(filter: $filter) {
@@ -388,26 +406,87 @@ export async function getUserByEmail(email: string): Promise<DbUser | null> {
       }
     }
   `
-  
+
   try {
-    // 明示的にauthModeを指定してIdentity Poolへのアクセスを回避
-    const { data } = await client.graphql({ 
-      query, 
+    const { data } = await client.graphql({
+      query,
       variables: { filter: { email: { eq: email } } },
-      authMode: 'apiKey' // 明示的にAPI_KEY認証を指定
+      authMode: 'apiKey'
     }) as any
-    return data?.listUsers?.items?.[0] ?? null
+    return (data?.listUsers?.items ?? []) as DbUser[]
   } catch (error: any) {
-    // Identity Poolのエラーは無視（GraphQL APIはAPI_KEY認証を使用しているため）
     if (error?.message?.includes('cognito-identity') ||
         error?.message?.includes('IdentityPool') ||
         error?.name === 'NotAuthorizedException') {
-      return null
+      return []
     }
-
-    console.error('getUserByEmail error:', error?.message, error?.errors, error)
-    return null
+    console.error('listUsersByEmail error:', error instanceof Error ? error.message : error)
+    return []
   }
+}
+
+/**
+ * 複数の User レコードから「最も充実した本物」を選ぶ
+ * 優先度: firstName/lastName が両方入っている → 片方入っている → 何もない
+ * 同点なら createdAt が最も古いものを優先（最初に登録された本物）
+ */
+function pickPrimaryUser(users: DbUser[]): DbUser {
+  const score = (u: DbUser): number => {
+    let s = 0
+    if (u.firstName && u.firstName.trim()) s += 2
+    if (u.lastName && u.lastName.trim()) s += 2
+    if (u.avatar) s += 1
+    if (u.bio) s += 1
+    if (u.prefecture) s += 1
+    return s
+  }
+  return [...users].sort((a, b) => {
+    const diff = score(b) - score(a)
+    if (diff !== 0) return diff
+    return (a.createdAt || '').localeCompare(b.createdAt || '')
+  })[0]
+}
+
+/**
+ * メールアドレスから User を取得、存在しない場合は新規作成する。
+ * createUser の競合状態（同一メールで複数 User が作られるバグ）を防ぐための統一API。
+ * 既存箇所の `getUserByEmail + createUser` パターンはすべてこの関数に置き換えること。
+ */
+export async function getOrCreateUser(
+  email: string,
+  defaultInput?: { firstName?: string; lastName?: string }
+): Promise<DbUser> {
+  const existing = await listUsersByEmail(email)
+  if (existing.length > 0) {
+    return pickPrimaryUser(existing)
+  }
+
+  // 新規作成
+  const mutation = /* GraphQL */ `
+    mutation CreateUser($input: CreateUserInput!) {
+      createUser(input: $input) {
+        id firstName lastName email bio avatar coverImage instagramUrl
+        category location region regionBlock prefecture district
+        teams isEmailPublic isRegistrationDatePublic
+        createdAt updatedAt
+      }
+    }
+  `
+  const input = {
+    email,
+    firstName: defaultInput?.firstName ?? '',
+    lastName: defaultInput?.lastName ?? '',
+  }
+  const result = await client.graphql({
+    query: mutation,
+    variables: { input },
+    authMode: 'apiKey',
+  }) as any
+
+  if (result.errors) {
+    throw new Error(result.errors[0]?.message || 'getOrCreateUser: ユーザー作成エラー')
+  }
+  return result.data.createUser as DbUser
 }
 
 export async function updateUser(id: string, input: Partial<DbUser>): Promise<DbUser> {

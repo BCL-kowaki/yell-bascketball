@@ -18,6 +18,17 @@ import { uploadImageToS3 } from "@/lib/storage"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS } from "@/lib/regionData"
 
+// チームエディタ用ユーザー表示型（searchUsers 戻りの DbUser を受けるためのスーパーセット）
+type EditorUser = {
+  id: string
+  email: string
+  firstName: string
+  lastName: string
+  avatar?: string | null
+  region?: string | null
+  prefecture?: string | null
+}
+
 const regions = {
   北海道: ["北海道"],
   東北: ["青森県", "岩手県", "宮城県", "秋田県", "山形県", "福島県"],
@@ -49,14 +60,14 @@ export default function CreateTeamPage() {
     instagramUrl: "",
     logo: null as File | null,
     coverImage: null as File | null,
-    editors: [] as Array<{ id: string; email: string; firstName: string; lastName: string; avatar?: string }>,
+    editors: [] as EditorUser[],
   })
   const [prefectures, setPrefectures] = useState<string[]>([])
   const [districts, setDistricts] = useState<string[]>([])
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
-  const [searchResults, setSearchResults] = useState<Array<{ id: string; email: string; firstName: string; lastName: string; avatar?: string }>>([])
+  const [searchResults, setSearchResults] = useState<EditorUser[]>([])
   const [isSearching, setIsSearching] = useState(false)
 
   useEffect(() => {
@@ -154,7 +165,7 @@ export default function CreateTeamPage() {
     }
   }
 
-  const handleAddEditor = (user: { id: string; email: string; firstName: string; lastName: string; avatar?: string }) => {
+  const handleAddEditor = (user: EditorUser) => {
     if (formData.editors.length < 5 && !formData.editors.some(e => e.id === user.id)) {
       setFormData(prev => ({ ...prev, editors: [...prev.editors, user] }))
       setSearchTerm("")

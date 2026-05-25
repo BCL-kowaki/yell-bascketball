@@ -15,7 +15,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Layout } from "@/components/layout"
 import { CommentModal } from "@/components/comment-modal"
 import {
-  ChevronLeft,
   Trophy,
   MapPin,
   Calendar,
@@ -1715,18 +1714,6 @@ export default function TournamentDetailPage() {
 
   return (
     <Layout>
-        {/* Breadcrumb */}
-      <div className="max-w-6xl mx-auto px-2 pt-2">
-        <div className="flex items-center gap-2 mb-2">
-          <Link href="/tournaments">
-            <Button variant="ghost" size="sm">
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              大会一覧に戻る
-            </Button>
-          </Link>
-        </div>
-        </div>
-
       {/* === FB風 大会ヘッダー === */}
       <div className="w-full bg-white">
       <div className="max-w-[1080px] mx-auto">
@@ -2927,7 +2914,7 @@ export default function TournamentDetailPage() {
                                 </a>
                               </div>
                             </div>
-                            <PdfViewer pdfUrl={result.pdfUrl} pdfName={result.pdfName} />
+                            <PdfViewer pdfUrl={result.pdfUrl} pdfName={result.pdfName ?? undefined} />
                           </div>
                         )}
 
@@ -3245,20 +3232,24 @@ export default function TournamentDetailPage() {
       </Tabs>
 
       {/* コメントモーダル */}
-      {selectedPostForComment && (
+      {selectedPostForComment && (() => {
+        // posts 読み込み時に authorName/authorAvatar を動的付与しているため
+        // DbPost 型には存在しないフィールドを参照する。型キャストで明示する。
+        const p = selectedPostForComment as DbPost & { authorName?: string | null; authorAvatar?: string | null }
+        return (
         <CommentModal
           open={commentModalOpen}
           onOpenChange={setCommentModalOpen}
           post={{
-            id: selectedPostForComment.id,
+            id: p.id,
             user: {
-              name: selectedPostForComment.authorName || "匿名ユーザー",
-              avatar: selectedPostForComment.authorAvatar,
-              email: selectedPostForComment.authorEmail,
+              name: p.authorName || "匿名ユーザー",
+              avatar: p.authorAvatar ?? undefined,
+              email: p.authorEmail ?? undefined,
             },
-            content: selectedPostForComment.content,
-            timestamp: selectedPostForComment.createdAt 
-              ? new Date(selectedPostForComment.createdAt).toLocaleDateString('ja-JP', {
+            content: p.content,
+            timestamp: p.createdAt
+              ? new Date(p.createdAt).toLocaleDateString('ja-JP', {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric',
@@ -3266,12 +3257,12 @@ export default function TournamentDetailPage() {
                   minute: '2-digit',
                 })
               : "",
-            image: selectedPostForComment.imageUrl,
-            video: selectedPostForComment.videoUrl,
-            pdf: selectedPostForComment.pdfUrl,
-            likesCount: selectedPostForComment.likesCount || 0,
-            commentsCount: selectedPostForComment.commentsCount || 0,
-            isLiked: postLikedStates[selectedPostForComment.id] || false,
+            image: p.imageUrl ?? undefined,
+            video: p.videoUrl ?? undefined,
+            pdf: p.pdfUrl ?? undefined,
+            likesCount: p.likesCount || 0,
+            commentsCount: p.commentsCount || 0,
+            isLiked: postLikedStates[p.id] || false,
           }}
           comments={modalComments.map((c) => ({
             id: c.id.toString(),
@@ -3298,7 +3289,8 @@ export default function TournamentDetailPage() {
           isLoading={isSubmittingComment}
           isLoadingComments={isLoadingModalComments}
         />
-      )}
+        )
+      })()}
 
       {/* ログイン促進モーダル */}
       <LoginPromptModal

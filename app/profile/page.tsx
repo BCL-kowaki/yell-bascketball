@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
-import { getUserByEmail, updateUser, listPosts, createPost as createDbPost, getCurrentUserEmail, searchTeams, followUser, unfollowUser, checkFollowStatus, getFollowCounts, getUserFavorites, getCommentsByPost, addComment as addDbComment, updatePostCounts, toggleLike as toggleDbLike, getMyManagedTournaments, getMyTeams, getMyTeamTournaments, getSiteBanners, type DbUser, type DbPost, type DbTeam, type DbTournament, type SponsorBanner } from "@/lib/api"
+import { getUserByEmail, getOrCreateUser, updateUser, listPosts, createPost as createDbPost, getCurrentUserEmail, searchTeams, followUser, unfollowUser, checkFollowStatus, getFollowCounts, getUserFavorites, getCommentsByPost, addComment as addDbComment, updatePostCounts, toggleLike as toggleDbLike, getMyManagedTournaments, getMyTeams, getMyTeamTournaments, getSiteBanners, type DbUser, type DbPost, type DbTeam, type DbTournament, type SponsorBanner } from "@/lib/api"
 import { uploadImageToS3, uploadPdfToS3, uploadVideoToS3, refreshS3Url } from "@/lib/storage"
 import SponsorSidebar, { MobileSnsCard } from "@/components/sponsor-sidebar"
 import { CATEGORIES, CATEGORIES2, REGION_BLOCKS, PREFECTURES_BY_REGION, DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS } from "@/lib/regionData"
@@ -196,16 +196,9 @@ export default function ProfilePage() {
 
       if (!userData) {
         console.log('User not found in DynamoDB, creating...', email)
-        // DB未登録の場合は自動作成を試みる
+        // DB未登録の場合は get-or-create で作成（重複防止）
         try {
-          const { generateClient } = await import("aws-amplify/api")
-          const { createUser } = await import("@/src/graphql/mutations")
-          const apiClient = generateClient({ authMode: 'apiKey' })
-          await apiClient.graphql({
-            query: createUser,
-            variables: { input: { email: email, firstName: '', lastName: '' } },
-            authMode: 'apiKey'
-          })
+          await getOrCreateUser(email)
           console.log('User created in DynamoDB, redirecting to setup-profile')
         } catch (createError) {
           console.error('Failed to create user in DB:', createError)
@@ -257,6 +250,7 @@ export default function ProfilePage() {
         lastName: userData.lastName,
         bio: userData.bio || "",
         category: userData.category || "",
+        category2: userData.category2 || "",
         region: userData.region || "",
         prefecture: userData.prefecture || "",
         district: userData.district || "",

@@ -1,16 +1,22 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
   ChevronRight,
   Plus,
   Filter,
   MapPin,
-  Clock
+  Shield,
+  Swords,
 } from "lucide-react"
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion"
 import { Layout } from "@/components/layout"
 import { listTournaments, DbTournament, getCurrentUserEmail } from "@/lib/api"
 import { LoginPromptModal } from "@/components/login-prompt"
@@ -21,8 +27,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { CATEGORIES } from "@/lib/regionData"
-import { REGION_SLUG_TO_NAME } from "@/lib/regionMapping"
+import { CATEGORIES, PREFECTURES_BY_REGION } from "@/lib/regionData"
+import {
+  REGION_SLUG_TO_NAME,
+  PREFECTURE_NAME_TO_SLUG,
+} from "@/lib/regionMapping"
 
 // ハードコードされた地域リスト（Regionテーブルが空の場合に使用）
 const REGIONS = [
@@ -37,12 +46,25 @@ const REGIONS = [
   { id: "kyushu", name: "九州・沖縄", slug: "kyushu", sortOrder: 9 },
 ]
 
+// 大会を地域→都道府県→{公式戦, カップ戦} に集計するための型
+type PrefectureCounts = {
+  prefectureName: string
+  prefectureSlug: string
+  total: number
+  official: number
+  cup: number
+}
+
+type RegionCounts = {
+  total: number
+  prefectures: PrefectureCounts[]
+}
+
 export default function TournamentsPage() {
   const router = useRouter()
   const [tournaments, setTournaments] = useState<DbTournament[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
-  const [regionCounts, setRegionCounts] = useState<Record<string, number>>({})
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
 
@@ -60,19 +82,10 @@ export default function TournamentsPage() {
     checkAuth()
   }, [])
 
-  useEffect(() => {
-    calculateRegionCounts()
-  }, [tournaments, selectedCategory])
-
   async function loadTournaments() {
     try {
       setIsLoading(true)
       const allTournaments = await listTournaments(1000, { isApproved: true })
-      console.log("📊 Total tournaments loaded:", allTournaments.length)
-      if (allTournaments.length > 0) {
-        console.log("📝 First tournament sample:", allTournaments[0])
-        console.log("🗺️ All tournament regionBlocks:", allTournaments.map(t => t.regionBlock))
-      }
       setTournaments(allTournaments)
     } catch (error) {
       console.error("Failed to load tournaments:", error)
@@ -81,33 +94,48 @@ export default function TournamentsPage() {
     }
   }
 
-  function calculateRegionCounts() {
-    const counts: Record<string, number> = {}
-    const filteredTournaments = selectedCategory === "all"
+  // 地域 → 都道府県 → (公式戦/カップ戦) の集計
+  const regionData = useMemo<Record<string, RegionCounts>>(() => {
+    const filtered = selectedCategory === "all"
       ? tournaments
       : tournaments.filter(t => t.category === selectedCategory)
 
-    console.log("🔍 Calculating region counts for", filteredTournaments.length, "tournaments")
+    const result: Record<string, RegionCounts> = {}
 
-    // 地域名からslugへのマッピング（REGION_SLUG_TO_NAMEの逆マッピング）
-    const regionNameToSlug: Record<string, string> = {}
-    Object.entries(REGION_SLUG_TO_NAME).forEach(([slug, name]) => {
-      regionNameToSlug[name] = slug
-    })
+    REGIONS.forEach(region => {
+      const regionName = REGION_SLUG_TO_NAME[region.slug]
+      const prefectureNames = PREFECTURES_BY_REGION[regionName] || []
 
-    filteredTournaments.forEach(tournament => {
-      const regionBlock = tournament.regionBlock || ""
-      const slug = regionNameToSlug[regionBlock]
-      if (slug) {
-        counts[slug] = (counts[slug] || 0) + 1
-      } else {
-        console.warn("⚠️ Unknown regionBlock:", regionBlock, "for tournament:", tournament.name)
+      const prefectures: PrefectureCounts[] = prefectureNames.map(prefName => {
+        const prefTournaments = filtered.filter(
+          t => t.regionBlock === regionName && t.prefecture === prefName
+        )
+        const officialCount = prefTournaments.filter(
+          t => t.tournamentType === "official"
+        ).length
+        const cupCount = prefTournaments.filter(
+          t => !t.tournamentType || t.tournamentType === "cup"
+        ).length
+
+        return {
+          prefectureName: prefName,
+          prefectureSlug: PREFECTURE_NAME_TO_SLUG[prefName] || prefName,
+          total: prefTournaments.length,
+          official: officialCount,
+          cup: cupCount,
+        }
+      })
+
+      const regionTotal = prefectures.reduce((sum, p) => sum + p.total, 0)
+
+      result[region.slug] = {
+        total: regionTotal,
+        prefectures,
       }
     })
 
-    console.log("✅ Final region counts:", counts)
-    setRegionCounts(counts)
-  }
+    return result
+  }, [tournaments, selectedCategory])
 
   return (
     <Layout>
@@ -163,35 +191,98 @@ export default function TournamentsPage() {
               <p className="mt-4 text-gray-500">読み込み中...</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-              {REGIONS.map((region) => {
-                const count = regionCounts[region.slug] || 0
-                return (
-                  <Link key={region.id} href={`/tournaments/${region.slug}`}>
-                    <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group h-full">
-                      <CardHeader className="pt-3 pb-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <CardTitle className="text-xl font-bold" style={{ color: "#1e1e1e" }}>
-                              {region.name}
-                            </CardTitle>
-                          </div>
-                          <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            <div className="px-2 md:px-6">
+              {/* 地域アコーディオン */}
+              <Accordion type="single" collapsible className="bg-white rounded-lg border border-gray-200 divide-y">
+                {REGIONS.map((region) => {
+                  const data = regionData[region.slug]
+                  const total = data?.total || 0
+                  const prefs = data?.prefectures || []
+                  return (
+                    <AccordionItem
+                      key={region.id}
+                      value={region.slug}
+                      className="border-b-0 px-4"
+                    >
+                      <AccordionTrigger className="hover:no-underline py-4">
+                        <div className="flex items-center justify-between w-full pr-2">
+                          <span className="text-lg font-bold" style={{ color: "#1e1e1e" }}>
+                            {region.name}
+                          </span>
+                          <span className="text-sm font-semibold" style={{ color: "#f06a4e" }}>
+                            {total}件
+                          </span>
                         </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4 flex-1">
-                        <div className="pt-3 border-t border-gray-100">
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <Clock className="w-4 h-4" style={{ color: "#f06a4e" }} />
-                            <span className="text-sm font-medium">登録大会数:</span>
-                            <span className="text-lg font-bold" style={{ color: "#f06a4e" }}>{count}件</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                )
-              })}
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        {/* 都道府県アコーディオン */}
+                        <Accordion type="single" collapsible className="bg-gray-50 rounded-md divide-y divide-gray-200">
+                          {prefs.map((pref) => (
+                            <AccordionItem
+                              key={pref.prefectureSlug}
+                              value={pref.prefectureSlug}
+                              className="border-b-0 px-3"
+                            >
+                              <AccordionTrigger className="hover:no-underline py-3">
+                                <div className="flex items-center justify-between w-full pr-2">
+                                  <span className="text-base font-medium text-gray-800">
+                                    {pref.prefectureName}
+                                  </span>
+                                  <span className="text-sm font-semibold" style={{ color: "#f06a4e" }}>
+                                    {pref.total}件
+                                  </span>
+                                </div>
+                              </AccordionTrigger>
+                              <AccordionContent>
+                                {/* 公式戦 / カップ戦 のリンク */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 py-1">
+                                  <Link
+                                    href={`/tournaments/${region.slug}/${pref.prefectureSlug}?type=official`}
+                                    className="flex items-center justify-between rounded-md border border-gray-200 bg-white hover:border-[#f06a4e] hover:bg-orange-50 transition-colors px-3 py-2 group"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <div
+                                        className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
+                                        style={{ background: "linear-gradient(135deg, #f7931e 0%, #e84b8a 100%)" }}
+                                      >
+                                        <Shield className="w-3.5 h-3.5 text-white" />
+                                      </div>
+                                      <span className="text-sm font-medium text-gray-800">公式戦</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-sm font-semibold" style={{ color: "#f06a4e" }}>
+                                        {pref.official}件
+                                      </span>
+                                      <ChevronRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition-transform" />
+                                    </div>
+                                  </Link>
+                                  <Link
+                                    href={`/tournaments/${region.slug}/${pref.prefectureSlug}?type=cup`}
+                                    className="flex items-center justify-between rounded-md border border-gray-200 bg-white hover:border-blue-500 hover:bg-blue-50 transition-colors px-3 py-2 group"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-blue-500 to-indigo-600">
+                                        <Swords className="w-3.5 h-3.5 text-white" />
+                                      </div>
+                                      <span className="text-sm font-medium text-gray-800">カップ戦</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-sm font-semibold text-blue-600">
+                                        {pref.cup}件
+                                      </span>
+                                      <ChevronRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition-transform" />
+                                    </div>
+                                  </Link>
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          ))}
+                        </Accordion>
+                      </AccordionContent>
+                    </AccordionItem>
+                  )
+                })}
+              </Accordion>
             </div>
           )}
         </div>

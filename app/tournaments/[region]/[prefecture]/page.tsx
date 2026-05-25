@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -23,20 +23,40 @@ import { OFFICIAL_AREAS_BY_PREFECTURE } from "@/lib/regionData"
 
 // 大会カード
 function TournamentCard({ tournament }: { tournament: DbTournament }) {
+  const isOfficial = tournament.tournamentType === "official"
+  // 公式戦=オレンジ系、カップ戦=青系のプレースホルダー背景
+  const placeholderBg = isOfficial
+    ? "bg-gradient-to-br from-orange-400 to-red-400"
+    : "bg-gradient-to-br from-blue-400 to-indigo-500"
+  const PlaceholderIcon = isOfficial ? Shield : Swords
+
   return (
     <Link href={`/tournaments/detail/${tournament.id}`}>
       <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group h-full overflow-hidden py-0">
-        {tournament.coverImage && (
-          <div className="relative w-full h-32 overflow-hidden">
-            <img
-              src={tournament.coverImage}
-              alt={tournament.name}
-              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-              onError={(e) => { e.currentTarget.style.display = 'none' }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-          </div>
-        )}
+        <div className={`relative w-full h-32 overflow-hidden ${tournament.coverImage ? "" : placeholderBg}`}>
+          {tournament.coverImage ? (
+            <>
+              <img
+                src={tournament.coverImage}
+                alt={tournament.name}
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                onError={(e) => {
+                  // 画像読み込み失敗時はプレースホルダー表示に切り替え
+                  const wrapper = e.currentTarget.parentElement
+                  if (wrapper) {
+                    wrapper.classList.add(...placeholderBg.split(" "))
+                    e.currentTarget.style.display = "none"
+                  }
+                }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+            </>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <PlaceholderIcon className="w-12 h-12 text-white/60 group-hover:scale-110 transition-transform duration-300" />
+            </div>
+          )}
+        </div>
         <CardHeader>
           <div className="flex items-start justify-between gap-2 mt-3">
             <CardTitle className="text-lg font-bold group-hover:text-red-600 transition-colors">
@@ -86,13 +106,31 @@ export default function PrefectureTournamentsPage() {
   const prefectureName = PREFECTURE_SLUG_TO_NAME[prefectureSlug] || prefectureSlug
 
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const typeParam = searchParams.get("type")
+  const initialViewMode: ViewMode =
+    typeParam === "official" ? "official" : typeParam === "cup" ? "cup" : "hub"
+
   const [tournaments, setTournaments] = useState<DbTournament[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
-  const [viewMode, setViewMode] = useState<ViewMode>("hub")
+  const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode)
   const [selectedArea, setSelectedArea] = useState<string | null>(null)
   const [selectedSubArea, setSelectedSubArea] = useState<string | null>(null)
+
+  // URL クエリ `?type=` の変化に追従（戻る/進む対応）
+  useEffect(() => {
+    if (typeParam === "official") {
+      setViewMode("official")
+    } else if (typeParam === "cup") {
+      setViewMode("cup")
+    } else {
+      setViewMode("hub")
+    }
+    setSelectedArea(null)
+    setSelectedSubArea(null)
+  }, [typeParam])
 
   // {prefecture}にUUIDが入っている古いリンクからのアクセスは大会詳細ページへリダイレクト
   // (例: /tournaments/九州・沖縄/9b10c08b-... → /tournaments/detail/9b10c08b-...)
@@ -181,57 +219,6 @@ export default function PrefectureTournamentsPage() {
     return true
   })
 
-  // パンくずの構築
-  function getBreadcrumbItems() {
-    const items = [
-      { label: "大会トップ", href: "/tournaments" },
-      { label: `${regionName}エリア`, href: `/tournaments/${regionSlug}` },
-    ]
-
-    if (viewMode === "hub") {
-      items.push({ label: prefectureName, href: "" })
-    } else if (viewMode === "official") {
-      items.push({ label: prefectureName, href: "" })
-      if (selectedArea && selectedSubArea) {
-        // area + subArea 選択済み
-      } else if (selectedArea) {
-        // area のみ選択済み
-      }
-    } else if (viewMode === "cup") {
-      items.push({ label: prefectureName, href: "" })
-    }
-
-    return items
-  }
-
-  // 戻るボタンの挙動
-  function handleBack() {
-    if (viewMode === "official") {
-      if (selectedSubArea) {
-        setSelectedSubArea(null)
-      } else if (selectedArea) {
-        setSelectedArea(null)
-      } else {
-        setViewMode("hub")
-      }
-    } else if (viewMode === "cup") {
-      setViewMode("hub")
-    } else {
-      router.push(`/tournaments/${regionSlug}`)
-    }
-  }
-
-  // 戻るボタンのラベル
-  function getBackLabel() {
-    if (viewMode === "official") {
-      if (selectedSubArea) return `${selectedArea}に戻る`
-      if (selectedArea) return `${prefectureName}の公式戦に戻る`
-      return `${prefectureName}に戻る`
-    }
-    if (viewMode === "cup") return `${prefectureName}に戻る`
-    return `${regionName}エリアに戻る`
-  }
-
   // UUID形式の場合はリダイレクト中のローディング表示
   if (isUuidPrefecture) {
     return (
@@ -263,58 +250,13 @@ export default function PrefectureTournamentsPage() {
   return (
     <Layout>
       <div className="max-w-7xl mx-auto py-6">
-        {/* Breadcrumb */}
+        {/* Breadcrumb（大会トップへの戻りのみ） */}
         <div className="flex items-center gap-2 mb-2 text-sm flex-wrap px-2 md:px-6">
-          {getBreadcrumbItems().map((item, i, arr) => (
-            <span key={i} className="flex items-center gap-2">
-              {i > 0 && <ChevronRight className="w-4 h-4 text-gray-400" />}
-              {i < arr.length - 1 ? (
-                <Link href={item.href} className="text-gray-500 hover:text-gray-700">
-                  {item.label}
-                </Link>
-              ) : (
-                <span className="font-medium" style={{ color: "#f06a4e" }}>{item.label}</span>
-              )}
-            </span>
-          ))}
-          {viewMode === "official" && (
-            <>
-              <ChevronRight className="w-4 h-4 text-gray-400" />
-              {!selectedArea ? (
-                <span className="font-medium" style={{ color: "#f06a4e" }}>公式戦</span>
-              ) : (
-                <span
-                  className="text-gray-500 hover:text-gray-700 cursor-pointer"
-                  onClick={() => { setSelectedArea(null); setSelectedSubArea(null) }}
-                >公式戦</span>
-              )}
-              {selectedArea && (
-                <>
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
-                  {!selectedSubArea ? (
-                    <span className="font-medium" style={{ color: "#f06a4e" }}>{selectedArea}</span>
-                  ) : (
-                    <span
-                      className="text-gray-500 hover:text-gray-700 cursor-pointer"
-                      onClick={() => setSelectedSubArea(null)}
-                    >{selectedArea}</span>
-                  )}
-                </>
-              )}
-              {selectedSubArea && (
-                <>
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
-                  <span className="font-medium" style={{ color: "#f06a4e" }}>{selectedSubArea}</span>
-                </>
-              )}
-            </>
-          )}
-          {viewMode === "cup" && (
-            <>
-              <ChevronRight className="w-4 h-4 text-gray-400" />
-              <span className="font-medium" style={{ color: "#f06a4e" }}>カップ戦</span>
-            </>
-          )}
+          <Link href="/tournaments" className="text-gray-500 hover:text-gray-700">
+            大会トップ
+          </Link>
+          <ChevronRight className="w-4 h-4 text-gray-400" />
+          <span className="font-medium" style={{ color: "#f06a4e" }}>{prefectureName}</span>
         </div>
 
         {/* Header - コンパクト1行表示 */}
@@ -565,10 +507,12 @@ export default function PrefectureTournamentsPage() {
 
         {/* Back Button */}
         <div className="text-center mt-8">
-          <Button variant="outline" className="px-6 py-3" onClick={handleBack}>
-            <ChevronLeft className="w-4 h-4 mr-2" />
-            {getBackLabel()}
-          </Button>
+          <Link href="/tournaments">
+            <Button variant="outline" className="px-6 py-3">
+              <ChevronLeft className="w-4 h-4 mr-2" />
+              大会トップへ戻る
+            </Button>
+          </Link>
         </div>
       </div>
 

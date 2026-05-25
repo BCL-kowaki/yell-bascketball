@@ -30,7 +30,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import {
-  ChevronLeft,
   ChevronRight,
   Globe,
   Users,
@@ -1151,7 +1150,7 @@ export default function TeamDetailPage() {
         notifyNewTeamPost(
           teamId,
           team.name,
-          currentUser ? `${currentUser.lastName}${currentUser.firstName}` : '投稿者',
+          currentUserData?.name || '投稿者',
           newPostContent.trim(),
           currentUserEmail || undefined
         ).catch((err) => {
@@ -1308,18 +1307,6 @@ export default function TeamDetailPage() {
 
   return (
     <Layout>
-        {/* Breadcrumb */}
-      <div className="max-w-6xl mx-auto px-1 pt-2">
-        <div className="flex items-center gap-2 mb-2">
-          <Link href="/teams">
-            <Button variant="ghost" size="sm">
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              チーム一覧に戻る
-            </Button>
-          </Link>
-        </div>
-        </div>
-
       {/* === FB風 チームヘッダー === */}
       <div className="w-full bg-white">
       <div className="max-w-[1080px] mx-auto">

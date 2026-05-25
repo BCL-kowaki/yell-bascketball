@@ -19,7 +19,6 @@ import {
   Shield,
   Globe,
   Lock,
-  UserPlus,
   PlusCircle,
   Loader2
 } from "lucide-react"
@@ -579,27 +578,13 @@ export default function TeamsPage() {
                       </div>
                     )}
 
-                    {/* Follow Button */}
-                    <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                      {team.founded && (
-                        <div className="text-xs text-gray-500 flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          <span>設立: {team.founded}</span>
-                        </div>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="default"
-                        className="bg-brand-gradient hover:opacity-90"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          // Handle follow/unfollow
-                        }}
-                      >
-                        <UserPlus className="w-3 h-3 mr-1" />
-                        詳細を見る
-                      </Button>
-                  </div>
+                    {/* Founded */}
+                    {team.founded && (
+                      <div className="pt-2 border-t border-gray-100 text-xs text-gray-500 flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        <span>設立: {team.founded}</span>
+                      </div>
+                    )}
                 </CardContent>
               </Card>
             </Link>

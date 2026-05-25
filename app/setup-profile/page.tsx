@@ -3,9 +3,7 @@
 import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
-import { getUserByEmail, updateUser, getCurrentUserEmail } from "@/lib/api"
-import { generateClient } from 'aws-amplify/api'
-import { createUser } from '@/src/graphql/mutations'
+import { getOrCreateUser, updateUser, getCurrentUserEmail } from "@/lib/api"
 import { PREFECTURES_BY_REGION, REGION_BLOCKS, CATEGORIES, CATEGORIES2 } from "@/lib/regionData"
 import { useToast } from "@/hooks/use-toast"
 
@@ -73,26 +71,11 @@ function SetupProfileForm() {
 
     setIsLoading(true)
     try {
-      // まずDynamoDBにユーザーが存在するか確認
-      let user = await getUserByEmail(email)
-
-      if (!user) {
-        // ユーザーが存在しない場合、新規作成
-        const client = generateClient({ authMode: 'apiKey' })
-        const result = await client.graphql({
-          query: createUser,
-          variables: {
-            input: {
-              email: email,
-              firstName: formData.firstName,
-              lastName: formData.lastName,
-            }
-          },
-          authMode: 'apiKey'
-        })
-        // @ts-ignore
-        user = result.data?.createUser
-      }
+      // get-or-create で重複作成を防ぐ
+      const user = await getOrCreateUser(email, {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+      })
 
       if (user) {
         // プロフィール情報を更新
@@ -139,24 +122,8 @@ function SetupProfileForm() {
 
     setIsSkipping(true)
     try {
-      // DynamoDBにユーザーが存在しない場合は作成
-      let user = await getUserByEmail(email)
-      if (!user) {
-        const client = generateClient({ authMode: 'apiKey' })
-        const result = await client.graphql({
-          query: createUser,
-          variables: {
-            input: {
-              email: email,
-              firstName: "",
-              lastName: "",
-            }
-          },
-          authMode: 'apiKey'
-        })
-        // @ts-ignore
-        user = result.data?.createUser
-      }
+      // get-or-create で重複作成を防ぐ
+      const user = await getOrCreateUser(email)
 
       // セッションを設定
       try {
@@ -344,7 +311,6 @@ function SetupProfileForm() {
                 color: selectedRegion ? "#1e1e1e" : "#999",
                 marginBottom: "8px",
                 appearance: "auto",
-                WebkitAppearance: "auto",
               }}
             >
               <option value="">地域ブロックを選択</option>
@@ -368,8 +334,7 @@ function SetupProfileForm() {
                   boxSizing: "border-box",
                   color: formData.prefecture ? "#1e1e1e" : "#999",
                   appearance: "auto",
-                  WebkitAppearance: "auto",
-                }}
+                  }}
               >
                 <option value="">都道府県を選択</option>
                 {availablePrefectures.map((p) => (

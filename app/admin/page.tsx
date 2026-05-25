@@ -93,7 +93,7 @@ export default function AdminDashboardPage() {
   const handleLogout = () => {
     adminLogout()
     setIsAdmin(false)
-    setStats({ users: 0, teams: 0, tournaments: 0, chats: 0, pendingTeams: 0, recentUsers: 0, recentTeams: 0 })
+    setStats({ users: 0, teams: 0, tournaments: 0, chats: 0, pendingTeams: 0, pendingTournaments: 0, recentUsers: 0, recentTeams: 0 })
   }
 
   if (isLoading) {

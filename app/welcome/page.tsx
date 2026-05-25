@@ -2,7 +2,6 @@
 import Link from "next/link"
 import { MapPin, ChevronRight } from "lucide-react"
 import { REGION_BLOCKS, PREFECTURES_BY_REGION } from "@/lib/regionData"
-import { REGION_NAME_TO_SLUG } from "@/lib/regionMapping"
 
 export default function WelcomePage() {
   return (
@@ -84,12 +83,11 @@ export default function WelcomePage() {
           }}
         >
           {REGION_BLOCKS.map((region) => {
-            const regionSlug = REGION_NAME_TO_SLUG[region]
             const prefectures = PREFECTURES_BY_REGION[region] || []
             return (
               <Link
                 key={region}
-                href={regionSlug ? `/tournaments/${regionSlug}` : '/tournaments'}
+                href="/tournaments"
                 prefetch={true}
                 style={{
                   display: "flex",

@@ -294,7 +294,7 @@ export async function uploadImageToS3(file: File, userId?: string): Promise<stri
       options: {
         contentType: fileToUpload.type,
         onProgress: (progress) => {
-          console.log(`Image upload progress: ${((progress.transferredBytes / progress.totalBytes) * 100).toFixed(1)}%`)
+          console.log(`Image upload progress: ${((progress.transferredBytes / (progress.totalBytes ?? 1)) * 100).toFixed(1)}%`)
         }
       },
     }).result
@@ -491,7 +491,7 @@ export async function uploadPdfToS3(file: File, userId?: string): Promise<string
       options: {
         contentType: file.type || 'application/pdf',
         onProgress: (progress) => {
-          const pct = ((progress.transferredBytes / progress.totalBytes) * 100).toFixed(1)
+          const pct = ((progress.transferredBytes / (progress.totalBytes ?? 1)) * 100).toFixed(1)
           console.log(`uploadPdfToS3 - progress: ${pct}%`)
         }
       },
@@ -623,7 +623,7 @@ export async function uploadVideoToS3(file: File, userId?: string): Promise<stri
       options: {
         contentType: file.type || 'video/mp4',
         onProgress: (progress) => {
-          console.log(`Video upload progress: ${((progress.transferredBytes / progress.totalBytes) * 100).toFixed(1)}%`)
+          console.log(`Video upload progress: ${((progress.transferredBytes / (progress.totalBytes ?? 1)) * 100).toFixed(1)}%`)
         }
       },
     }).result

@@ -61,17 +61,19 @@ type Reply = {
 }
 
 type Comment = {
-  id: number
+  id: number | string
   user: {
-    id: number
+    id?: number
     name: string
     avatar: string
+    email?: string
   }
   content: string
   timestamp: string
   likes: number
   liked: boolean
   replies: Reply[]
+  likesCount?: number
 }
 
 type Post = {
@@ -651,11 +653,14 @@ export default function TimelinePage() {
                 hour: '2-digit',
                 minute: '2-digit',
               }),
+              likes: 0,
+              liked: false,
+              replies: [],
               likesCount: 0,
             }
           })
         )
-        
+
         setModalComments(commentsWithUsers)
       } catch (e) {
         console.error('Failed to load comments:', e)
@@ -828,11 +833,14 @@ export default function TimelinePage() {
                     hour: '2-digit',
                     minute: '2-digit',
                   }),
+                  likes: 0,
+                  liked: false,
+                  replies: [],
                   likesCount: 0,
                 }
               })
             )
-            
+
             setModalComments(commentsWithUsers)
           } catch (e) {
             console.error('Failed to reload comments:', e)
