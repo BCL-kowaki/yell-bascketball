@@ -55,7 +55,7 @@ import {
   Instagram,
   Send
 } from "lucide-react"
-import { getTeam, getCurrentUserEmail, updateTeam, type DbTeam, getPostsByTeam, createPost, type DbPost, toggleFavoriteTeam, checkFavoriteTeam, getUserByEmail, deletePost, toggleLike as toggleDbLike, addComment as addDbComment, getCommentsByPost, updatePostCounts, checkLikeStatus, searchUsers, getTeamTournaments, type DbUser, type DbTournamentTeam, type DbTournament, createChatThread, checkTournamentAdminPermission, listTournaments, getSiteSponsors, type SponsorBanner } from "@/lib/api"
+import { getTeam, getCurrentUserEmail, updateTeam, type DbTeam, getPostsByTeam, createPost, type DbPost, toggleFavoriteTeam, checkFavoriteTeam, getUserByEmail, deletePost, toggleLike as toggleDbLike, addComment as addDbComment, getCommentsByPost, updatePostCounts, checkLikeStatus, searchUsers, getTeamTournaments, type DbUser, type DbTournamentTeam, type DbTournament, createChatThread, checkTournamentAdminPermission, listTournaments, getSiteSponsors, type SponsorBanner, formatHeadcount, HEADCOUNT_OPTIONS } from "@/lib/api"
 import SponsorSidebar, { MobileSnsCard } from "@/components/sponsor-sidebar"
 import { notifyNewTeamPost } from "@/lib/push-sender"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -1433,7 +1433,7 @@ export default function TeamDetailPage() {
               <span className="flex items-center gap-[4px]"><Calendar className="w-[16px] h-[16px]" />設立: {team.founded}</span>
             )}
             {team.headcount && (
-              <span className="flex items-center gap-[4px]"><Users className="w-[16px] h-[16px]" />{team.headcount}名</span>
+              <span className="flex items-center gap-[4px]"><Users className="w-[16px] h-[16px]" />{formatHeadcount(team.headcount)}</span>
             )}
             {team.instagramUrl && (() => {
               const getInstagramAccountId = (url: string): string => {
@@ -1960,12 +1960,21 @@ export default function TeamDetailPage() {
 
                       <div>
                         <Label htmlFor="headcount">人数</Label>
-                        <Input
-                          id="headcount"
-                          type="number"
-                          value={editedTeam.headcount || ''}
-                          onChange={(e) => handleInputChange('headcount', parseInt(e.target.value) || undefined)}
-                        />
+                        <Select
+                          value={editedTeam.headcount ? String(editedTeam.headcount) : ''}
+                          onValueChange={(value) => handleInputChange('headcount', parseInt(value) || undefined)}
+                        >
+                          <SelectTrigger id="headcount">
+                            <SelectValue placeholder="人数を選択" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {HEADCOUNT_OPTIONS.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       <div>
@@ -2221,7 +2230,7 @@ export default function TeamDetailPage() {
                       {team.headcount && (
                         <div>
                           <h4 className="font-medium mb-2">人数</h4>
-                          <p className="text-muted-foreground">{team.headcount}名</p>
+                          <p className="text-muted-foreground">{formatHeadcount(team.headcount)}</p>
                         </div>
                       )}
 

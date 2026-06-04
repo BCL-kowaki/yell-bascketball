@@ -2,6 +2,7 @@
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Trophy, Users, LogIn } from "lucide-react"
+import { useShowTeams } from "@/lib/useShowTeams"
 
 interface NavigationProps {
   currentUser?: {
@@ -12,6 +13,7 @@ interface NavigationProps {
 }
 
 export function Navigation({ currentUser, isLoggedIn = false }: NavigationProps) {
+  const showTeams = useShowTeams()
   return (
     <div className="hidden lg:block w-[340px] flex-shrink-0 pt-4 sticky top-[100px] self-start">
       {/* User Profile（ログイン時のみ） */}
@@ -70,8 +72,8 @@ export function Navigation({ currentUser, isLoggedIn = false }: NavigationProps)
         </Link>
       )}
 
-      {/* Favorite Teams（ログイン時のみ） */}
-      {isLoggedIn && (
+      {/* Favorite Teams（ログイン時のみ・チーム機能ONのとき） */}
+      {isLoggedIn && showTeams && (
         <Link href="/favorites/teams" className="block mb-6">
           <div className="flex items-center gap-4 mb-4 hover:opacity-80 transition-opacity cursor-pointer p-2 rounded-lg hover:bg-gray-100">
             <Users className="w-[40px] h-[40px] text-gray-300" />
@@ -93,14 +95,16 @@ export function Navigation({ currentUser, isLoggedIn = false }: NavigationProps)
               </div>
             </div>
           </Link>
-          <Link href="/teams" className="block mb-6">
-            <div className="flex items-center gap-4 mb-4 hover:opacity-80 transition-opacity cursor-pointer p-2 rounded-lg hover:bg-gray-100">
-              <Users className="w-[40px] h-[40px] text-gray-300" />
-              <div className="font-bold text-[15px] text-black">
-                チームを探す
+          {showTeams && (
+            <Link href="/teams" className="block mb-6">
+              <div className="flex items-center gap-4 mb-4 hover:opacity-80 transition-opacity cursor-pointer p-2 rounded-lg hover:bg-gray-100">
+                <Users className="w-[40px] h-[40px] text-gray-300" />
+                <div className="font-bold text-[15px] text-black">
+                  チームを探す
+                </div>
               </div>
-            </div>
-          </Link>
+            </Link>
+          )}
         </>
       )}
     </div>

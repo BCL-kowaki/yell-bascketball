@@ -167,7 +167,7 @@ export default function NotificationsPage() {
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center space-x-2">
                 <Bell className="h-6 w-6 text-[#e84b8a]" />
-                <span>お知らせ</span>
+                <span>アクティビティ</span>
                 {unreadCount > 0 && (
                   <Badge variant="destructive" className="ml-2">
                     {unreadCount}

@@ -14,7 +14,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import {
   isSystemAdmin, adminListAllTeams, updateTeam, adminUpdateTeamApproval, adminDeleteTeam,
-  type DbTeam
+  adminListAllUsers, getAllUserPhones, formatHeadcount, type DbTeam, type DbUser
 } from "@/lib/api"
 
 export default function AdminTeamsPage() {
@@ -22,6 +22,10 @@ export default function AdminTeamsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
   const [teams, setTeams] = useState<DbTeam[]>([])
+  // email(小文字) → User のマップ（管理者のフルネーム表示用）
+  const [userMap, setUserMap] = useState<Map<string, DbUser>>(new Map())
+  // email(小文字) → 電話番号 のマップ（デプロイ耐性のある専用取得）
+  const [phoneMap, setPhoneMap] = useState<Map<string, string>>(new Map())
   const [searchQuery, setSearchQuery] = useState("")
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [editingData, setEditingData] = useState<Partial<DbTeam> | null>(null)
@@ -41,6 +45,13 @@ export default function AdminTeamsPage() {
           return (b.createdAt || '').localeCompare(a.createdAt || '')
         })
         setTeams(data)
+        // 管理者のフルネーム・電話番号を引くため全ユーザーをマップ化
+        const users = await adminListAllUsers()
+        const map = new Map<string, DbUser>()
+        users.forEach(u => { if (u.email) map.set(u.email.toLowerCase(), u) })
+        setUserMap(map)
+        // 電話番号は専用の耐性関数で取得（未デプロイ時は空Map）
+        setPhoneMap(await getAllUserPhones())
       } catch (e) { console.error(e) }
       setIsLoading(false)
     }
@@ -158,7 +169,12 @@ export default function AdminTeamsPage() {
         </div>
 
         <div className="space-y-2">
-          {filteredTeams.map(t => (
+          {filteredTeams.map(t => {
+            // 管理者(オーナー)のUserレコードを引く
+            const owner = userMap.get((t.ownerEmail || '').toLowerCase())
+            const ownerName = owner ? `${owner.lastName} ${owner.firstName}`.trim() : ''
+            const ownerPhone = phoneMap.get((t.ownerEmail || '').toLowerCase()) || ''
+            return (
             <Card key={t.id} className={`overflow-hidden ${!t.isApproved ? 'border-yellow-300 bg-yellow-50/30' : 'border-gray-200'}`}>
               <button onClick={() => toggleExpand(t.id)} className="w-full text-left p-3 flex items-center gap-3 hover:bg-gray-50 transition-colors">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
@@ -176,7 +192,7 @@ export default function AdminTeamsPage() {
                   <p className="text-xs text-gray-500 truncate">管理者: {[t.ownerEmail, ...(t.editorEmails || [])].filter((v, i, a) => v && a.indexOf(v) === i).join(', ') || '-'} | {t.prefecture || '-'}</p>
                 </div>
                 <div className="text-right flex-shrink-0 hidden sm:block">
-                  <p className="text-xs text-gray-400">{t.headcount ? `${t.headcount}人` : '-'}</p>
+                  <p className="text-xs text-gray-400">{t.headcount ? formatHeadcount(t.headcount) : '-'}</p>
                   <p className="text-[10px] text-gray-400">{formatDate(t.createdAt)}</p>
                 </div>
                 {expandedId === t.id ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
@@ -184,17 +200,10 @@ export default function AdminTeamsPage() {
 
               {expandedId === t.id && editingData && (
                 <div className="border-t border-gray-100 p-4 bg-gray-50 space-y-3">
-                  {/* 承認ボタン */}
-                  <div className="flex gap-2 pb-2 border-b border-gray-200">
-                    {!t.isApproved ? (
-                      <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleApproval(t.id, true)}>
-                        <CheckCircle className="w-3 h-3 mr-1" />承認する
-                      </Button>
-                    ) : (
-                      <Button size="sm" variant="outline" onClick={() => handleApproval(t.id, false)}>
-                        <XCircle className="w-3 h-3 mr-1" />未承認に戻す
-                      </Button>
-                    )}
+                  {/* 管理者情報（読み取り専用） */}
+                  <div className="rounded-md bg-white border border-gray-200 p-3 text-sm space-y-1">
+                    <p className="text-gray-700"><span className="text-gray-500">管理者名:</span> {ownerName || '-'}</p>
+                    <p className="text-gray-700"><span className="text-gray-500">電話番号:</span> {ownerPhone || '未登録'}</p>
                   </div>
                   <div>
                     <label className="text-xs font-medium text-gray-600">チーム名</label>
@@ -233,6 +242,19 @@ export default function AdminTeamsPage() {
                     <label className="text-xs font-medium text-gray-600">説明</label>
                     <Input value={editingData.description || ''} onChange={e => setEditingData({...editingData, description: e.target.value})} />
                   </div>
+                  {/* 承認ボタン（大会管理と統一） */}
+                  <div className="flex items-center gap-2 pt-2 pb-2">
+                    {!t.isApproved ? (
+                      <Button size="sm" onClick={() => handleApproval(t.id, true)} className="bg-green-600 hover:bg-green-700 text-white">
+                        <CheckCircle className="w-3 h-3 mr-1" />承認する
+                      </Button>
+                    ) : (
+                      <Button variant="outline" size="sm" onClick={() => handleApproval(t.id, false)} className="text-yellow-600 border-yellow-400 hover:bg-yellow-50">
+                        <XCircle className="w-3 h-3 mr-1" />未承認に戻す
+                      </Button>
+                    )}
+                  </div>
+
                   <div className="flex items-center justify-between pt-2">
                     <Button variant="destructive" size="sm" onClick={() => handleDelete(t.id, t.name)}>
                       <Trash2 className="w-3 h-3 mr-1" />削除
@@ -247,7 +269,8 @@ export default function AdminTeamsPage() {
                 </div>
               )}
             </Card>
-          ))}
+            )
+          })}
         </div>
 
         {filteredTeams.length === 0 && (

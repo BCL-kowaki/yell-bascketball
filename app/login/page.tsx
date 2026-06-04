@@ -68,7 +68,6 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
-  const [statusMsg, setStatusMsg] = useState("")
 
   // 保存済みメアド読み込み + セッションチェック
   useEffect(() => {
@@ -91,7 +90,6 @@ export default function LoginPage() {
     e.preventDefault()
     setIsLoading(true)
     setError("")
-    setStatusMsg("")
 
     const loginEmail = email.toLowerCase().trim()
 
@@ -103,7 +101,6 @@ export default function LoginPage() {
 
     try {
       // === Step 1: 既存セッションをクリア ===
-      setStatusMsg("認証準備中...")
       try {
         await signOut()
       } catch {
@@ -111,7 +108,6 @@ export default function LoginPage() {
       }
 
       // === Step 2: Cognito signIn ===
-      setStatusMsg("認証中...")
       let signInResult: any
       try {
         signInResult = await signIn({
@@ -144,7 +140,6 @@ export default function LoginPage() {
       }
 
       // === Step 3: メールアドレス取得 ===
-      setStatusMsg("ユーザー情報取得中...")
       let userEmail = loginEmail
       try {
         const attributes = await fetchUserAttributes()
@@ -154,7 +149,6 @@ export default function LoginPage() {
       }
 
       // === Step 4: セッションCookie発行 ===
-      setStatusMsg("セッション設定中...")
       const sessionRes = await fetch('/api/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -169,7 +163,6 @@ export default function LoginPage() {
       }
 
       // === Step 5: Cookie確認（リダイレクト先でmiddlewareに弾かれないか事前チェック） ===
-      setStatusMsg("セッション確認中...")
       const verifyRes = await fetch('/api/session')
       if (!verifyRes.ok) {
         console.error("[ログイン] セッション確認失敗:", verifyRes.status)
@@ -186,7 +179,6 @@ export default function LoginPage() {
       // === Step 6: DB未登録ユーザーのリカバリー ===
       // Cognito登録後にプロフィール設定画面に到達せず離脱したケースに対応
       // get-or-create パターンで重複作成を防ぐ
-      setStatusMsg("ユーザーデータ確認中...")
       try {
         await getOrCreateUser(userEmail)
       } catch {
@@ -195,7 +187,6 @@ export default function LoginPage() {
 
       // === Step 7: ページ遷移 ===
       // ★ window.location.hrefで確実にフルリロードさせる
-      setStatusMsg("ログイン成功！リダイレクト中...")
       window.location.href = '/profile'
 
     } catch (error: any) {
@@ -417,24 +408,6 @@ export default function LoginPage() {
                 }}
               >
                 {error}
-              </div>
-            )}
-
-            {/* ステータスメッセージ（処理中の進捗表示） */}
-            {statusMsg && !error && (
-              <div
-                style={{
-                  padding: "10px 12px",
-                  fontSize: "13px",
-                  color: "#2563eb",
-                  backgroundColor: "#eff6ff",
-                  borderRadius: "8px",
-                  marginBottom: "12px",
-                  border: "1px solid #bfdbfe",
-                  textAlign: "center",
-                }}
-              >
-                {statusMsg}
               </div>
             )}
 

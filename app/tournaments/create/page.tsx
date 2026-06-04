@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
-import { getUserByEmail, createTournament, searchUsers, createTournamentInvitation, getCurrentUserEmail, notifyAdminsForApproval, isAdminEmail, type DbUser } from "@/lib/api"
+import { getUserByEmail, createTournament, searchUsers, createTournamentInvitation, getCurrentUserEmail, notifyAdminsForApproval, isAdminEmail, setUserPhone, type DbUser } from "@/lib/api"
 import { uploadImageToS3 } from "@/lib/storage"
 import { CATEGORIES, REGION_BLOCKS, PREFECTURES_BY_REGION, DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS } from "@/lib/regionData"
 import { Button } from "@/components/ui/button"
@@ -13,8 +13,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Layout } from "@/components/layout"
+import { PhoneVerificationModal } from "@/components/phone-verification-modal"
 import { useToast } from "@/hooks/use-toast"
-import { Camera, X, Search, UserPlus, Flag } from "lucide-react"
+import { Camera, X, Search, UserPlus, Flag, Info } from "lucide-react"
 
 export default function CreateTournamentPage() {
   ensureAmplifyConfigured()
@@ -37,10 +38,20 @@ export default function CreateTournamentPage() {
     area: "",
     subArea: "",
     description: "",
+    instagramUrl: "",
+    website: "",
   })
+
+  // 2段階認証用の電話番号と認証モーダルの表示状態
+  const [phone, setPhone] = useState("")
+  const [showVerifyModal, setShowVerifyModal] = useState(false)
 
   const [availablePrefectures, setAvailablePrefectures] = useState<string[]>([])
   const [availableDistricts, setAvailableDistricts] = useState<string[]>([])
+
+  // アイコン画像関連
+  const [iconPreview, setIconPreview] = useState<string | null>(null)
+  const [iconFile, setIconFile] = useState<File | null>(null)
 
   // 壁紙画像関連
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
@@ -113,6 +124,10 @@ export default function CreateTournamentPage() {
       }
 
       setCurrentUser(userData)
+      // プロフィールに電話番号が登録されていれば認証欄へ初期入力（編集可）
+      if (userData.phoneNumber) {
+        setPhone(userData.phoneNumber)
+      }
     } catch (error) {
       console.error('Failed to load user:', error)
       toast({
@@ -180,6 +195,18 @@ export default function CreateTournamentPage() {
     }
   }
 
+  // アイコン画像の選択
+  const handleIconChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setIconFile(file)
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader()
+      reader.onloadend = () => setIconPreview(reader.result as string)
+      reader.readAsDataURL(file)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -212,8 +239,40 @@ export default function CreateTournamentPage() {
       return
     }
 
+    // 電話番号(2段階認証用)の入力チェック
+    if (!phone.trim()) {
+      toast({
+        title: "エラー",
+        description: "認証用の電話番号を入力してください",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // バリデーションを通過したらSMS認証モーダルを開く（実際の作成は認証成功後）
+    setShowVerifyModal(true)
+  }
+
+  // SMS認証成功後に実行される実際の大会作成処理（成功で true、失敗で false を返す）
+  const performCreate = async (): Promise<boolean> => {
+    if (!currentUser) return false
     setIsSaving(true)
     try {
+      // アイコン画像をアップロード
+      let iconImageUrl: string | null = null
+      if (iconFile) {
+        try {
+          iconImageUrl = await uploadImageToS3(iconFile, currentUser.id)
+        } catch (error) {
+          console.error('Failed to upload icon image:', error)
+          toast({
+            title: "警告",
+            description: "アイコン画像のアップロードに失敗しましたが、大会の登録は続行します",
+            variant: "default",
+          })
+        }
+      }
+
       // 壁紙画像をアップロード
       let coverImageUrl: string | null = null
       if (coverFile) {
@@ -234,7 +293,7 @@ export default function CreateTournamentPage() {
       // 大会を作成（一般ユーザーはカップ戦のみ、承認待ち状態で作成）
       const tournamentData = {
         name: formData.name,
-        iconUrl: null,
+        iconUrl: iconImageUrl,
         coverImage: coverImageUrl,
         category: formData.category || null,
         regionBlock: formData.regionBlock || null,
@@ -244,6 +303,8 @@ export default function CreateTournamentPage() {
         area: null,
         subArea: null,
         description: formData.description || null,
+        instagramUrl: formData.instagramUrl || null,
+        website: formData.website || null,
         ownerEmail: currentUser.email,
         // 管理者一覧（作成者を必ず含める）
         coAdminEmails: [currentUser.email, ...selectedCoAdmins.map(admin => admin.email).filter(e => e !== currentUser.email)],
@@ -253,6 +314,12 @@ export default function CreateTournamentPage() {
       console.log('Creating tournament:', tournamentData)
       const tournament = await createTournament(tournamentData)
       console.log('Tournament created:', tournament)
+
+      // SMS認証済みの電話番号を管理者(作成者)に紐づけて保存（非ブロッキング）
+      if (phone.trim()) {
+        setUserPhone(currentUser.email, phone.trim())
+          .catch(e => console.error('電話番号の保存に失敗:', e))
+      }
 
       // 共有管理者に招待を送信
       if (selectedCoAdmins.length > 0) {
@@ -273,11 +340,6 @@ export default function CreateTournamentPage() {
         }
       }
 
-      toast({
-        title: "大会を登録しました",
-        description: "管理者の承認後に公開されます。しばらくお待ちください。",
-      })
-
       // 管理者へ承認待ち通知を送信
       notifyAdminsForApproval({
         type: 'approval_request',
@@ -288,7 +350,8 @@ export default function CreateTournamentPage() {
         relatedType: 'tournament',
       }).catch(e => console.error('管理者通知送信エラー:', e))
 
-      router.push('/tournaments')
+      // 成功（モーダル側で申請完了表示に切り替わる）
+      return true
     } catch (error: any) {
       console.error('Failed to create tournament:', error)
       toast({
@@ -296,6 +359,7 @@ export default function CreateTournamentPage() {
         description: error?.message || "大会の登録に失敗しました",
         variant: "destructive",
       })
+      return false
     } finally {
       setIsSaving(false)
     }
@@ -320,99 +384,70 @@ export default function CreateTournamentPage() {
   return (
     <Layout isLoggedIn={true} currentUser={{ name: displayName, avatar: currentUser.avatar || undefined }}>
       <div className="max-w-4xl mx-auto pb-20 p-4 md:p-8">
-        <h1 className="text-3xl font-bold mb-6">新規大会登録</h1>
-
-        <form onSubmit={handleSubmit}>
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>基本情報</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* 大会タイプ（サイト管理者のみ選択可能。一般ユーザーには表示しない） */}
-              {isSiteAdmin && (
-                <div>
-                  <label className="text-sm font-medium mb-3 block">大会タイプ</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, tournamentType: "cup" })}
-                      className={`p-4 rounded-lg border-2 text-left transition-all ${
-                        formData.tournamentType === "cup"
-                          ? "border-[#f06a4e] bg-[#fcf4e7]"
-                          : "border-gray-200 bg-white hover:border-gray-300"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Flag className={`w-6 h-6 ${formData.tournamentType === "cup" ? "text-[#f06a4e]" : "text-gray-400"}`} />
-                        <div>
-                          <span className={`font-bold ${formData.tournamentType === "cup" ? "text-[#f06a4e]" : "text-gray-700"}`}>カップ戦</span>
-                          <p className="text-xs text-gray-500 mt-0.5">チーム・個人主催のカップ戦</p>
-                        </div>
-                      </div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, tournamentType: "official" })}
-                      className={`p-4 rounded-lg border-2 text-left transition-all ${
-                        formData.tournamentType === "official"
-                          ? "border-[#f06a4e] bg-[#fcf4e7]"
-                          : "border-gray-200 bg-white hover:border-gray-300"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Flag className={`w-6 h-6 ${formData.tournamentType === "official" ? "text-[#f06a4e]" : "text-gray-400"}`} />
-                        <div>
-                          <span className={`font-bold ${formData.tournamentType === "official" ? "text-[#f06a4e]" : "text-gray-700"}`}>公式戦</span>
-                          <p className="text-xs text-gray-500 mt-0.5">運営本部主催の公式戦</p>
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-2">
-                    ※ サイト管理者のみ大会種別を選択できます
-                  </p>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold">新規大会登録</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* 登録にあたっての注意事項（承認制・SMS認証） */}
+            <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
+              <div className="flex items-start gap-2">
+                <Info className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                <div className="text-amber-800">
+                  <p className="font-medium mb-1">登録後の流れ</p>
+                  <ul className="text-amber-700 text-sm list-disc pl-4 space-y-1">
+                    <li>大会登録は管理者による承認後に公開されます。承認待ち中は大会一覧に表示されませんのでご了承ください。</li>
+                    <li>管理者様は、ご本人様確認のため登録時にSMS認証を行わせていただいております。</li>
+                  </ul>
                 </div>
-              )}
+              </div>
+            </div>
 
-              {/* 壁紙画像 */}
+            <form onSubmit={handleSubmit} className="space-y-8">
+              {/* 基本情報 */}
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold border-b pb-2">基本情報</h2>
+              {/* 画像（アイコン／壁紙） */}
               <div>
-                <label className="text-sm font-medium mb-2 block">大会壁紙画像（任意）</label>
-                <div className="space-y-3">
-                  {coverPreview ? (
-                    <div className="relative">
-                      <img
-                        src={coverPreview}
-                        alt="Cover preview"
-                        className="w-full h-48 object-cover rounded-lg border"
-                      />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        className="absolute top-2 right-2"
-                        onClick={() => {
-                          setCoverPreview(null)
-                          setCoverFile(null)
-                        }}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                <label className="text-sm font-medium mb-2 block">画像（アイコン／壁紙）（任意）</label>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  {/* アイコン */}
+                  <div className="shrink-0">
+                    <p className="text-xs text-muted-foreground mb-1">アイコン</p>
+                    {iconPreview ? (
+                      <div className="relative w-28 h-28">
+                        <img src={iconPreview} alt="Icon preview" className="w-28 h-28 object-cover rounded-full border" />
+                        <Button type="button" variant="destructive" size="sm" className="absolute -top-2 -right-2 h-7 w-7 p-0 rounded-full"
+                          onClick={() => { setIconPreview(null); setIconFile(null) }}>
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center w-28 h-28 border-2 border-dashed border-gray-300 rounded-full cursor-pointer hover:bg-gray-50 transition-colors">
+                        <Camera className="w-6 h-6 text-gray-400" />
+                        <input type="file" accept="image/*" onChange={handleIconChange} className="hidden" />
+                      </label>
+                    )}
+                  </div>
+                  {/* 壁紙 */}
+                  <div className="flex-1">
+                    <p className="text-xs text-muted-foreground mb-1">壁紙</p>
+                    {coverPreview ? (
+                      <div className="relative">
+                        <img src={coverPreview} alt="Cover preview" className="w-full h-40 object-cover rounded-lg border" />
+                        <Button type="button" variant="destructive" size="sm" className="absolute top-2 right-2"
+                          onClick={() => { setCoverPreview(null); setCoverFile(null) }}>
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                         <Camera className="w-8 h-8 text-gray-400 mb-2" />
                         <p className="text-sm text-gray-500">壁紙画像をアップロード</p>
-                        <p className="text-xs text-gray-400 mt-1">クリックまたはドラッグ&ドロップ</p>
-                      </div>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleCoverChange}
-                        className="hidden"
-                      />
-                    </label>
-                  )}
+                        <input type="file" accept="image/*" onChange={handleCoverChange} className="hidden" />
+                      </label>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -501,15 +536,33 @@ export default function CreateTournamentPage() {
                   rows={5}
                 />
               </div>
-            </CardContent>
-          </Card>
 
-          {/* 管理者情報 */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>管理者情報</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+              {/* Instagram URL */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Instagram URL</label>
+                <Input
+                  type="text"
+                  placeholder="プロフィールURLを入れてください"
+                  value={formData.instagramUrl}
+                  onChange={(e) => setFormData({ ...formData, instagramUrl: e.target.value })}
+                />
+              </div>
+
+              {/* その他SNS */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">その他SNS</label>
+                <Input
+                  type="url"
+                  placeholder="WEBサイト・SNSのURL"
+                  value={formData.website}
+                  onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                />
+              </div>
+              </div>
+
+              {/* 管理者情報 */}
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold border-b pb-2">管理者情報</h2>
               {/* ページ管理者 */}
               <div>
                 <label className="text-sm font-medium mb-2 block">ページ管理者</label>
@@ -619,29 +672,57 @@ export default function CreateTournamentPage() {
                   </div>
                 )}
               </div>
-            </CardContent>
-          </Card>
+              </div>
 
-          {/* 登録ボタン */}
-          <div className="flex gap-3">
-            <Button
-              type="submit"
-              disabled={isSaving}
-              className="flex-1"
-            >
-              {isSaving ? "登録中..." : "大会を登録"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.push('/tournaments')}
-              disabled={isSaving}
-            >
-              キャンセル
-            </Button>
-          </div>
-        </form>
+              {/* 認証用電話番号（SMS 2段階認証） */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium block">
+                  認証用電話番号
+                </label>
+                <Input
+                  type="tel"
+                  placeholder="例: 09012345678"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  管理者様は、ご本人様確認のためSMS認証を設けさせていただいております。電話番号登録後SMSへ認証コードが届きますので、次ページのコード入力欄へ入力してください。
+                </p>
+              </div>
+
+              {/* 登録ボタン */}
+              <div className="flex gap-3 pt-4 border-t">
+                <Button
+                  type="submit"
+                  disabled={isSaving}
+                  className="flex-1"
+                >
+                  {isSaving ? "登録中..." : "大会を登録"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.push('/tournaments')}
+                  disabled={isSaving}
+                >
+                  キャンセル
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* SMS 2段階認証モーダル（認証成功後に実際の作成処理を実行） */}
+      <PhoneVerificationModal
+        open={showVerifyModal}
+        phone={phone}
+        onVerified={performCreate}
+        onClose={() => setShowVerifyModal(false)}
+        completeMessage={"運営本部に大会登録の申請いたしました。\n運営本部にて確認を行い、承認されるまで今しばらくお待ちください。"}
+        backToTopLabel="大会トップへ戻る"
+        onBackToTop={() => router.push('/tournaments')}
+      />
     </Layout>
   )
 }

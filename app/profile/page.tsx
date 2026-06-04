@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
-import { getUserByEmail, getOrCreateUser, updateUser, listPosts, createPost as createDbPost, getCurrentUserEmail, searchTeams, followUser, unfollowUser, checkFollowStatus, getFollowCounts, getUserFavorites, getCommentsByPost, addComment as addDbComment, updatePostCounts, toggleLike as toggleDbLike, getMyManagedTournaments, getMyTeams, getMyTeamTournaments, getSiteBanners, type DbUser, type DbPost, type DbTeam, type DbTournament, type SponsorBanner } from "@/lib/api"
+import { getUserByEmail, getOrCreateUser, updateUser, getUserPhone, setUserPhone, listPosts, createPost as createDbPost, getCurrentUserEmail, searchTeams, followUser, unfollowUser, checkFollowStatus, getFollowCounts, getUserFavorites, getCommentsByPost, addComment as addDbComment, updatePostCounts, toggleLike as toggleDbLike, getMyManagedTournaments, getMyTeams, getMyTeamTournaments, getSiteBanners, type DbUser, type DbPost, type DbTeam, type DbTournament, type SponsorBanner } from "@/lib/api"
 import { uploadImageToS3, uploadPdfToS3, uploadVideoToS3, refreshS3Url } from "@/lib/storage"
 import SponsorSidebar, { MobileSnsCard } from "@/components/sponsor-sidebar"
 import { CATEGORIES, CATEGORIES2, REGION_BLOCKS, PREFECTURES_BY_REGION, DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS } from "@/lib/regionData"
@@ -41,6 +41,7 @@ export default function ProfilePage() {
     isEmailPublic: false,
     isRegistrationDatePublic: false,
     instagramUrl: "",
+    phoneNumber: "",
   })
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
@@ -258,7 +259,13 @@ export default function ProfilePage() {
         isEmailPublic: userData.isEmailPublic || false,
         isRegistrationDatePublic: userData.isRegistrationDatePublic || false,
         instagramUrl: userData.instagramUrl || "",
+        phoneNumber: userData.phoneNumber || "",
       })
+
+      // 電話番号は専用ストレージから取得して初期表示（非ブロッキング）
+      getUserPhone(userData.email)
+        .then(p => { if (p) setEditForm(prev => ({ ...prev, phoneNumber: p })) })
+        .catch(() => {})
 
       // 既存データに基づいて選択肢を設定
       if (userData.region) {
@@ -925,11 +932,17 @@ export default function ProfilePage() {
         isEmailPublic: editForm.isEmailPublic,
         isRegistrationDatePublic: editForm.isRegistrationDatePublic,
         instagramUrl: editForm.instagramUrl || null,
+        phoneNumber: editForm.phoneNumber || null,
       }
 
       console.log('Updating user profile:', { userId: user.id, updateData })
 
       const updatedUser = await updateUser(user.id, updateData)
+
+      // 電話番号は専用ストレージへ保存（User.phoneNumber 未デプロイのため）
+      if (editForm.phoneNumber?.trim()) {
+        setUserPhone(user.email, editForm.phoneNumber.trim()).catch(e => console.error('電話番号の保存に失敗:', e))
+      }
 
       console.log('Profile updated successfully:', updatedUser)
 
@@ -967,6 +980,7 @@ export default function ProfilePage() {
         firstName: user.firstName,
         lastName: user.lastName,
         instagramUrl: user.instagramUrl || "",
+        phoneNumber: user.phoneNumber || "",
         bio: user.bio || "",
         category: user.category || "",
         category2: user.category2 || "",
@@ -2293,6 +2307,22 @@ export default function ProfilePage() {
                 placeholder="プロフィールURLを入れてください"
                 className="mt-1"
               />
+            </div>
+
+            {/* 電話番号（SMS認証用） */}
+            <div>
+              <Label htmlFor="phoneNumber">電話番号</Label>
+              <Input
+                id="phoneNumber"
+                type="tel"
+                value={editForm.phoneNumber}
+                onChange={(e) => setEditForm({ ...editForm, phoneNumber: e.target.value })}
+                placeholder="例: 09012345678"
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                大会・チーム登録時のSMS本人確認に利用します。
+              </p>
             </div>
 
             {/* 保存・キャンセルボタン */}

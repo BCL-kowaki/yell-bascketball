@@ -150,8 +150,8 @@ html, body {
   overscroll-behavior-x: none;
 }
 
-/* メインコンテナの幅を制限 */
-body > div {
+/* メインコンテナの幅を制限（ダイアログ本体は除外。除外しないと max-width が 100vw に強制され全幅になる） */
+body > div:not([data-slot="dialog-content"]) {
   max-width: 100vw !important;
   overflow-x: hidden !important;
 }

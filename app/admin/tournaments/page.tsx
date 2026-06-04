@@ -15,7 +15,8 @@ import { useToast } from "@/hooks/use-toast"
 import {
   isSystemAdmin, adminListAllTournaments, updateTournament, adminDeleteTournament,
   adminUpdateTournamentApproval, createTournament, getCurrentUserEmail,
-  type DbTournament
+  adminListAllUsers, getAllUserPhones,
+  type DbTournament, type DbUser
 } from "@/lib/api"
 import {
   REGION_BLOCKS, PREFECTURES_BY_REGION, CATEGORIES,
@@ -39,6 +40,10 @@ export default function AdminTournamentsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
   const [tournaments, setTournaments] = useState<DbTournament[]>([])
+  // email(小文字) → User のマップ（管理者のフルネーム表示用）
+  const [userMap, setUserMap] = useState<Map<string, DbUser>>(new Map())
+  // email(小文字) → 電話番号 のマップ（デプロイ耐性のある専用取得）
+  const [phoneMap, setPhoneMap] = useState<Map<string, string>>(new Map())
   const [searchQuery, setSearchQuery] = useState("")
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [editingData, setEditingData] = useState<Partial<DbTournament> | null>(null)
@@ -59,6 +64,13 @@ export default function AdminTournamentsPage() {
         const data = await adminListAllTournaments()
         data.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
         setTournaments(data)
+        // 管理者のフルネーム・電話番号を引くため全ユーザーをマップ化
+        const users = await adminListAllUsers()
+        const map = new Map<string, DbUser>()
+        users.forEach(u => { if (u.email) map.set(u.email.toLowerCase(), u) })
+        setUserMap(map)
+        // 電話番号は専用の耐性関数で取得（未デプロイ時は空Map）
+        setPhoneMap(await getAllUserPhones())
       } catch (e) { console.error(e) }
       setIsLoading(false)
     }
@@ -424,7 +436,12 @@ export default function AdminTournamentsPage() {
 
         {/* 一覧 */}
         <div className="space-y-2">
-          {filteredTournaments.map(t => (
+          {filteredTournaments.map(t => {
+            // 管理者(オーナー)のUserレコードを引く
+            const owner = userMap.get((t.ownerEmail || '').toLowerCase())
+            const ownerName = owner ? `${owner.lastName} ${owner.firstName}`.trim() : ''
+            const ownerPhone = phoneMap.get((t.ownerEmail || '').toLowerCase()) || ''
+            return (
             <Card key={t.id} className={`overflow-hidden ${!t.isApproved ? 'border-yellow-300 bg-yellow-50/30' : 'border-gray-200'}`}>
               <button onClick={() => toggleExpand(t.id)} className="w-full text-left p-3 flex items-center gap-3 hover:bg-gray-50 transition-colors">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${t.tournamentType === 'official' ? 'bg-gradient-to-br from-[#f7931e] to-[#e84b8a]' : 'bg-gradient-to-br from-blue-500 to-indigo-600'}`}>
@@ -453,6 +470,11 @@ export default function AdminTournamentsPage() {
 
               {expandedId === t.id && editingData && (
                 <div className="border-t border-gray-100 p-4 bg-gray-50 space-y-3">
+                  {/* 管理者情報（読み取り専用） */}
+                  <div className="rounded-md bg-white border border-gray-200 p-3 text-sm space-y-1">
+                    <p className="text-gray-700"><span className="text-gray-500">管理者名:</span> {ownerName || '-'}</p>
+                    <p className="text-gray-700"><span className="text-gray-500">電話番号:</span> {ownerPhone || '未登録'}</p>
+                  </div>
                   <div>
                     <label className="text-xs font-medium text-gray-600">大会名</label>
                     <Input value={editingData.name || ''} onChange={e => setEditingData({...editingData, name: e.target.value})} />
@@ -544,7 +566,8 @@ export default function AdminTournamentsPage() {
                 </div>
               )}
             </Card>
-          ))}
+            )
+          })}
         </div>
 
         {filteredTournaments.length === 0 && (

@@ -6,7 +6,7 @@
  * + Notification DBレコードも作成（お知らせ一覧用）
  */
 
-import { getPushSubscriptionsByUser, getFavoriteUserEmails, createNotification } from './api'
+import { getPushSubscriptionsByUser, getAllPushSubscriptions, getFavoriteUserEmails, createNotification } from './api'
 
 /**
  * 特定ユーザーにプッシュ通知を送信
@@ -63,6 +63,37 @@ async function sendPushToUsers(
     }
   } catch (error) {
     console.error('[push-sender] プッシュ通知送信エラー:', error)
+  }
+}
+
+/**
+ * 全ユーザーへプッシュ通知をブロードキャスト送信（運営本部からのお知らせ用）
+ * 通知購読している全端末へ一斉送信する。
+ */
+export async function broadcastPushToAll(notification: {
+  title: string
+  body: string
+  url?: string
+  tag?: string
+}): Promise<void> {
+  try {
+    const subs = await getAllPushSubscriptions()
+    const subscriptions = subs.map(s => ({ endpoint: s.endpoint, p256dh: s.p256dh, auth: s.auth }))
+    console.log('[push-sender] broadcastPushToAll: 購読数:', subscriptions.length)
+    if (subscriptions.length === 0) return
+
+    const response = await fetch('/api/push-notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscriptions, ...notification }),
+    })
+    if (!response.ok) {
+      console.error('[push-sender] broadcastPushToAll 送信失敗:', await response.text())
+    } else {
+      console.log('[push-sender] broadcastPushToAll 送信成功')
+    }
+  } catch (error) {
+    console.error('[push-sender] broadcastPushToAll エラー:', error)
   }
 }
 

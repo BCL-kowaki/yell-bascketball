@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation"
 import {
   Users,
   Trophy,
-  User,
   Smartphone,
   MessageCircle
 } from "lucide-react"
+import { useShowTeams } from "@/lib/useShowTeams"
 
 interface SidebarMenuProps {
   isLoggedIn?: boolean
@@ -21,6 +21,7 @@ interface SidebarMenuProps {
 export function SidebarMenu({ isLoggedIn = false, currentUser }: SidebarMenuProps) {
   const pathname = usePathname()
   const [unreadCount, setUnreadCount] = useState(0)
+  const showTeams = useShowTeams()
 
   // ログイン中は未読メッセージ数を取得
   useEffect(() => {
@@ -63,7 +64,7 @@ export function SidebarMenu({ isLoggedIn = false, currentUser }: SidebarMenuProp
       href: "/teams",
       icon: Users,
       label: "チーム",
-      show: true,
+      show: showTeams,
       badge: 0
     },
     {
@@ -79,13 +80,6 @@ export function SidebarMenu({ isLoggedIn = false, currentUser }: SidebarMenuProp
       label: "チャット",
       show: isLoggedIn,
       badge: unreadCount
-    },
-    {
-      href: "/profile",
-      icon: User,
-      label: "プロフィール",
-      show: isLoggedIn,
-      badge: 0
     }
   ]
 

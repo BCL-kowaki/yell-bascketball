@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   Users, Trophy, Shield, MessageCircle, BarChart3, Megaphone, LayoutDashboard,
-  Loader2, ShieldAlert, ChevronRight, Lock, LogOut, UserCog
+  Loader2, ShieldAlert, ChevronRight, Lock, LogOut, UserCog, Newspaper, Settings
 } from "lucide-react"
 import {
   isSystemAdmin, adminLogin, adminLogout, isAdminLoggedIn,
@@ -210,6 +210,22 @@ export default function AdminDashboardPage() {
       count: null,
       color: "from-pink-500 to-pink-600",
       desc: "プロフィールページのサイドバナー設定",
+    },
+    {
+      href: "/admin/news",
+      icon: Newspaper,
+      label: "お知らせ管理",
+      count: null,
+      color: "from-sky-500 to-sky-600",
+      desc: "運営本部からのお知らせ（NEWS）の投稿・削除",
+    },
+    {
+      href: "/admin/settings",
+      icon: Settings,
+      label: "サイト設定",
+      count: null,
+      color: "from-slate-500 to-slate-600",
+      desc: "チームメニューの表示/非表示など",
     },
     {
       href: "/admin/stats",

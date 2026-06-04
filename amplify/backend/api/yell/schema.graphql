@@ -20,6 +20,7 @@ type User @model @auth(rules: [{allow: public}]) {
   isEmailPublic: Boolean
   isRegistrationDatePublic: Boolean
   instagramUrl: String
+  phoneNumber: String
   createdAt: AWSDateTime
   updatedAt: AWSDateTime
 }
@@ -45,6 +46,7 @@ type Tournament @model @auth(rules: [{allow: public}]) {
   favoritesCount: Int
   isApproved: Boolean!
   instagramUrl: String
+  website: String
   createdAt: AWSDateTime
   updatedAt: AWSDateTime
 

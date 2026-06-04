@@ -56,6 +56,7 @@ export type DbUser = {
   isEmailPublic?: boolean | null
   isRegistrationDatePublic?: boolean | null
   instagramUrl?: string | null
+  phoneNumber?: string | null
   createdAt?: string | null
   updatedAt?: string | null
 }
@@ -80,6 +81,7 @@ export type DbTournament = {
   favoritesCount?: number | null
   isApproved?: boolean
   instagramUrl?: string | null
+  website?: string | null
   createdAt?: string | null
   updatedAt?: string | null
 }
@@ -169,6 +171,36 @@ export type DbTeam = {
   isApproved: boolean
   createdAt?: string | null
   updatedAt?: string | null
+}
+
+// チーム人数の選択肢（プルダウン用）。
+// DBは Int 型のため「範囲の下限値」を value として保存し、表示は label の範囲で行う。
+export const HEADCOUNT_OPTIONS: { value: string; label: string }[] = [
+  { value: "1", label: "1〜10" },
+  { value: "11", label: "11〜20" },
+  { value: "21", label: "21〜30" },
+  { value: "31", label: "31〜40" },
+  { value: "41", label: "41〜50" },
+  { value: "50", label: "50〜" },
+  { value: "100", label: "100〜" },
+]
+
+/**
+ * 保存された人数(Int)を範囲ラベルへ変換して表示する。
+ * 既存の任意の数値データも適切な範囲バケットへ丸めて表示する。
+ * @returns 例: "11〜20名" / 値が無ければ空文字
+ */
+export function formatHeadcount(n?: number | null): string {
+  if (n == null || n <= 0) return ""
+  let label: string
+  if (n >= 100) label = "100〜"
+  else if (n >= 50) label = "50〜"
+  else if (n >= 41) label = "41〜50"
+  else if (n >= 31) label = "31〜40"
+  else if (n >= 21) label = "21〜30"
+  else if (n >= 11) label = "11〜20"
+  else label = "1〜10"
+  return `${label}名`
 }
 
 export type DbFavorite = {
@@ -502,7 +534,9 @@ export async function updateUser(id: string, input: Partial<DbUser>): Promise<Db
   `
   try {
     // category2 は AppSync 反映遅延の可能性があるため、Input から一時的に除外
-    const { category2: _category2, ...inputWithoutCategory2 } = input as any
+    // phoneNumber はバックエンド(AppSync)スキーマ未デプロイのため一時的に除外
+    //   → `amplify push` でスキーマ反映後、この除外を解除すること
+    const { category2: _category2, phoneNumber: _phoneNumber, ...inputWithoutCategory2 } = input as any
     const variables = { input: { id, ...inputWithoutCategory2 } }
 
     // 明示的にauthModeを指定してIdentity Poolへのアクセスを回避
@@ -533,6 +567,62 @@ export async function updateUser(id: string, input: Partial<DbUser>): Promise<Db
     } catch {}
     throw error
   }
+}
+
+// ==================== ユーザー電話番号（SMS認証で入力した番号の保存・取得）====================
+// User.phoneNumber はバックエンド未デプロイのため、デプロイ済みの Notification を流用して
+// 「email → 電話番号」を保存する（News と同じセンチネル方式・スキーマ変更/デプロイ不要）。
+// recipientEmail にセンチネル値、senderName に対象ユーザーのメール、message に電話番号を格納。
+const USER_PHONE_RECIPIENT = '__userphone__'
+
+/**
+ * SMS認証で入力された電話番号を、対象ユーザー(email)に紐づけて保存する。
+ * 同一ユーザーは最新が採用される（getAllUserPhonesが新しい順で先頭を採用）。
+ */
+export async function setUserPhone(email: string, phone: string): Promise<boolean> {
+  const normalizedEmail = (email || '').toLowerCase().trim()
+  if (!normalizedEmail || !phone) return false
+  try {
+    await createNotification({
+      recipientEmail: USER_PHONE_RECIPIENT,
+      type: 'user_phone',
+      title: phone,
+      message: phone,
+      senderName: normalizedEmail,
+    })
+    return true
+  } catch (e: any) {
+    console.warn('setUserPhone error:', e?.message)
+    return false
+  }
+}
+
+/**
+ * 保存済みの電話番号を取得。email(小文字) → 電話番号 のMap。
+ */
+export async function getAllUserPhones(limit = 1000): Promise<Map<string, string>> {
+  const map = new Map<string, string>()
+  try {
+    // 新しい順に取得し、各emailの最新の電話番号を採用
+    const items = await getNotifications(USER_PHONE_RECIPIENT, limit)
+    for (const n of items) {
+      const email = (n.senderName || '').toLowerCase().trim()
+      if (email && n.message && !map.has(email)) map.set(email, n.message)
+    }
+  } catch (e: any) {
+    console.warn('getAllUserPhones error:', e?.message)
+  }
+  return map
+}
+
+/**
+ * 1ユーザー分の電話番号を取得（プロフィール初期表示などに使用）
+ */
+export async function getUserPhone(email: string): Promise<string | null> {
+  const normalized = (email || '').toLowerCase().trim()
+  if (!normalized) return null
+  const all = await getAllUserPhones()
+  return all.get(normalized) ?? null
 }
 
 // チーム検索（名前でフィルタリング）
@@ -962,9 +1052,12 @@ export async function createTournament(input: Partial<DbTournament>): Promise<Db
   `
 
   try {
+    // website はバックエンド(AppSync)スキーマ未デプロイのため一時除外
+    //   → `amplify push` 後、この除外と選択セットへの website 追加を解除すること
+    const { website: _website, ...safeInput } = input as any
     const result = await client.graphql({
       query: mutation,
-      variables: { input },
+      variables: { input: safeInput },
       authMode: 'apiKey'
     }) as any
 
@@ -3617,6 +3710,60 @@ export async function getNotifications(recipientEmail: string, limit = 50): Prom
   return unique.slice(0, limit)
 }
 
+// ==================== News（運営本部からのお知らせ）====================
+// 専用テーブルを新設せず、既存 Notification を流用（スキーマ変更・デプロイ不要）。
+// recipientEmail にセンチネル値を使い、グローバルなお知らせとして管理する。
+export const NEWS_RECIPIENT = '__news__'
+
+/**
+ * 運営本部からのお知らせ（NEWS記事）を投稿する
+ */
+export async function createNews(input: { title: string; body: string }): Promise<DbNotification> {
+  return createNotification({
+    recipientEmail: NEWS_RECIPIENT,
+    type: 'news',
+    title: input.title,
+    message: input.body,
+  })
+}
+
+/**
+ * News記事の一覧を取得（新しい順）
+ */
+export async function listNews(limit = 100): Promise<DbNotification[]> {
+  return getNotifications(NEWS_RECIPIENT, limit)
+}
+
+/**
+ * News記事を1件取得
+ */
+export async function getNews(id: string): Promise<DbNotification | null> {
+  const items = await listNews(200)
+  return items.find(n => n.id === id) ?? null
+}
+
+/**
+ * News記事を削除する
+ */
+export async function deleteNews(id: string): Promise<void> {
+  const mutation = /* GraphQL */ `
+    mutation DeleteNotification($input: DeleteNotificationInput!) {
+      deleteNotification(input: $input) { id }
+    }
+  `
+  try {
+    const result = await client.graphql({
+      query: mutation,
+      variables: { input: { id } },
+      authMode: 'apiKey',
+    }) as any
+    if (result.errors) throw new Error(result.errors[0]?.message || 'GraphQL error occurred')
+  } catch (error: any) {
+    console.error('deleteNews error:', error?.message)
+    throw error
+  }
+}
+
 /**
  * 通知を既読にする
  */
@@ -4236,6 +4383,58 @@ export async function getSiteConfig(configKey: string): Promise<DbSiteConfig | n
     console.error('getSiteConfig error:', error?.message)
     return null
   }
+}
+
+/**
+ * SiteConfig をキーで作成/更新（upsert）
+ */
+export async function setSiteConfig(configKey: string, configValue: string, updatedBy?: string): Promise<void> {
+  const existing = await getSiteConfig(configKey)
+  if (existing) {
+    const mutation = /* GraphQL */ `
+      mutation UpdateSiteConfig($input: UpdateSiteConfigInput!) {
+        updateSiteConfig(input: $input) { id }
+      }
+    `
+    const r = await client.graphql({
+      query: mutation,
+      variables: { input: { id: existing.id, configValue, updatedBy } },
+      authMode: 'apiKey',
+    }) as any
+    if (r.errors) throw new Error(r.errors[0]?.message || 'SiteConfig更新エラー')
+  } else {
+    const mutation = /* GraphQL */ `
+      mutation CreateSiteConfig($input: CreateSiteConfigInput!) {
+        createSiteConfig(input: $input) { id }
+      }
+    `
+    const r = await client.graphql({
+      query: mutation,
+      variables: { input: { configKey, configValue, updatedBy } },
+      authMode: 'apiKey',
+    }) as any
+    if (r.errors) throw new Error(r.errors[0]?.message || 'SiteConfig作成エラー')
+  }
+}
+
+/**
+ * チーム機能（メニュー表示）の ON/OFF を取得。未設定時は false（非表示）。
+ */
+export async function getShowTeams(): Promise<boolean> {
+  try {
+    const config = await getSiteConfig('show_teams')
+    if (!config) return false
+    return config.configValue === 'true'
+  } catch {
+    return false
+  }
+}
+
+/**
+ * チーム機能（メニュー表示）の ON/OFF を設定
+ */
+export async function setShowTeams(value: boolean, updatedBy?: string): Promise<void> {
+  await setSiteConfig('show_teams', value ? 'true' : 'false', updatedBy)
 }
 
 /**

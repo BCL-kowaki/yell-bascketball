@@ -24,7 +24,7 @@ import {
 } from "lucide-react"
 import { Layout } from "@/components/layout"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { listTeams, type DbTeam, getCurrentUserEmail } from "@/lib/api"
+import { listTeams, type DbTeam, getCurrentUserEmail, formatHeadcount } from "@/lib/api"
 import { refreshS3Url } from "@/lib/storage"
 import { LoginPromptModal } from "@/components/login-prompt"
 
@@ -572,7 +572,7 @@ export default function TeamsPage() {
                         {team.headcount && (
                           <Badge variant="outline" className="text-xs">
                             <Users className="w-3 h-3 mr-1" />
-                            {team.headcount}名
+                            {formatHeadcount(team.headcount)}
                           </Badge>
                         )}
                       </div>

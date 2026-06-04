@@ -7,7 +7,12 @@ const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || ''
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:yell-basketball@example.com'
 
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
-  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY)
+  // 不正な鍵（プレースホルダー等）でも起動・ビルドが落ちないよう保護
+  try {
+    webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY)
+  } catch (e) {
+    console.warn('VAPID鍵の設定に失敗（値を確認してください）:', (e as Error)?.message)
+  }
 }
 
 /**

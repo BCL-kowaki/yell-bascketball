@@ -1,5 +1,5 @@
 // YeLL Basketball Service Worker
-const CACHE_NAME = 'yell-v2'
+const CACHE_NAME = 'yell-v3'
 
 // キャッシュするリソース（アプリシェル）
 const PRECACHE_URLS = [

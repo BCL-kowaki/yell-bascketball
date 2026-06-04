@@ -8,15 +8,17 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Layout } from "@/components/layout"
+import { PhoneVerificationModal } from "@/components/phone-verification-modal"
 import { ChevronLeft, Info, Upload, X, Loader2, Search, UserPlus } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { createTeam, getCurrentUserEmail, searchUsers, notifyAdminsForApproval, checkTeamNameDuplicate } from "@/lib/api"
+import { createTeam, getCurrentUserEmail, getUserByEmail, searchUsers, notifyAdminsForApproval, checkTeamNameDuplicate, setUserPhone, HEADCOUNT_OPTIONS } from "@/lib/api"
 import { uploadImageToS3 } from "@/lib/storage"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS } from "@/lib/regionData"
+import { Badge } from "@/components/ui/badge"
+import { DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS, CATEGORIES } from "@/lib/regionData"
 
 // チームエディタ用ユーザー表示型（searchUsers 戻りの DbUser を受けるためのスーパーセット）
 type EditorUser = {
@@ -45,7 +47,12 @@ export default function CreateTeamPage() {
   const router = useRouter()
 
   const [currentUserEmail, setCurrentUserEmail] = useState<string>("")
+  const [currentUserName, setCurrentUserName] = useState<string>("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // 2段階認証用の電話番号と認証モーダルの表示状態
+  const [phone, setPhone] = useState("")
+  const [showVerifyModal, setShowVerifyModal] = useState(false)
 
   const [formData, setFormData] = useState({
     name: "",
@@ -99,6 +106,16 @@ export default function CreateTeamPage() {
       const email = await getCurrentUserEmail()
       if (email) {
         setCurrentUserEmail(email)
+        // プロフィールに電話番号が登録されていれば認証欄へ初期入力（編集可）
+        try {
+          const userData = await getUserByEmail(email)
+          if (userData) {
+            setCurrentUserName(`${userData.lastName ?? ""} ${userData.firstName ?? ""}`.trim())
+            if (userData.phoneNumber) setPhone(userData.phoneNumber)
+          }
+        } catch (err) {
+          console.error("電話番号の取得に失敗:", err)
+        }
       } else {
         toast({
           title: "ログインが必要です",
@@ -181,9 +198,6 @@ export default function CreateTeamPage() {
   const currentYear = new Date().getFullYear()
   const years = Array.from({ length: currentYear - 1899 }, (_, i) => currentYear - i)
 
-  // 人数リストを生成（1-100人）
-  const headcounts = Array.from({ length: 100 }, (_, i) => i + 1)
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
@@ -205,10 +219,21 @@ export default function CreateTeamPage() {
       return
     }
 
+    // 電話番号(2段階認証用)の入力チェック
+    if (!phone.trim()) {
+      toast({
+        title: "エラー",
+        description: "認証用の電話番号を入力してください",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
       // チーム名重複チェック(同じ「チーム名 + 都道府県 + 地区」の組み合わせを防ぐ)
+      // SMS送信前に確認し、無駄な認証を防ぐ
       const isDuplicate = await checkTeamNameDuplicate(
         formData.name.trim(),
         formData.prefecture || null,
@@ -220,10 +245,29 @@ export default function CreateTeamPage() {
           description: `同じ地区に「${formData.name}」というチームが既に登録されています。チーム名・都道府県・地区のいずれかを変更してください。`,
           variant: "destructive",
         })
-        setIsSubmitting(false)
         return
       }
 
+      // バリデーション通過 → SMS認証モーダルを開く（実際の作成は認証成功後）
+      setShowVerifyModal(true)
+    } catch (error: any) {
+      console.error("チーム名重複チェックに失敗:", error)
+      toast({
+        title: "エラー",
+        description: error?.message || "登録前チェックに失敗しました",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // SMS認証成功後に実行される実際のチーム作成処理（成功で true、失敗で false を返す）
+  const performCreate = async (): Promise<boolean> => {
+    if (!currentUserEmail) return false
+    setIsSubmitting(true)
+
+    try {
       // 画像をS3にアップロード
       let logoUrl: string | undefined = undefined
       let coverImageUrl: string | undefined = undefined
@@ -269,10 +313,11 @@ export default function CreateTeamPage() {
       const createdTeam = await createTeam(teamData)
       console.log('Team created:', createdTeam)
 
-      toast({
-        title: "チームを登録しました",
-        description: "管理者の承認後に公開されます。しばらくお待ちください。",
-      })
+      // SMS認証済みの電話番号を管理者(作成者)に紐づけて保存（非ブロッキング）
+      if (phone.trim()) {
+        setUserPhone(currentUserEmail, phone.trim())
+          .catch(e => console.error('電話番号の保存に失敗:', e))
+      }
 
       // 管理者へ承認待ち通知を送信
       notifyAdminsForApproval({
@@ -284,30 +329,8 @@ export default function CreateTeamPage() {
         relatedType: 'team',
       }).catch(e => console.error('管理者通知送信エラー:', e))
 
-      // フォームをリセット
-      setFormData({
-        name: "",
-        founded: "",
-        region: "",
-        prefecture: "",
-        district: "",
-        headcount: "",
-        category: "",
-        description: "",
-        website: "",
-        instagramUrl: "",
-        logo: null,
-        coverImage: null,
-        editors: [],
-      })
-      setLogoPreview(null)
-      setCoverPreview(null)
-      setSearchTerm("")
-      setSearchResults([])
-
-      // チーム一覧ページにリダイレクト
-      router.push('/teams')
-
+      // 成功（モーダル側で申請完了表示に切り替わる）
+      return true
     } catch (error: any) {
       console.error("Failed to create team:", error)
       toast({
@@ -315,6 +338,7 @@ export default function CreateTeamPage() {
         description: error?.message || "チームの作成に失敗しました",
         variant: "destructive",
       })
+      return false
     } finally {
       setIsSubmitting(false)
     }
@@ -342,189 +366,144 @@ export default function CreateTeamPage() {
               <Info className="w-4 h-4 text-amber-600" />
               <AlertTitle className="text-amber-800">登録後の流れ</AlertTitle>
               <AlertDescription className="text-amber-700 text-sm">
-                チーム登録は管理者による承認後に公開されます。承認待ち中はチーム一覧に表示されませんのでご了承ください。
+                <ul className="list-disc pl-4 space-y-1">
+                  <li>チーム登録は管理者による承認後に公開されます。承認待ち中はチーム一覧に表示されませんのでご了承ください。</li>
+                  <li>管理者様は、ご本人様確認のため登録時にSMS認証を行わせていただいております。</li>
+                </ul>
               </AlertDescription>
             </Alert>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="name">チーム名 <span className="text-red-500">*</span></Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                  className="bg-white"
-                  disabled={isSubmitting}
-                />
-              </div>
+            <form onSubmit={handleSubmit} className="space-y-8">
+              {/* 基本情報 */}
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold border-b pb-2">基本情報</h2>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label>ロゴ画像</Label>
-                   <div className="w-32 h-32 border-2 border-dashed rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-50" onClick={() => !isSubmitting && document.getElementById('logo')?.click()}>
-                     {logoPreview ? <img src={logoPreview} alt="ロゴ" className="w-full h-full object-cover rounded-full" /> : <Upload className="w-8 h-8 text-gray-400" />}
+                {/* 画像（アイコン／壁紙） */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">画像（アイコン／壁紙）（任意）</label>
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="shrink-0">
+                      <p className="text-xs text-muted-foreground mb-1">アイコン</p>
+                      <div className="w-28 h-28 border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-50 overflow-hidden" onClick={() => !isSubmitting && document.getElementById('logo')?.click()}>
+                        {logoPreview ? <img src={logoPreview} alt="アイコン" className="w-full h-full object-cover rounded-full" /> : <Upload className="w-6 h-6 text-gray-400" />}
+                      </div>
+                      <Input id="logo" type="file" accept="image/*" onChange={(e) => handleFileChange(e, "logo")} className="hidden" disabled={isSubmitting} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground mb-1">壁紙</p>
+                      <div className="w-full h-40 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-50 overflow-hidden" onClick={() => !isSubmitting && document.getElementById('coverImage')?.click()}>
+                        {coverPreview ? <img src={coverPreview} alt="壁紙" className="w-full h-full object-cover rounded-lg" /> : <Upload className="w-8 h-8 text-gray-400" />}
+                      </div>
+                      <Input id="coverImage" type="file" accept="image/*" onChange={(e) => handleFileChange(e, "coverImage")} className="hidden" disabled={isSubmitting} />
+                    </div>
                   </div>
-                  <Input
-                    id="logo"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleFileChange(e, "logo")}
-                    className="hidden"
-                    disabled={isSubmitting}
-                  />
                 </div>
-                <div className="space-y-2">
-                   <Label>カバー画像</Label>
-                   <div className="w-full h-32 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-50" onClick={() => !isSubmitting && document.getElementById('coverImage')?.click()}>
-                     {coverPreview ? <img src={coverPreview} alt="カバー画像" className="w-full h-full object-cover rounded-lg" /> : <Upload className="w-8 h-8 text-gray-400" />}
-                  </div>
-                   <Input
-                     id="coverImage"
-                     type="file"
-                     accept="image/*"
-                     onChange={(e) => handleFileChange(e, "coverImage")}
-                     className="hidden"
-                     disabled={isSubmitting}
-                   />
-                </div>
-              </div>
 
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label>地区</Label>
-                  <Select
-                    onValueChange={(value) => handleSelectChange("region", value)}
-                    value={formData.region}
-                    disabled={isSubmitting}
-                  >
-                    <SelectTrigger className="bg-white"><SelectValue placeholder="地区を選択" /></SelectTrigger>
+                {/* チーム名 */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">チーム名 <span className="text-red-500">*</span></label>
+                  <Input id="name" value={formData.name} onChange={handleInputChange} required className="bg-white" disabled={isSubmitting} />
+                </div>
+
+                {/* カテゴリ */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">カテゴリ</label>
+                  <Select value={formData.category} onValueChange={(value) => handleSelectChange("category", value)} disabled={isSubmitting}>
+                    <SelectTrigger className="bg-white"><SelectValue placeholder="カテゴリを選択" /></SelectTrigger>
+                    <SelectContent>{CATEGORIES.map((cat) => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+
+                {/* 地域ブロック */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">地域ブロック</label>
+                  <Select onValueChange={(value) => handleSelectChange("region", value)} value={formData.region} disabled={isSubmitting}>
+                    <SelectTrigger className="bg-white"><SelectValue placeholder="地域ブロックを選択" /></SelectTrigger>
                     <SelectContent>{Object.keys(regions).map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>都道府県</Label>
-                   <Select
-                     onValueChange={(value) => handleSelectChange("prefecture", value)}
-                     value={formData.prefecture}
-                     disabled={!formData.region || isSubmitting}
-                   >
+
+                {/* 都道府県 */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">都道府県</label>
+                  <Select onValueChange={(value) => handleSelectChange("prefecture", value)} value={formData.prefecture} disabled={!formData.region || isSubmitting}>
                     <SelectTrigger className="bg-white"><SelectValue placeholder="都道府県を選択" /></SelectTrigger>
                     <SelectContent>{prefectures.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-              </div>
 
-              {/* 地区選択 */}
-              <div className="space-y-2">
-                <Label>地区</Label>
-                <Select
-                  onValueChange={(value) => handleSelectChange("district", value)}
-                  value={formData.district}
-                  disabled={!formData.prefecture || isSubmitting}
-                >
-                  <SelectTrigger className="bg-white"><SelectValue placeholder={formData.prefecture ? "地区を選択" : "都道府県を先に選択"} /></SelectTrigger>
-                  <SelectContent>{districts.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  チーム名は「都道府県＋地区」単位で重複登録できません。表示時は「チーム名（地区）」のように地区が併記されます。
-                </p>
-              </div>
-
-               <div className="space-y-2">
-                <Label>カテゴリ</Label>
-                <RadioGroup
-                  value={formData.category}
-                  onValueChange={(v) => handleSelectChange("category", v)}
-                  className="flex items-center gap-6"
-                  disabled={isSubmitting}
-                >
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="U12" id="u12" disabled={isSubmitting} /><Label htmlFor="u12">U12</Label></div>
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="U15" id="u15" disabled={isSubmitting} /><Label htmlFor="u15">U15</Label></div>
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="U18" id="u18" disabled={isSubmitting} /><Label htmlFor="u18">U18</Label></div>
-                </RadioGroup>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="founded">設立年</Label>
-                  <Select
-                    value={formData.founded}
-                    onValueChange={(value) => handleSelectChange("founded", value)}
-                    disabled={isSubmitting}
-                  >
-                    <SelectTrigger className="bg-white">
-                      <SelectValue placeholder="設立年を選択" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {years.map((year) => (
-                        <SelectItem key={year} value={year.toString()}>
-                          {year}年
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
+                {/* 地区 */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">地区</label>
+                  <Select onValueChange={(value) => handleSelectChange("district", value)} value={formData.district} disabled={!formData.prefecture || isSubmitting}>
+                    <SelectTrigger className="bg-white"><SelectValue placeholder={formData.prefecture ? "地区を選択" : "都道府県を先に選択"} /></SelectTrigger>
+                    <SelectContent>{districts.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground mt-1">チーム名は「都道府県＋地区」単位で重複登録できません。表示時は「チーム名（地区）」のように地区が併記されます。</p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="headcount">人数</Label>
-                  <Select
-                    value={formData.headcount}
-                    onValueChange={(value) => handleSelectChange("headcount", value)}
-                    disabled={isSubmitting}
-                  >
-                    <SelectTrigger className="bg-white">
-                      <SelectValue placeholder="人数を選択" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {headcounts.map((count) => (
-                        <SelectItem key={count} value={count.toString()}>
-                          {count}人
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+
+                {/* 設立年 / 人数 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">設立年</label>
+                    <Select value={formData.founded} onValueChange={(value) => handleSelectChange("founded", value)} disabled={isSubmitting}>
+                      <SelectTrigger className="bg-white"><SelectValue placeholder="設立年を選択" /></SelectTrigger>
+                      <SelectContent>{years.map((year) => <SelectItem key={year} value={year.toString()}>{year}年</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">人数</label>
+                    <Select value={formData.headcount} onValueChange={(value) => handleSelectChange("headcount", value)} disabled={isSubmitting}>
+                      <SelectTrigger className="bg-white"><SelectValue placeholder="人数を選択" /></SelectTrigger>
+                      <SelectContent>{HEADCOUNT_OPTIONS.map((opt) => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* チーム紹介 */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">チーム紹介</label>
+                  <Textarea id="description" value={formData.description} onChange={handleInputChange} rows={5} className="bg-white" disabled={isSubmitting} />
+                </div>
+
+                {/* Instagram URL */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Instagram URL</label>
+                  <Input id="instagramUrl" type="text" value={formData.instagramUrl} onChange={handleInputChange} placeholder="プロフィールURLを入れてください" className="bg-white" disabled={isSubmitting} />
+                </div>
+
+                {/* その他SNS */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">その他SNS</label>
+                  <Input id="website" type="url" value={formData.website} onChange={handleInputChange} placeholder="WEBサイト・SNSのURL" className="bg-white" disabled={isSubmitting} />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                  <Label htmlFor="website">ウェブサイト・SNSリンク</Label>
-                  <Input
-                    id="website"
-                    type="url"
-                    value={formData.website}
-                    onChange={handleInputChange}
-                    className="bg-white"
-                    disabled={isSubmitting}
-                  />
-              </div>
-
-              <div className="space-y-2">
-                  <Label htmlFor="instagramUrl">Instagram URL</Label>
-                  <Input
-                    id="instagramUrl"
-                    type="text"
-                    value={formData.instagramUrl}
-                    onChange={handleInputChange}
-                    placeholder="プロフィールURLを入れてください"
-                    className="bg-white"
-                    disabled={isSubmitting}
-                  />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">チーム紹介</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  rows={5}
-                  className="bg-white"
-                  disabled={isSubmitting}
-                />
-              </div>
-
+              {/* 管理者情報 */}
               <div className="space-y-4">
-                <Label>チーム管理者 (最大5名)</Label>
+                <h2 className="text-lg font-semibold border-b pb-2">管理者情報</h2>
+
+                {/* ページ管理者 */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">ページ管理者</label>
+                  <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
+                    <Avatar>
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        {(currentUserName || currentUserEmail || "?").charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{currentUserName || currentUserEmail}</p>
+                      <p className="text-sm text-muted-foreground">あなた</p>
+                    </div>
+                    <Badge className="ml-auto">管理者</Badge>
+                  </div>
+                </div>
+
+                {/* 共有管理者 */}
+                <div className="space-y-3">
+                  <label className="text-sm font-medium block">共有管理者（任意・最大5名）</label>
+                  <p className="text-sm text-muted-foreground">ユーザー名で検索して、共有管理者として招待できます</p>
                 {formData.editors.length < 5 && (
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
@@ -613,7 +592,25 @@ export default function CreateTeamPage() {
                 )}
               </div>
 
-              <div className="flex justify-end">
+                {/* 認証用電話番号（SMS 2段階認証） */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">認証用電話番号</label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="例: 09012345678"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="bg-white"
+                    disabled={isSubmitting}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    管理者様は、ご本人様確認のためSMS認証を設けさせていただいております。電話番号登録後SMSへ認証コードが届きますので、次ページのコード入力欄へ入力してください。
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-4 border-t">
                 <Button
                   type="submit"
                   className="bg-brand-gradient text-white"
@@ -633,6 +630,17 @@ export default function CreateTeamPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* SMS 2段階認証モーダル（認証成功後に実際の作成処理を実行） */}
+      <PhoneVerificationModal
+        open={showVerifyModal}
+        phone={phone}
+        onVerified={performCreate}
+        onClose={() => setShowVerifyModal(false)}
+        completeMessage={"運営本部にチーム登録の申請いたしました。\n運営本部にて確認を行い、承認されるまで今しばらくお待ちください。"}
+        backToTopLabel="チームトップへ戻る"
+        onBackToTop={() => router.push('/teams')}
+      />
     </Layout>
   )
 }

@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useShowTeams } from "@/lib/useShowTeams"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -10,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Settings, LogOut, Search, Trophy, Users, User, X, Smartphone, MessageCircle, ShieldAlert, Bell } from "lucide-react"
+import { Settings, LogOut, Search, Trophy, Users, User, X, Smartphone, MessageCircle, ShieldAlert, Bell, Newspaper, Activity } from "lucide-react"
 
 interface HeaderNavigationProps {
   isLoggedIn?: boolean
@@ -24,6 +25,7 @@ interface HeaderNavigationProps {
 
 export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = false }: HeaderNavigationProps) {
   const pathname = usePathname()
+  const showTeams = useShowTeams()
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [unreadCount, setUnreadCount] = useState(0)
@@ -117,7 +119,9 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = fa
     { href: "/profile", icon: User, label: "マイページ", requireLogin: true },
   ]
 
-  const visibleNavItems = navItems.filter(item => !item.requireLogin || isLoggedIn)
+  const visibleNavItems = navItems.filter(item =>
+    (!item.requireLogin || isLoggedIn) && (item.href !== "/teams" || showTeams)
+  )
 
   return (
     <header
@@ -184,19 +188,38 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = fa
             </Link>
           )}
 
-          {/* 通知 */}
+          {/* 通知（お知らせ） */}
           {isLoggedIn && (
-            <Link
-              href="/notifications"
-              className="relative flex items-center justify-center w-[40px] h-[40px] rounded-full bg-gray-100 hover:bg-gray-200"
-            >
-              <Bell className="w-[20px] h-[20px] text-gray-600" />
-              {notificationCount > 0 && (
-                <span className="absolute -top-[2px] -right-[2px] flex items-center justify-center min-w-[18px] h-[18px] px-[4px] text-[11px] font-bold text-white rounded-full bg-red-500">
-                  {notificationCount > 99 ? "99+" : notificationCount}
-                </span>
-              )}
-            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="お知らせ"
+                  className="relative flex items-center justify-center w-[40px] h-[40px] rounded-full bg-gray-100 hover:bg-gray-200"
+                >
+                  <Bell className="w-[20px] h-[20px] text-gray-600" />
+                  {notificationCount > 0 && (
+                    <span className="absolute -top-[2px] -right-[2px] flex items-center justify-center min-w-[18px] h-[18px] px-[4px] text-[11px] font-bold text-white rounded-full bg-red-500">
+                      {notificationCount > 99 ? "99+" : notificationCount}
+                    </span>
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem asChild>
+                  <Link href="/news" className="flex items-center cursor-pointer">
+                    <Newspaper className="mr-3 h-4 w-4" />
+                    運営本部からのお知らせ
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/notifications" className="flex items-center cursor-pointer">
+                    <Activity className="mr-3 h-4 w-4" />
+                    アクティビティ
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
 
           {/* メッセージ */}
@@ -317,19 +340,38 @@ export function HeaderNavigation({ isLoggedIn = false, currentUser, isAdmin = fa
             </Link>
           )}
 
-          {/* 通知 */}
+          {/* 通知（お知らせ） */}
           {isLoggedIn && (
-            <Link
-              href="/notifications"
-              className="relative flex items-center justify-center w-[36px] h-[36px] rounded-full bg-gray-100 hover:bg-gray-200"
-            >
-              <Bell className="w-[20px] h-[20px] text-gray-600" />
-              {notificationCount > 0 && (
-                <span className="absolute -top-[1px] -right-[1px] flex items-center justify-center min-w-[16px] h-[16px] px-[3px] text-[10px] font-bold text-white rounded-full bg-pink-500">
-                  {notificationCount > 99 ? "99+" : notificationCount}
-                </span>
-              )}
-            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="お知らせ"
+                  className="relative flex items-center justify-center w-[36px] h-[36px] rounded-full bg-gray-100 hover:bg-gray-200"
+                >
+                  <Bell className="w-[20px] h-[20px] text-gray-600" />
+                  {notificationCount > 0 && (
+                    <span className="absolute -top-[1px] -right-[1px] flex items-center justify-center min-w-[16px] h-[16px] px-[3px] text-[10px] font-bold text-white rounded-full bg-pink-500">
+                      {notificationCount > 99 ? "99+" : notificationCount}
+                    </span>
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem asChild>
+                  <Link href="/news" className="flex items-center cursor-pointer">
+                    <Newspaper className="mr-3 h-4 w-4" />
+                    運営本部からのお知らせ
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/notifications" className="flex items-center cursor-pointer">
+                    <Activity className="mr-3 h-4 w-4" />
+                    アクティビティ
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
 
           {/* アカウント */}
