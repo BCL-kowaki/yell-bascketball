@@ -11,6 +11,10 @@ frontend:
         - npm ci --legacy-peer-deps
     build:
       commands:
+        # サーバー専用の環境変数(Twilio/VAPID)をビルド時に .env.production へ書き出し、
+        # Next.jsのAPIルート実行時(ランタイム)でも参照できるようにする。
+        # ※ Amplifyは NEXT_PUBLIC_ 以外の変数をSSR/APIランタイムへ自動で渡さないための対策。
+        - env | grep -E '^(TWILIO_|VAPID_)' >> .env.production || true
         - npm run build
   artifacts:
     baseDirectory: .next
