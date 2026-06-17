@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Heart, MessageCircle, FileText, MoreHorizontal, Loader2, Edit, Trash2 } from "lucide-react"
 import { type DbPost, getUserByEmail } from "@/lib/api"
 import { refreshS3Url } from "@/lib/storage"
+import { DocumentViewer } from "@/components/document-viewer"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -113,83 +114,6 @@ function AvatarWithRefresh({ avatarUrl, fallbackText, className }: { avatarUrl: 
         {fallbackText}
       </AvatarFallback>
     </Avatar>
-  )
-}
-
-// PDF表示コンポーネント（S3のURLを動的に更新）
-function PdfViewer({ pdfUrl, pdfName }: { pdfUrl: string; pdfName?: string | null }) {
-  const [refreshedUrl, setRefreshedUrl] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    const loadPdf = async () => {
-      if (!pdfUrl) return
-
-      if (pdfUrl.startsWith('data:') || pdfUrl.startsWith('blob:')) {
-        setRefreshedUrl(pdfUrl)
-        setIsLoading(false)
-        return
-      }
-
-      try {
-        const newUrl = await refreshS3Url(pdfUrl)
-        setRefreshedUrl(newUrl || pdfUrl)
-      } catch (error) {
-        console.error('Failed to refresh PDF URL:', error)
-        setRefreshedUrl(pdfUrl)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    loadPdf()
-  }, [pdfUrl])
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center bg-gray-50 min-h-[200px]">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-      </div>
-    )
-  }
-
-  if (!refreshedUrl) return null
-
-  if (refreshedUrl.startsWith('data:') || refreshedUrl.startsWith('blob:')) {
-    return (
-      <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden">
-        <object
-          data={refreshedUrl}
-          type="application/pdf"
-          width="100%"
-          height="500px"
-          className="w-full"
-        >
-          <div className="p-4 text-center text-gray-500">
-            <p>PDFを表示できませんでした。</p>
-            <a
-              href={refreshedUrl}
-              download={pdfName || "document.pdf"}
-              className="text-[#e84b8a] hover:underline mt-2 inline-block"
-            >
-              ダウンロードする
-            </a>
-          </div>
-        </object>
-      </div>
-    )
-  }
-
-  return (
-    <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden">
-      <iframe
-        src={`https://docs.google.com/viewer?url=${encodeURIComponent(refreshedUrl)}&embedded=true`}
-        width="100%"
-        height="500px"
-        className="w-full"
-        title={pdfName || "PDFファイル"}
-      ></iframe>
-    </div>
   )
 }
 
@@ -404,11 +328,11 @@ export function TimelinePostCard({
                   rel="noopener noreferrer"
                   className="text-[#e84b8a] hover:underline font-medium block truncate"
                 >
-                  {post.pdfName || "PDFファイル"}
+                  {post.pdfName || "ファイル"}
                 </a>
               </div>
             </div>
-            <PdfViewer pdfUrl={post.pdfUrl} pdfName={post.pdfName} />
+            <DocumentViewer pdfUrl={post.pdfUrl} pdfName={post.pdfName} />
           </div>
         ) : post.pdfName ? (
           <div className="mb-4 p-3 rounded-lg border border-yellow-200 bg-yellow-50">
@@ -519,5 +443,5 @@ export function TimelinePostCard({
 }
 
 // エクスポートする補助関数
-export { AvatarWithRefresh, ImageWithRefresh, PdfViewer }
+export { AvatarWithRefresh, ImageWithRefresh }
 

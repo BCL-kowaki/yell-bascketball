@@ -5,6 +5,7 @@ import Link from "next/link"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
 import { getUserByEmail, getOrCreateUser, updateUser, getUserPhone, setUserPhone, listPosts, createPost as createDbPost, getCurrentUserEmail, searchTeams, followUser, unfollowUser, checkFollowStatus, getFollowCounts, getUserFavorites, getCommentsByPost, addComment as addDbComment, updatePostCounts, toggleLike as toggleDbLike, getMyManagedTournaments, getMyTeams, getMyTeamTournaments, getSiteBanners, type DbUser, type DbPost, type DbTeam, type DbTournament, type SponsorBanner } from "@/lib/api"
 import { uploadImageToS3, uploadPdfToS3, uploadVideoToS3, refreshS3Url } from "@/lib/storage"
+import { DOCUMENT_ACCEPT } from "@/components/document-viewer"
 import SponsorSidebar, { MobileSnsCard } from "@/components/sponsor-sidebar"
 import { CATEGORIES, CATEGORIES2, REGION_BLOCKS, PREFECTURES_BY_REGION, DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS } from "@/lib/regionData"
 import { Button } from "@/components/ui/button"
@@ -1384,7 +1385,7 @@ export default function ProfilePage() {
                         <Button variant="ghost" size="sm" className="text-gray-600 hover:bg-gray-100 p-2 h-auto" onClick={() => pdfInputRef.current?.click()}>
                           <FileText className="w-5 h-5 text-red-500" />
                         </Button>
-                        <input type="file" ref={pdfInputRef} onChange={handlePostPdfSelect} accept=".pdf" style={{ display: "none" }} />
+                        <input type="file" ref={pdfInputRef} onChange={handlePostPdfSelect} accept={DOCUMENT_ACCEPT} style={{ display: "none" }} />
                         <Button variant="ghost" size="sm" className="text-gray-600 hover:bg-gray-100 p-2 h-auto" onClick={() => videoInputRef.current?.click()}>
                           <Video className="w-5 h-5 text-purple-500" />
                         </Button>
@@ -1415,7 +1416,7 @@ export default function ProfilePage() {
                       )}
                       {selectedPdf && (
                         <div className="relative text-sm text-gray-500 p-2 border rounded-lg flex items-center justify-between">
-                          <span>選択中のPDF: {selectedPdf.name}</span>
+                          <span>選択中のファイル: {selectedPdf.name}</span>
                           <Button
                             variant="destructive"
                             size="sm"

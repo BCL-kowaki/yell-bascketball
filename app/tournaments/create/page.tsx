@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
 import { Layout } from "@/components/layout"
 import { PhoneVerificationModal } from "@/components/phone-verification-modal"
 import { useToast } from "@/hooks/use-toast"
@@ -40,6 +41,7 @@ export default function CreateTournamentPage() {
     description: "",
     instagramUrl: "",
     website: "",
+    showAdminName: true, // 管理者名を公開するか（デフォルト公開）
   })
 
   // 2段階認証用の電話番号と認証モーダルの表示状態
@@ -308,6 +310,7 @@ export default function CreateTournamentPage() {
         ownerEmail: currentUser.email,
         // 管理者一覧（作成者を必ず含める）
         coAdminEmails: [currentUser.email, ...selectedCoAdmins.map(admin => admin.email).filter(e => e !== currentUser.email)],
+        showAdminName: formData.showAdminName,
         isApproved: false,
       }
 
@@ -579,6 +582,20 @@ export default function CreateTournamentPage() {
                   </div>
                   <Badge className="ml-auto">管理者</Badge>
                 </div>
+              </div>
+
+              {/* 管理者名の公開設定 */}
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="pr-3">
+                  <p className="font-medium text-sm">管理者の名前を公開する</p>
+                  <p className="text-sm text-muted-foreground">
+                    オフにすると、大会ページで管理者の名前を一般ユーザーに表示しません
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.showAdminName}
+                  onCheckedChange={(checked) => setFormData({ ...formData, showAdminName: checked })}
+                />
               </div>
 
               {/* 共有管理者 */}

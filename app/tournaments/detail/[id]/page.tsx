@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -76,6 +77,7 @@ import { notifyNewTournamentPost } from "@/lib/push-sender"
 import { ensureAmplifyConfigured } from "@/lib/amplifyClient"
 import { useToast } from "@/hooks/use-toast"
 import { uploadImageToS3, uploadPdfToS3, refreshS3Url } from "@/lib/storage"
+import { DocumentViewer, DOCUMENT_ACCEPT } from "@/components/document-viewer"
 import { CATEGORIES, REGION_BLOCKS, PREFECTURES_BY_REGION, DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS, OFFICIAL_AREAS_BY_PREFECTURE, TOURNAMENT_TYPES } from "@/lib/regionData"
 import { LoginPromptModal } from "@/components/login-prompt"
 import {
@@ -154,82 +156,6 @@ function ImageWithRefresh({ imageUrl }: { imageUrl: string }) {
   )
 }
 
-// PDF表示コンポーネント（S3のURLを動的に更新）
-function PdfViewer({ pdfUrl, pdfName }: { pdfUrl: string; pdfName?: string }) {
-  const [refreshedUrl, setRefreshedUrl] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    const loadPdf = async () => {
-      if (!pdfUrl) return
-
-      if (pdfUrl.startsWith('data:')) {
-        setRefreshedUrl(pdfUrl)
-        setIsLoading(false)
-        return
-      }
-
-      try {
-        const newUrl = await refreshS3Url(pdfUrl)
-        setRefreshedUrl(newUrl || pdfUrl)
-      } catch (error) {
-        console.error('Failed to refresh PDF URL:', error)
-        setRefreshedUrl(pdfUrl)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    loadPdf()
-  }, [pdfUrl])
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center bg-gray-50 min-h-[200px]">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-      </div>
-    )
-  }
-
-  if (!refreshedUrl) return null
-
-  if (refreshedUrl.startsWith('data:') || refreshedUrl.startsWith('blob:')) {
-    return (
-      <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden">
-        <object
-          data={refreshedUrl}
-          type="application/pdf"
-          width="100%"
-          height="500px"
-          className="w-full"
-        >
-          <div className="p-4 text-center text-gray-500">
-            <p>PDFを表示できませんでした。</p>
-            <a
-              href={refreshedUrl}
-              download={pdfName || "document.pdf"}
-              className="text-[#e84b8a] hover:underline mt-2 inline-block"
-            >
-              ダウンロードする
-            </a>
-          </div>
-        </object>
-      </div>
-    )
-  }
-
-  return (
-    <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden">
-      <iframe
-        src={`https://docs.google.com/viewer?url=${encodeURIComponent(refreshedUrl)}&embedded=true`}
-        width="100%"
-        height="500px"
-        className="w-full"
-        title={pdfName || "PDFファイル"}
-      ></iframe>
-    </div>
-  )
-}
 
 export default function TournamentDetailPage() {
   ensureAmplifyConfigured()
@@ -261,6 +187,7 @@ export default function TournamentDetailPage() {
     tournamentType: "",
     area: "",
     subArea: "",
+    showAdminName: true, // 管理者名を公開するか（デフォルト公開）
   })
 
   // お気に入り関連
@@ -407,6 +334,7 @@ export default function TournamentDetailPage() {
           tournamentType: tournament.tournamentType || "cup",
           area: tournament.area || "",
           subArea: tournament.subArea || "",
+          showAdminName: tournament.showAdminName !== false,
         })
         // 画像プレビューを設定
         if (tournament.iconUrl) {
@@ -514,6 +442,7 @@ export default function TournamentDetailPage() {
         tournamentType: tournamentData.tournamentType || "cup",
         area: tournamentData.area || "",
         subArea: tournamentData.subArea || "",
+        showAdminName: tournamentData.showAdminName !== false,
       })
 
       // 大会管理者の情報を取得（ownerEmail + coAdminEmails統合、重複排除）
@@ -996,6 +925,7 @@ export default function TournamentDetailPage() {
         subArea: editForm.tournamentType === "official" ? (editForm.subArea || null) : null,
         district: editForm.district,
         instagramUrl: editForm.instagramUrl || null,
+        showAdminName: editForm.showAdminName,
         ownerEmail: coAdminEmails[0], // 最初の管理者をownerEmailに設定
         coAdminEmails: coAdminEmails, // 全管理者をcoAdminEmailsに保存
         iconUrl: iconUrl || null,
@@ -1988,6 +1918,20 @@ export default function TournamentDetailPage() {
                     />
               </div>
 
+                  {/* 管理者名の公開設定 */}
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="pr-3">
+                      <p className="font-medium text-sm">管理者の名前を公開する</p>
+                      <p className="text-sm text-muted-foreground">
+                        オフにすると、大会ページで管理者の名前を一般ユーザーに表示しません
+                      </p>
+                    </div>
+                    <Switch
+                      checked={editForm.showAdminName}
+                      onCheckedChange={(checked) => setEditForm({ ...editForm, showAdminName: checked })}
+                    />
+                  </div>
+
                   {/* 大会管理者 */}
                   <div>
                     <Label>大会管理者（最大5名まで）</Label>
@@ -2214,6 +2158,30 @@ export default function TournamentDetailPage() {
                 )
               })()}
 
+              {/* 大会管理者（公開設定がオンの場合のみ表示） */}
+              {tournament.showAdminName !== false && tournamentManagers.length > 0 && (
+                <div className="mt-4 pt-4 border-t">
+                  <h4 className="font-medium text-sm mb-2">大会管理者</h4>
+                  <div className="space-y-2">
+                    {tournamentManagers.map((manager, index) => (
+                      <Link
+                        key={index}
+                        href={`/users/${encodeURIComponent(manager.email)}`}
+                        className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+                      >
+                        <Avatar className="w-8 h-8">
+                          <AvatarImage src={manager.avatar || undefined} alt={manager.name} />
+                          <AvatarFallback>
+                            {manager.name.split(' ').map((n) => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium text-sm">{manager.name}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
             </div>
 
             <div className="flex gap-2 w-full md:w-auto">
@@ -2362,7 +2330,7 @@ export default function TournamentDetailPage() {
                         <input
                           ref={pdfInputRef}
                           type="file"
-                          accept="application/pdf"
+                          accept={DOCUMENT_ACCEPT}
                           onChange={handlePdfSelect}
                           style={{ display: "none" }}
                         />
@@ -2420,7 +2388,7 @@ export default function TournamentDetailPage() {
                       )}
                       {pdfPreview && (
                         <div className="relative text-sm text-gray-500 p-2 border rounded-lg flex items-center justify-between">
-                          <span>選択中のPDF: {selectedPdf?.name}</span>
+                          <span>選択中のファイル: {selectedPdf?.name}</span>
                           <Button
                             variant="destructive"
                             size="sm"
@@ -2541,10 +2509,10 @@ export default function TournamentDetailPage() {
                             <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 flex items-center gap-3">
                               <FileText className="w-6 h-6 text-red-500" />
                               <div className="flex-1">
-                                <p className="font-medium text-sm">{post.pdfName || "PDFファイル"}</p>
+                                <p className="font-medium text-sm">{post.pdfName || "ファイル"}</p>
                               </div>
                             </div>
-                            <PdfViewer pdfUrl={post.pdfUrl} pdfName={post.pdfName} />
+                            <DocumentViewer pdfUrl={post.pdfUrl} pdfName={post.pdfName} />
                           </div>
                         ) : post.pdfName ? (
                           <div className="mb-4 p-3 rounded-lg border border-yellow-200 bg-yellow-50">
@@ -2910,11 +2878,11 @@ export default function TournamentDetailPage() {
                                   rel="noopener noreferrer"
                                   className="text-[#e84b8a] hover:underline font-medium block truncate"
                                 >
-                                  {result.pdfName || "PDFファイル"}
+                                  {result.pdfName || "ファイル"}
                                 </a>
                               </div>
                             </div>
-                            <PdfViewer pdfUrl={result.pdfUrl} pdfName={result.pdfName ?? undefined} />
+                            <DocumentViewer pdfUrl={result.pdfUrl} pdfName={result.pdfName ?? undefined} />
                           </div>
                         )}
 
@@ -3019,13 +2987,13 @@ export default function TournamentDetailPage() {
                         >
                           <span className="cursor-pointer">
                             <FileText className="w-4 h-4" />
-                            PDF
+                            ファイル
                           </span>
                         </Button>
                         <input
                           ref={resultPdfInputRef}
                           type="file"
-                          accept="application/pdf"
+                          accept={DOCUMENT_ACCEPT}
                           className="hidden"
                           onChange={(e) => {
                             const file = e.target.files?.[0]

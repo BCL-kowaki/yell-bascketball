@@ -41,6 +41,7 @@ type Tournament @model @auth(rules: [{allow: public}]) {
   description: String
   ownerEmail: String!
   coAdminEmails: [String]
+  showAdminName: Boolean
   startDate: AWSDateTime
   endDate: AWSDateTime
   favoritesCount: Int
@@ -76,6 +77,7 @@ type Team @model @auth(rules: [{allow: public}]) {
   instagramUrl: String
   ownerEmail: String!
   editorEmails: [String]
+  showAdminName: Boolean
   isApproved: Boolean!
   createdAt: AWSDateTime
   updatedAt: AWSDateTime

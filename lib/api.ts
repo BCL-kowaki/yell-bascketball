@@ -76,6 +76,7 @@ export type DbTournament = {
   description?: string | null
   ownerEmail: string
   coAdminEmails?: string[] | null
+  showAdminName?: boolean | null
   startDate?: string | null
   endDate?: string | null
   favoritesCount?: number | null
@@ -168,6 +169,7 @@ export type DbTeam = {
   instagramUrl?: string | null
   ownerEmail: string
   editorEmails?: string[] | null
+  showAdminName?: boolean | null
   isApproved: boolean
   createdAt?: string | null
   updatedAt?: string | null
@@ -1040,6 +1042,20 @@ export async function deletePost(id: string): Promise<void> {
 
 // ==================== Tournament Functions ====================
 
+/*
+ * 【showAdminName 有効化チェックリスト】
+ * showAdminName（管理者名の公開可否）は schema.graphql に追加済みだが、AppSync 未デプロイ。
+ * `amplify push` 完了後、以下を有効化すると保存・取得が機能する（それまでは未設定=公開で動作）。
+ *   1. 読み取り（選択セットに showAdminName を追加）:
+ *      - createTournament / updateTournament / listTournaments / getTournament の各クエリ
+ *      - createTeam / updateTeam / listTeams / getTeam の各クエリ
+ *   2. 書き込み:
+ *      - createTournament: 上の除外（_showAdminName）から外す
+ *      - updateTournament: allowedFields に 'showAdminName' を追加
+ *      - createTeam: `if (input.showAdminName !== undefined) sanitizedInput.showAdminName = input.showAdminName` を追加
+ *      - updateTeam: 同上
+ * フロント（フォーム/表示）は showAdminName !== false を「公開」とみなす実装済みのため、デプロイ後は自動で機能する。
+ */
 export async function createTournament(input: Partial<DbTournament>): Promise<DbTournament> {
   const mutation = /* GraphQL */ `
     mutation CreateTournament($input: CreateTournamentInput!) {
@@ -1052,9 +1068,10 @@ export async function createTournament(input: Partial<DbTournament>): Promise<Db
   `
 
   try {
-    // website はバックエンド(AppSync)スキーマ未デプロイのため一時除外
-    //   → `amplify push` 後、この除外と選択セットへの website 追加を解除すること
-    const { website: _website, ...safeInput } = input as any
+    // website / showAdminName はバックエンド(AppSync)スキーマ未デプロイのため一時除外
+    //   → `amplify push` 後、この除外を解除し、上の選択セットに showAdminName を追加すること
+    //   （showAdminName: 管理者名の公開可否トグル。詳細は schema.graphql / DbTournament を参照）
+    const { website: _website, showAdminName: _showAdminName, ...safeInput } = input as any
     const result = await client.graphql({
       query: mutation,
       variables: { input: safeInput },

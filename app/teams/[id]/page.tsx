@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Layout } from "@/components/layout"
@@ -60,87 +61,8 @@ import SponsorSidebar, { MobileSnsCard } from "@/components/sponsor-sidebar"
 import { notifyNewTeamPost } from "@/lib/push-sender"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { uploadImageToS3, uploadPdfToS3, uploadVideoToS3, refreshS3Url } from "@/lib/storage"
+import { DocumentViewer, DOCUMENT_ACCEPT } from "@/components/document-viewer"
 
-// PDF表示コンポーネント（トップページと同じ）
-function PdfViewer({ pdfUrl, pdfName }: { pdfUrl: string; pdfName?: string }) {
-  const [refreshedUrl, setRefreshedUrl] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    const loadPdf = async () => {
-      if (!pdfUrl) return
-      
-      // Base64データURLの場合はそのまま使用
-      if (pdfUrl.startsWith('data:')) {
-        setRefreshedUrl(pdfUrl)
-        setIsLoading(false)
-        return
-      }
-      
-      // S3のURLを更新（ダウンロードモードを使用）
-      try {
-        const newUrl = await refreshS3Url(pdfUrl) // ダウンロードモードを強制
-        setRefreshedUrl(newUrl || pdfUrl)
-      } catch (error) {
-        console.error('Failed to refresh PDF URL:', error)
-        setRefreshedUrl(pdfUrl) // エラー時は元のURLを使用
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    
-    loadPdf()
-  }, [pdfUrl])
-
-  if (isLoading) {
-    return (
-      <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center" style={{ height: '500px' }}>
-        <div className="text-center text-gray-500">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-          <p>PDFを読み込み中...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!refreshedUrl) {
-    return (
-      <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden bg-gray-50 p-4 text-center text-gray-500">
-        <p>PDFを読み込めませんでした</p>
-      </div>
-    )
-  }
-
-  // PDFを直接表示（Google Docs ViewerのCSP問題を回避）
-  return (
-    <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden">
-      <object
-        key={refreshedUrl} // URLが変更されたときに再読み込み
-        data={refreshedUrl}
-        type="application/pdf"
-        width="100%"
-        height="500px"
-        className="w-full"
-        style={{ minHeight: '500px' }}
-      >
-        {/* フォールバック: PDFが表示できない場合 */}
-        <div className="p-8 text-center bg-gray-50">
-          <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-          <p className="text-gray-600 mb-4">PDFを表示できませんでした</p>
-          <a
-            href={refreshedUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[#e84b8a] hover:underline inline-flex items-center gap-2 font-medium"
-          >
-            <FileText className="w-4 h-4" />
-            {pdfName || "PDFファイル"}を新しいタブで開く
-          </a>
-        </div>
-      </object>
-    </div>
-  )
-}
 import { useToast } from "@/hooks/use-toast"
 import { CATEGORIES, REGION_BLOCKS, PREFECTURES_BY_REGION, DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS } from "@/lib/regionData"
 import { LoginPromptModal } from "@/components/login-prompt"
@@ -673,6 +595,7 @@ export default function TeamDetailPage() {
         coverImageUrl: coverImageUrl || undefined,
         ownerEmail: allAdminEmails[0], // 最初の管理者をownerEmailに設定
         editorEmails: allAdminEmails,   // 全管理者をeditorEmailsに保存
+        showAdminName: editedTeam.showAdminName !== false,
       }
 
       await updateTeam(params.id, updatedData)
@@ -1546,7 +1469,7 @@ export default function TeamDetailPage() {
                           type="file"
                           ref={pdfInputRef}
                           onChange={handlePdfSelect}
-                          accept=".pdf"
+                          accept={DOCUMENT_ACCEPT}
                           style={{ display: "none" }}
                         />
                           <Button
@@ -1603,7 +1526,7 @@ export default function TeamDetailPage() {
                       )}
                       {selectedPdf && (
                         <div className="relative text-sm text-gray-500 p-2 border rounded-lg flex items-center justify-between">
-                          <span>選択中のPDF: {selectedPdf.name}</span>
+                          <span>選択中のファイル: {selectedPdf.name}</span>
                       <Button
                             variant="destructive"
                             size="sm"
@@ -1770,7 +1693,7 @@ export default function TeamDetailPage() {
 
                             {post.pdfUrl && (
                               <div className="mb-6">
-                                <PdfViewer pdfUrl={post.pdfUrl} pdfName={post.pdfName || undefined} />
+                                <DocumentViewer pdfUrl={post.pdfUrl} pdfName={post.pdfName || undefined} />
                                   </div>
                                 )}
                             {!post.pdfUrl && post.pdfName && (
@@ -1778,7 +1701,7 @@ export default function TeamDetailPage() {
                                 <div className="flex items-center gap-2 text-yellow-800">
                                   <FileText className="w-5 h-5" />
                                   <span className="font-medium">{post.pdfName}</span>
-                                  <span className="text-sm text-yellow-600">（PDFのアップロードに失敗しました）</span>
+                                  <span className="text-sm text-yellow-600">（ファイルのアップロードに失敗しました）</span>
                                 </div>
                               </div>
                             )}
@@ -1985,6 +1908,20 @@ export default function TeamDetailPage() {
                           value={editedTeam.instagramUrl || ''}
                           onChange={(e) => handleInputChange('instagramUrl', e.target.value)}
                           placeholder="プロフィールURLを入れてください"
+                        />
+                      </div>
+
+                      {/* 管理者名の公開設定 */}
+                      <div className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="pr-3">
+                          <p className="font-medium text-sm">管理者の名前を公開する</p>
+                          <p className="text-sm text-muted-foreground">
+                            オフにすると、チームページで管理者の名前を一般ユーザーに表示しません
+                          </p>
+                        </div>
+                        <Switch
+                          checked={editedTeam.showAdminName !== false}
+                          onCheckedChange={(checked) => handleInputChange('showAdminName', checked)}
                         />
                       </div>
 
@@ -2269,6 +2206,7 @@ export default function TeamDetailPage() {
                         )
                       })()}
 
+                      {team.showAdminName !== false && (
                       <div>
                         <h4 className="font-medium mb-2">チーム管理者</h4>
                         <div className="space-y-2">
@@ -2295,6 +2233,7 @@ export default function TeamDetailPage() {
                       )}
                         </div>
                       </div>
+                      )}
 
                       <div>
                         <h4 className="font-medium mb-2">登録日</h4>

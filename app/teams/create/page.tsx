@@ -18,6 +18,7 @@ import { createTeam, getCurrentUserEmail, getUserByEmail, searchUsers, notifyAdm
 import { uploadImageToS3 } from "@/lib/storage"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
 import { DISTRICTS_BY_PREFECTURE, DEFAULT_DISTRICTS, CATEGORIES } from "@/lib/regionData"
 
 // チームエディタ用ユーザー表示型（searchUsers 戻りの DbUser を受けるためのスーパーセット）
@@ -68,6 +69,7 @@ export default function CreateTeamPage() {
     logo: null as File | null,
     coverImage: null as File | null,
     editors: [] as EditorUser[],
+    showAdminName: true, // 管理者名を公開するか（デフォルト公開）
   })
   const [prefectures, setPrefectures] = useState<string[]>([])
   const [districts, setDistricts] = useState<string[]>([])
@@ -306,6 +308,7 @@ export default function CreateTeamPage() {
         instagramUrl: formData.instagramUrl || undefined,
         ownerEmail: currentUserEmail,
         editorEmails: editorEmailList, // 作成者を含む全管理者
+        showAdminName: formData.showAdminName,
         isApproved: false,
       }
 
@@ -498,6 +501,20 @@ export default function CreateTeamPage() {
                     </div>
                     <Badge className="ml-auto">管理者</Badge>
                   </div>
+                </div>
+
+                {/* 管理者名の公開設定 */}
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="pr-3">
+                    <p className="font-medium text-sm">管理者の名前を公開する</p>
+                    <p className="text-sm text-muted-foreground">
+                      オフにすると、チームページで管理者の名前を一般ユーザーに表示しません
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formData.showAdminName}
+                    onCheckedChange={(checked) => setFormData({ ...formData, showAdminName: checked })}
+                  />
                 </div>
 
                 {/* 共有管理者 */}

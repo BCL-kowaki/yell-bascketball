@@ -13,6 +13,7 @@ import { listPosts, getTimelinePosts, createPost as createDbPost, toggleLike as 
 import SponsorBannerDisplay from "@/components/sponsor-banner-display"
 import SponsorSidebar, { MobileSnsCard } from "@/components/sponsor-sidebar"
 import { uploadImageToS3, uploadPdfToS3, uploadVideoToS3, refreshS3Url } from "@/lib/storage"
+import { DocumentViewer, isOfficeDocument, DOCUMENT_ACCEPT } from "@/components/document-viewer"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input as DialogInput } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
@@ -209,89 +210,6 @@ function ImageWithRefresh({ imageUrl }: { imageUrl: string }) {
         console.log('Image loaded successfully:', refreshedUrl.substring(0, 100))
       }}
     />
-  )
-}
-
-// PDF表示コンポーネント（S3のURLを動的に更新）
-function PdfViewer({ pdfUrl, pdfName }: { pdfUrl: string; pdfName?: string }) {
-  const [refreshedUrl, setRefreshedUrl] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    const loadPdf = async () => {
-      if (!pdfUrl) return
-      
-      // Base64データURLの場合はそのまま使用
-      if (pdfUrl.startsWith('data:')) {
-        setRefreshedUrl(pdfUrl)
-        setIsLoading(false)
-        return
-      }
-      
-      // S3のURLを更新（署名付きURL → パブリックURLフォールバック）
-      try {
-        console.log('🔄 PdfViewer: Refreshing PDF URL...')
-        const newUrl = await refreshS3Url(pdfUrl)
-        setRefreshedUrl(newUrl || pdfUrl)
-      } catch (error) {
-        console.error('❌ PdfViewer: Failed to refresh PDF URL:', error)
-        setRefreshedUrl(pdfUrl) // エラー時は元のURLを使用
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    
-    loadPdf()
-  }, [pdfUrl])
-
-  if (isLoading) {
-    return (
-      <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center" style={{ height: '500px' }}>
-        <div className="text-center text-gray-500">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-          <p>PDFを読み込み中...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!refreshedUrl) {
-    return (
-      <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden bg-gray-50 p-4 text-center text-gray-500">
-        <p>PDFを読み込めませんでした</p>
-      </div>
-    )
-  }
-
-  // PDFを直接表示（Google Docs ViewerのCSP問題を回避）
-  // objectタグを使用してPDFを直接表示（embedタグより互換性が高い）
-  return (
-    <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden">
-      <object
-        key={refreshedUrl} // URLが変更されたときに再読み込み
-        data={refreshedUrl}
-        type="application/pdf"
-        width="100%"
-        height="500px"
-        className="w-full"
-        style={{ minHeight: '500px' }}
-      >
-        {/* フォールバック: PDFが表示できない場合 */}
-        <div className="p-8 text-center bg-gray-50">
-          <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-          <p className="text-gray-600 mb-4">PDFを表示できませんでした</p>
-          <a
-            href={refreshedUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[#e84b8a] hover:underline inline-flex items-center gap-2 font-medium"
-          >
-            <FileText className="w-4 h-4" />
-            {pdfName || "PDFファイル"}を新しいタブで開く
-          </a>
-        </div>
-      </object>
-    </div>
   )
 }
 
@@ -1353,7 +1271,7 @@ export default function TimelinePage() {
                   type="file"
                   ref={pdfInputRef}
                   onChange={handlePdfSelect}
-                  accept=".pdf"
+                  accept={DOCUMENT_ACCEPT}
                   style={{ display: "none" }}
                 />
                 <Button variant="ghost" size="sm" className="text-gray-600 hover:bg-gray-100 p-2 h-auto" onClick={handleVideoButtonClick}>
@@ -1423,7 +1341,7 @@ export default function TimelinePage() {
               )}
               {selectedPdf && (
                 <div className="relative text-sm text-gray-500 p-2 border rounded-lg flex items-center justify-between">
-                  <span>選択中のPDF: {selectedPdf.name}</span>
+                  <span>選択中のファイル: {selectedPdf.name}</span>
                   <Button
                     variant="destructive"
                     size="sm"
@@ -1585,15 +1503,15 @@ export default function TimelinePage() {
                         rel="noopener noreferrer"
                         className="text-[#e84b8a] hover:underline font-medium block mb-2"
                       >
-                        {post.pdfName || "PDFファイル"}
+                        {post.pdfName || "ファイル"}
                       </a>
                       <p className="text-sm text-gray-500">
-                        PDFを表示するには、上記のリンクをクリックしてください
+                        ファイルを表示するには、上記のリンクをクリックしてください
                       </p>
                     </div>
                   </div>
-                  {post.pdfUrl.startsWith('data:') ? (
-                    // Base64データURLの場合はobjectタグを使用（より安全）
+                  {post.pdfUrl.startsWith('data:') && !isOfficeDocument(post.pdfName || post.pdfUrl) ? (
+                    // Base64データURLのPDFはobjectタグを使用（より安全）
                     <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden">
                       <object
                         data={post.pdfUrl}
@@ -1614,9 +1532,12 @@ export default function TimelinePage() {
                         </div>
                       </object>
                     </div>
+                  ) : post.pdfUrl.startsWith('data:') ? (
+                    // Base64のOfficeファイルは外部ビューワで表示できないためダウンロードのみ（上記リンクで対応）
+                    null
                   ) : (
-                    // S3 URLの場合は、動的にURLを更新してGoogle Docs Viewerを使用
-                    <PdfViewer pdfUrl={post.pdfUrl} pdfName={post.pdfName} />
+                    // S3 URLの場合は、種別に応じてPDF/Officeビューワで表示
+                    <DocumentViewer pdfUrl={post.pdfUrl} pdfName={post.pdfName} />
                   )}
                 </div>
               ) : post.pdfName ? (
@@ -1625,7 +1546,7 @@ export default function TimelinePage() {
                   <div className="flex items-center gap-2 text-yellow-800">
                     <FileText className="w-5 h-5" />
                     <span className="font-medium">{post.pdfName}</span>
-                    <span className="text-sm text-yellow-600">（PDFのアップロードに失敗しました）</span>
+                    <span className="text-sm text-yellow-600">（ファイルのアップロードに失敗しました）</span>
                   </div>
                 </div>
               ) : null}
