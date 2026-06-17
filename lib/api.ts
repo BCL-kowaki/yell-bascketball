@@ -633,7 +633,7 @@ export async function searchTeams(searchTerm: string): Promise<DbTeam[]> {
     query ListTeams($filter: ModelTeamFilterInput, $limit: Int) {
       listTeams(filter: $filter, limit: $limit) {
         items {
-          id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website instagramUrl ownerEmail editorEmails isApproved createdAt updatedAt
+          id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website instagramUrl ownerEmail editorEmails showAdminName isApproved createdAt updatedAt
         }
       }
     }
@@ -1043,18 +1043,14 @@ export async function deletePost(id: string): Promise<void> {
 // ==================== Tournament Functions ====================
 
 /*
- * 【showAdminName 有効化チェックリスト】
- * showAdminName（管理者名の公開可否）は schema.graphql に追加済みだが、AppSync 未デプロイ。
- * `amplify push` 完了後、以下を有効化すると保存・取得が機能する（それまでは未設定=公開で動作）。
- *   1. 読み取り（選択セットに showAdminName を追加）:
- *      - createTournament / updateTournament / listTournaments / getTournament の各クエリ
- *      - createTeam / updateTeam / listTeams / getTeam の各クエリ
- *   2. 書き込み:
- *      - createTournament: 上の除外（_showAdminName）から外す
- *      - updateTournament: allowedFields に 'showAdminName' を追加
- *      - createTeam: `if (input.showAdminName !== undefined) sanitizedInput.showAdminName = input.showAdminName` を追加
- *      - updateTeam: 同上
- * フロント（フォーム/表示）は showAdminName !== false を「公開」とみなす実装済みのため、デプロイ後は自動で機能する。
+ * showAdminName（管理者名の公開可否）は AppSync へデプロイ済み・有効化済み。
+ * 読み取り（各選択セット）・書き込み（create/update Tournament・Team）すべてに反映済みで、
+ * フロントは showAdminName !== false を「公開」とみなす（未設定=公開）。
+ *
+ * 【未有効化の補足】同じく amplify push 済みだが、まだ送信していないフィールド:
+ *   - Tournament.website（createTournament で _website として除外中）
+ *   - User.phoneNumber
+ *   必要になれば、上記の除外解除＋選択セットへの追加で有効化できる。
  */
 export async function createTournament(input: Partial<DbTournament>): Promise<DbTournament> {
   const mutation = /* GraphQL */ `
@@ -1062,16 +1058,15 @@ export async function createTournament(input: Partial<DbTournament>): Promise<Db
       createTournament(input: $input) {
         id name iconUrl coverImage category regionBlock prefecture district
         tournamentType area subArea
-        description ownerEmail coAdminEmails startDate endDate favoritesCount isApproved instagramUrl createdAt updatedAt
+        description ownerEmail coAdminEmails showAdminName startDate endDate favoritesCount isApproved instagramUrl createdAt updatedAt
       }
     }
   `
 
   try {
-    // website / showAdminName はバックエンド(AppSync)スキーマ未デプロイのため一時除外
-    //   → `amplify push` 後、この除外を解除し、上の選択セットに showAdminName を追加すること
-    //   （showAdminName: 管理者名の公開可否トグル。詳細は schema.graphql / DbTournament を参照）
-    const { website: _website, showAdminName: _showAdminName, ...safeInput } = input as any
+    // showAdminName はデプロイ済みのため送信する。
+    // website はまだ有効化していないため一時除外（amplify push 済みなので有効化可能）
+    const { website: _website, ...safeInput } = input as any
     const result = await client.graphql({
       query: mutation,
       variables: { input: safeInput },
@@ -1097,7 +1092,7 @@ export async function listTournaments(limit = 200, filter?: { isApproved?: boole
         items {
           id name iconUrl coverImage category regionBlock prefecture district
           tournamentType area subArea
-          description ownerEmail coAdminEmails startDate endDate favoritesCount isApproved instagramUrl createdAt updatedAt
+          description ownerEmail coAdminEmails showAdminName startDate endDate favoritesCount isApproved instagramUrl createdAt updatedAt
         }
         nextToken
       }
@@ -1153,7 +1148,7 @@ export async function getTournament(id: string): Promise<DbTournament | null> {
       getTournament(id: $id) {
         id name iconUrl coverImage category regionBlock prefecture district
         tournamentType area subArea
-        description ownerEmail coAdminEmails startDate endDate favoritesCount isApproved instagramUrl createdAt updatedAt
+        description ownerEmail coAdminEmails showAdminName startDate endDate favoritesCount isApproved instagramUrl createdAt updatedAt
       }
     }
   `
@@ -1215,7 +1210,7 @@ export async function updateTournament(id: string, input: Partial<DbTournament>)
       updateTournament(input: $input) {
         id name iconUrl coverImage category regionBlock prefecture district
         tournamentType area subArea
-        description ownerEmail coAdminEmails startDate endDate favoritesCount instagramUrl createdAt updatedAt
+        description ownerEmail coAdminEmails showAdminName startDate endDate favoritesCount instagramUrl createdAt updatedAt
       }
     }
   `
@@ -1226,7 +1221,7 @@ export async function updateTournament(id: string, input: Partial<DbTournament>)
     const allowedFields = [
       'name', 'iconUrl', 'coverImage', 'category', 'regionBlock', 'prefecture',
       'district', 'tournamentType', 'area', 'subArea', 'description', 'ownerEmail',
-      'coAdminEmails', 'startDate', 'endDate', 'favoritesCount', 'instagramUrl'
+      'coAdminEmails', 'showAdminName', 'startDate', 'endDate', 'favoritesCount', 'instagramUrl'
     ]
     for (const field of allowedFields) {
       if ((input as any)[field] !== undefined) {
@@ -1291,7 +1286,7 @@ export async function createTeam(input: Partial<DbTeam>): Promise<DbTeam> {
   const mutation = /* GraphQL */ `
     mutation CreateTeam($input: CreateTeamInput!) {
       createTeam(input: $input) {
-        id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website instagramUrl ownerEmail editorEmails isApproved createdAt updatedAt
+        id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website instagramUrl ownerEmail editorEmails showAdminName isApproved createdAt updatedAt
       }
     }
   `
@@ -1314,6 +1309,7 @@ export async function createTeam(input: Partial<DbTeam>): Promise<DbTeam> {
     if ((input as any).website) sanitizedInput.website = (input as any).website
     if ((input as any).ownerEmail) sanitizedInput.ownerEmail = (input as any).ownerEmail
     if ((input as any).editorEmails) sanitizedInput.editorEmails = (input as any).editorEmails
+    if ((input as any).showAdminName !== undefined) sanitizedInput.showAdminName = (input as any).showAdminName
     if ((input as any).isApproved !== undefined) sanitizedInput.isApproved = (input as any).isApproved !== false
 
     const result = await client.graphql({
@@ -1339,7 +1335,7 @@ export async function listTeams(limit = 50, filter?: { isApproved?: boolean }): 
     query ListTeams($filter: ModelTeamFilterInput, $limit: Int) {
       listTeams(filter: $filter, limit: $limit) {
         items {
-          id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website instagramUrl ownerEmail editorEmails isApproved createdAt updatedAt
+          id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website instagramUrl ownerEmail editorEmails showAdminName isApproved createdAt updatedAt
         }
       }
     }
@@ -1423,7 +1419,7 @@ export async function getTeam(id: string): Promise<DbTeam | null> {
   const query = /* GraphQL */ `
     query GetTeam($id: ID!) {
       getTeam(id: $id) {
-        id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website instagramUrl ownerEmail editorEmails isApproved createdAt updatedAt
+        id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website instagramUrl ownerEmail editorEmails showAdminName isApproved createdAt updatedAt
       }
     }
   `
@@ -1451,7 +1447,7 @@ export async function updateTeam(id: string, input: Partial<DbTeam>): Promise<Db
   const mutation = /* GraphQL */ `
     mutation UpdateTeam($input: UpdateTeamInput!) {
       updateTeam(input: $input) {
-        id name shortName category region prefecture description website instagramUrl logoUrl coverImageUrl editorEmails isApproved createdAt
+        id name shortName category region prefecture description website instagramUrl logoUrl coverImageUrl editorEmails showAdminName isApproved createdAt
       }
     }
   `
@@ -1473,6 +1469,7 @@ export async function updateTeam(id: string, input: Partial<DbTeam>): Promise<Db
     if (input.logoUrl !== undefined) sanitizedInput.logoUrl = input.logoUrl
     if (input.coverImageUrl !== undefined) sanitizedInput.coverImageUrl = input.coverImageUrl
     if (input.editorEmails !== undefined) sanitizedInput.editorEmails = input.editorEmails
+    if (input.showAdminName !== undefined) sanitizedInput.showAdminName = input.showAdminName
     if (input.headcount) sanitizedInput.headcount = input.headcount
 
     const result = await client.graphql({
@@ -2802,7 +2799,7 @@ export async function searchTournaments(searchTerm: string): Promise<DbTournamen
         items {
           id name iconUrl coverImage category regionBlock prefecture district
           tournamentType area subArea
-          description ownerEmail coAdminEmails startDate endDate favoritesCount instagramUrl createdAt updatedAt
+          description ownerEmail coAdminEmails showAdminName startDate endDate favoritesCount instagramUrl createdAt updatedAt
         }
       }
     }
@@ -3328,7 +3325,7 @@ export async function getMyTeams(email: string): Promise<DbTeam[]> {
     query ListTeams($filter: ModelTeamFilterInput, $limit: Int) {
       listTeams(filter: $filter, limit: $limit) {
         items {
-          id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website instagramUrl ownerEmail editorEmails isApproved createdAt updatedAt
+          id name shortName logoUrl coverImageUrl founded region prefecture headcount category description website instagramUrl ownerEmail editorEmails showAdminName isApproved createdAt updatedAt
         }
       }
     }
@@ -4123,7 +4120,7 @@ export async function adminListAllTeams(limit = 500): Promise<DbTeam[]> {
       listTeams(limit: $limit, nextToken: $nextToken) {
         items {
           id name shortName logoUrl region prefecture headcount category
-          ownerEmail editorEmails isApproved createdAt updatedAt
+          ownerEmail editorEmails showAdminName isApproved createdAt updatedAt
         }
         nextToken
       }
@@ -4162,7 +4159,7 @@ export async function adminListAllTournaments(limit = 500): Promise<DbTournament
       listTournaments(limit: $limit, nextToken: $nextToken) {
         items {
           id name category regionBlock prefecture district tournamentType area subArea
-          ownerEmail coAdminEmails startDate endDate favoritesCount isApproved createdAt updatedAt
+          ownerEmail coAdminEmails showAdminName startDate endDate favoritesCount isApproved createdAt updatedAt
         }
         nextToken
       }

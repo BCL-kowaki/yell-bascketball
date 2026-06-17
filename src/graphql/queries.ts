@@ -14,6 +14,7 @@ export const getUser = /* GraphQL */ `
       avatar
       coverImage
       category
+      category2
       region
       regionBlock
       prefecture
@@ -22,6 +23,7 @@ export const getUser = /* GraphQL */ `
       isEmailPublic
       isRegistrationDatePublic
       instagramUrl
+      phoneNumber
       createdAt
       updatedAt
       __typename
@@ -45,6 +47,7 @@ export const listUsers = /* GraphQL */ `
         avatar
         coverImage
         category
+        category2
         region
         regionBlock
         prefecture
@@ -53,6 +56,7 @@ export const listUsers = /* GraphQL */ `
         isEmailPublic
         isRegistrationDatePublic
         instagramUrl
+        phoneNumber
         createdAt
         updatedAt
         __typename
@@ -79,11 +83,13 @@ export const getTournament = /* GraphQL */ `
       description
       ownerEmail
       coAdminEmails
+      showAdminName
       startDate
       endDate
       favoritesCount
       isApproved
       instagramUrl
+      website
       createdAt
       updatedAt
       teams {
@@ -132,11 +138,13 @@ export const listTournaments = /* GraphQL */ `
         description
         ownerEmail
         coAdminEmails
+        showAdminName
         startDate
         endDate
         favoritesCount
         isApproved
         instagramUrl
+        website
         createdAt
         updatedAt
         __typename
@@ -157,6 +165,7 @@ export const getTeam = /* GraphQL */ `
       founded
       region
       prefecture
+      district
       headcount
       category
       description
@@ -164,6 +173,7 @@ export const getTeam = /* GraphQL */ `
       instagramUrl
       ownerEmail
       editorEmails
+      showAdminName
       isApproved
       createdAt
       updatedAt
@@ -199,6 +209,7 @@ export const listTeams = /* GraphQL */ `
         founded
         region
         prefecture
+        district
         headcount
         category
         description
@@ -206,6 +217,7 @@ export const listTeams = /* GraphQL */ `
         instagramUrl
         ownerEmail
         editorEmails
+        showAdminName
         isApproved
         createdAt
         updatedAt
@@ -258,11 +270,13 @@ export const getPost = /* GraphQL */ `
         description
         ownerEmail
         coAdminEmails
+        showAdminName
         startDate
         endDate
         favoritesCount
         isApproved
         instagramUrl
+        website
         createdAt
         updatedAt
         __typename
@@ -276,6 +290,7 @@ export const getPost = /* GraphQL */ `
         founded
         region
         prefecture
+        district
         headcount
         category
         description
@@ -283,6 +298,7 @@ export const getPost = /* GraphQL */ `
         instagramUrl
         ownerEmail
         editorEmails
+        showAdminName
         isApproved
         createdAt
         updatedAt
@@ -440,11 +456,13 @@ export const getFavorite = /* GraphQL */ `
         description
         ownerEmail
         coAdminEmails
+        showAdminName
         startDate
         endDate
         favoritesCount
         isApproved
         instagramUrl
+        website
         createdAt
         updatedAt
         __typename
@@ -458,6 +476,7 @@ export const getFavorite = /* GraphQL */ `
         founded
         region
         prefecture
+        district
         headcount
         category
         description
@@ -465,6 +484,7 @@ export const getFavorite = /* GraphQL */ `
         instagramUrl
         ownerEmail
         editorEmails
+        showAdminName
         isApproved
         createdAt
         updatedAt
@@ -552,11 +572,13 @@ export const getTournamentTeam = /* GraphQL */ `
         description
         ownerEmail
         coAdminEmails
+        showAdminName
         startDate
         endDate
         favoritesCount
         isApproved
         instagramUrl
+        website
         createdAt
         updatedAt
         __typename
@@ -570,6 +592,7 @@ export const getTournamentTeam = /* GraphQL */ `
         founded
         region
         prefecture
+        district
         headcount
         category
         description
@@ -577,6 +600,7 @@ export const getTournamentTeam = /* GraphQL */ `
         instagramUrl
         ownerEmail
         editorEmails
+        showAdminName
         isApproved
         createdAt
         updatedAt
@@ -640,11 +664,13 @@ export const getTournamentResult = /* GraphQL */ `
         description
         ownerEmail
         coAdminEmails
+        showAdminName
         startDate
         endDate
         favoritesCount
         isApproved
         instagramUrl
+        website
         createdAt
         updatedAt
         __typename
@@ -712,11 +738,13 @@ export const getTournamentInvitation = /* GraphQL */ `
         description
         ownerEmail
         coAdminEmails
+        showAdminName
         startDate
         endDate
         favoritesCount
         isApproved
         instagramUrl
+        website
         createdAt
         updatedAt
         __typename

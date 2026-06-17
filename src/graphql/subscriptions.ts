@@ -14,6 +14,7 @@ export const onCreateUser = /* GraphQL */ `
       avatar
       coverImage
       category
+      category2
       region
       regionBlock
       prefecture
@@ -22,6 +23,7 @@ export const onCreateUser = /* GraphQL */ `
       isEmailPublic
       isRegistrationDatePublic
       instagramUrl
+      phoneNumber
       createdAt
       updatedAt
       __typename
@@ -40,6 +42,7 @@ export const onUpdateUser = /* GraphQL */ `
       avatar
       coverImage
       category
+      category2
       region
       regionBlock
       prefecture
@@ -48,6 +51,7 @@ export const onUpdateUser = /* GraphQL */ `
       isEmailPublic
       isRegistrationDatePublic
       instagramUrl
+      phoneNumber
       createdAt
       updatedAt
       __typename
@@ -66,6 +70,7 @@ export const onDeleteUser = /* GraphQL */ `
       avatar
       coverImage
       category
+      category2
       region
       regionBlock
       prefecture
@@ -74,6 +79,7 @@ export const onDeleteUser = /* GraphQL */ `
       isEmailPublic
       isRegistrationDatePublic
       instagramUrl
+      phoneNumber
       createdAt
       updatedAt
       __typename
@@ -99,11 +105,13 @@ export const onCreateTournament = /* GraphQL */ `
       description
       ownerEmail
       coAdminEmails
+      showAdminName
       startDate
       endDate
       favoritesCount
       isApproved
       instagramUrl
+      website
       createdAt
       updatedAt
       teams {
@@ -149,11 +157,13 @@ export const onUpdateTournament = /* GraphQL */ `
       description
       ownerEmail
       coAdminEmails
+      showAdminName
       startDate
       endDate
       favoritesCount
       isApproved
       instagramUrl
+      website
       createdAt
       updatedAt
       teams {
@@ -199,11 +209,13 @@ export const onDeleteTournament = /* GraphQL */ `
       description
       ownerEmail
       coAdminEmails
+      showAdminName
       startDate
       endDate
       favoritesCount
       isApproved
       instagramUrl
+      website
       createdAt
       updatedAt
       teams {
@@ -241,6 +253,7 @@ export const onCreateTeam = /* GraphQL */ `
       founded
       region
       prefecture
+      district
       headcount
       category
       description
@@ -248,6 +261,7 @@ export const onCreateTeam = /* GraphQL */ `
       instagramUrl
       ownerEmail
       editorEmails
+      showAdminName
       isApproved
       createdAt
       updatedAt
@@ -278,6 +292,7 @@ export const onUpdateTeam = /* GraphQL */ `
       founded
       region
       prefecture
+      district
       headcount
       category
       description
@@ -285,6 +300,7 @@ export const onUpdateTeam = /* GraphQL */ `
       instagramUrl
       ownerEmail
       editorEmails
+      showAdminName
       isApproved
       createdAt
       updatedAt
@@ -315,6 +331,7 @@ export const onDeleteTeam = /* GraphQL */ `
       founded
       region
       prefecture
+      district
       headcount
       category
       description
@@ -322,6 +339,7 @@ export const onDeleteTeam = /* GraphQL */ `
       instagramUrl
       ownerEmail
       editorEmails
+      showAdminName
       isApproved
       createdAt
       updatedAt
@@ -383,11 +401,13 @@ export const onCreatePost = /* GraphQL */ `
         description
         ownerEmail
         coAdminEmails
+        showAdminName
         startDate
         endDate
         favoritesCount
         isApproved
         instagramUrl
+        website
         createdAt
         updatedAt
         __typename
@@ -401,6 +421,7 @@ export const onCreatePost = /* GraphQL */ `
         founded
         region
         prefecture
+        district
         headcount
         category
         description
@@ -408,6 +429,7 @@ export const onCreatePost = /* GraphQL */ `
         instagramUrl
         ownerEmail
         editorEmails
+        showAdminName
         isApproved
         createdAt
         updatedAt
@@ -459,11 +481,13 @@ export const onUpdatePost = /* GraphQL */ `
         description
         ownerEmail
         coAdminEmails
+        showAdminName
         startDate
         endDate
         favoritesCount
         isApproved
         instagramUrl
+        website
         createdAt
         updatedAt
         __typename
@@ -477,6 +501,7 @@ export const onUpdatePost = /* GraphQL */ `
         founded
         region
         prefecture
+        district
         headcount
         category
         description
@@ -484,6 +509,7 @@ export const onUpdatePost = /* GraphQL */ `
         instagramUrl
         ownerEmail
         editorEmails
+        showAdminName
         isApproved
         createdAt
         updatedAt
@@ -535,11 +561,13 @@ export const onDeletePost = /* GraphQL */ `
         description
         ownerEmail
         coAdminEmails
+        showAdminName
         startDate
         endDate
         favoritesCount
         isApproved
         instagramUrl
+        website
         createdAt
         updatedAt
         __typename
@@ -553,6 +581,7 @@ export const onDeletePost = /* GraphQL */ `
         founded
         region
         prefecture
+        district
         headcount
         category
         description
@@ -560,6 +589,7 @@ export const onDeletePost = /* GraphQL */ `
         instagramUrl
         ownerEmail
         editorEmails
+        showAdminName
         isApproved
         createdAt
         updatedAt
@@ -737,11 +767,13 @@ export const onCreateFavorite = /* GraphQL */ `
         description
         ownerEmail
         coAdminEmails
+        showAdminName
         startDate
         endDate
         favoritesCount
         isApproved
         instagramUrl
+        website
         createdAt
         updatedAt
         __typename
@@ -755,6 +787,7 @@ export const onCreateFavorite = /* GraphQL */ `
         founded
         region
         prefecture
+        district
         headcount
         category
         description
@@ -762,6 +795,7 @@ export const onCreateFavorite = /* GraphQL */ `
         instagramUrl
         ownerEmail
         editorEmails
+        showAdminName
         isApproved
         createdAt
         updatedAt
@@ -795,11 +829,13 @@ export const onUpdateFavorite = /* GraphQL */ `
         description
         ownerEmail
         coAdminEmails
+        showAdminName
         startDate
         endDate
         favoritesCount
         isApproved
         instagramUrl
+        website
         createdAt
         updatedAt
         __typename
@@ -813,6 +849,7 @@ export const onUpdateFavorite = /* GraphQL */ `
         founded
         region
         prefecture
+        district
         headcount
         category
         description
@@ -820,6 +857,7 @@ export const onUpdateFavorite = /* GraphQL */ `
         instagramUrl
         ownerEmail
         editorEmails
+        showAdminName
         isApproved
         createdAt
         updatedAt
@@ -853,11 +891,13 @@ export const onDeleteFavorite = /* GraphQL */ `
         description
         ownerEmail
         coAdminEmails
+        showAdminName
         startDate
         endDate
         favoritesCount
         isApproved
         instagramUrl
+        website
         createdAt
         updatedAt
         __typename
@@ -871,6 +911,7 @@ export const onDeleteFavorite = /* GraphQL */ `
         founded
         region
         prefecture
+        district
         headcount
         category
         description
@@ -878,6 +919,7 @@ export const onDeleteFavorite = /* GraphQL */ `
         instagramUrl
         ownerEmail
         editorEmails
+        showAdminName
         isApproved
         createdAt
         updatedAt
@@ -950,11 +992,13 @@ export const onCreateTournamentTeam = /* GraphQL */ `
         description
         ownerEmail
         coAdminEmails
+        showAdminName
         startDate
         endDate
         favoritesCount
         isApproved
         instagramUrl
+        website
         createdAt
         updatedAt
         __typename
@@ -968,6 +1012,7 @@ export const onCreateTournamentTeam = /* GraphQL */ `
         founded
         region
         prefecture
+        district
         headcount
         category
         description
@@ -975,6 +1020,7 @@ export const onCreateTournamentTeam = /* GraphQL */ `
         instagramUrl
         ownerEmail
         editorEmails
+        showAdminName
         isApproved
         createdAt
         updatedAt
@@ -1011,11 +1057,13 @@ export const onUpdateTournamentTeam = /* GraphQL */ `
         description
         ownerEmail
         coAdminEmails
+        showAdminName
         startDate
         endDate
         favoritesCount
         isApproved
         instagramUrl
+        website
         createdAt
         updatedAt
         __typename
@@ -1029,6 +1077,7 @@ export const onUpdateTournamentTeam = /* GraphQL */ `
         founded
         region
         prefecture
+        district
         headcount
         category
         description
@@ -1036,6 +1085,7 @@ export const onUpdateTournamentTeam = /* GraphQL */ `
         instagramUrl
         ownerEmail
         editorEmails
+        showAdminName
         isApproved
         createdAt
         updatedAt
@@ -1072,11 +1122,13 @@ export const onDeleteTournamentTeam = /* GraphQL */ `
         description
         ownerEmail
         coAdminEmails
+        showAdminName
         startDate
         endDate
         favoritesCount
         isApproved
         instagramUrl
+        website
         createdAt
         updatedAt
         __typename
@@ -1090,6 +1142,7 @@ export const onDeleteTournamentTeam = /* GraphQL */ `
         founded
         region
         prefecture
+        district
         headcount
         category
         description
@@ -1097,6 +1150,7 @@ export const onDeleteTournamentTeam = /* GraphQL */ `
         instagramUrl
         ownerEmail
         editorEmails
+        showAdminName
         isApproved
         createdAt
         updatedAt
@@ -1140,11 +1194,13 @@ export const onCreateTournamentResult = /* GraphQL */ `
         description
         ownerEmail
         coAdminEmails
+        showAdminName
         startDate
         endDate
         favoritesCount
         isApproved
         instagramUrl
+        website
         createdAt
         updatedAt
         __typename
@@ -1187,11 +1243,13 @@ export const onUpdateTournamentResult = /* GraphQL */ `
         description
         ownerEmail
         coAdminEmails
+        showAdminName
         startDate
         endDate
         favoritesCount
         isApproved
         instagramUrl
+        website
         createdAt
         updatedAt
         __typename
@@ -1234,11 +1292,13 @@ export const onDeleteTournamentResult = /* GraphQL */ `
         description
         ownerEmail
         coAdminEmails
+        showAdminName
         startDate
         endDate
         favoritesCount
         isApproved
         instagramUrl
+        website
         createdAt
         updatedAt
         __typename
@@ -1275,11 +1335,13 @@ export const onCreateTournamentInvitation = /* GraphQL */ `
         description
         ownerEmail
         coAdminEmails
+        showAdminName
         startDate
         endDate
         favoritesCount
         isApproved
         instagramUrl
+        website
         createdAt
         updatedAt
         __typename
@@ -1316,11 +1378,13 @@ export const onUpdateTournamentInvitation = /* GraphQL */ `
         description
         ownerEmail
         coAdminEmails
+        showAdminName
         startDate
         endDate
         favoritesCount
         isApproved
         instagramUrl
+        website
         createdAt
         updatedAt
         __typename
@@ -1357,11 +1421,13 @@ export const onDeleteTournamentInvitation = /* GraphQL */ `
         description
         ownerEmail
         coAdminEmails
+        showAdminName
         startDate
         endDate
         favoritesCount
         isApproved
         instagramUrl
+        website
         createdAt
         updatedAt
         __typename
