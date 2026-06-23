@@ -2,18 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { FileText, Loader2 } from "lucide-react"
-import { refreshS3Url, extractS3KeyFromUrl } from "@/lib/storage"
-
-/**
- * 投稿に添付されたドキュメント（PDF / Word / Excel / PowerPoint）を表示する共通ビューワ。
- *
- * - PDF      : ブラウザネイティブの <object> で直接表示
- * - Office系 : ブラウザがネイティブ表示できないため Microsoft Office Online Viewer で表示
- *
- * S3の署名付きURLは期限切れするため、表示前に refreshS3Url() で再取得する。
- * Base64(data:) / Blob(blob:) URL は外部ビューワで取得できないため、PDFのみ表示・
- * Office系はダウンロードリンクにフォールバックする。
- */
+import { refreshS3Url } from "@/lib/storage"
 
 // ファイル選択(input accept)で受け付けるドキュメント形式
 export const DOCUMENT_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
@@ -42,6 +31,7 @@ interface DocumentViewerProps {
 }
 
 export function DocumentViewer({ pdfUrl, pdfName }: DocumentViewerProps) {
+  const [viewerSrc, setViewerSrc] = useState<string | null>(null)
   const [refreshedUrl, setRefreshedUrl] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -60,19 +50,43 @@ export function DocumentViewer({ pdfUrl, pdfName }: DocumentViewerProps) {
       }
 
       // S3の署名付きURLを再取得（期限切れ対策）
+      let finalUrl = pdfUrl
       try {
         const newUrl = await refreshS3Url(pdfUrl)
-        setRefreshedUrl(newUrl || pdfUrl)
+        finalUrl = newUrl || pdfUrl
       } catch (error) {
         console.error("DocumentViewer: URLの再取得に失敗しました:", error)
-        setRefreshedUrl(pdfUrl)
-      } finally {
-        setIsLoading(false)
       }
+
+      setRefreshedUrl(finalUrl)
+
+      // Officeファイルの場合はトークンを取得してOffice Viewerのsrcを設定
+      if (isOfficeDocument(pdfName || finalUrl) && !finalUrl.startsWith("data:") && !finalUrl.startsWith("blob:")) {
+        try {
+          const res = await fetch("/api/file", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: finalUrl }),
+          })
+          if (res.ok) {
+            const { token } = await res.json()
+            const proxyUrl = `${window.location.origin}/api/file?token=${token}`
+            setViewerSrc(
+              `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(proxyUrl)}`
+            )
+          } else {
+            console.error("DocumentViewer: トークン取得失敗", res.status)
+          }
+        } catch (error) {
+          console.error("DocumentViewer: トークン取得エラー:", error)
+        }
+      }
+
+      setIsLoading(false)
     }
 
     load()
-  }, [pdfUrl])
+  }, [pdfUrl, pdfName])
 
   if (isLoading) {
     return (
@@ -119,21 +133,24 @@ export function DocumentViewer({ pdfUrl, pdfName }: DocumentViewerProps) {
       )
     }
 
-    // S3の署名付きURLはURLが長すぎてOffice Online Viewerが処理できないため、
-    // /api/file プロキシにS3キー（短い文字列）のみ渡してサーバー側で取得する
-    const s3Key = extractS3KeyFromUrl(refreshedUrl)
-    const proxyUrl = s3Key
-      ? `/api/file?key=${encodeURIComponent(s3Key)}`
-      : `/api/file?key=${encodeURIComponent(refreshedUrl)}`
-    const origin = typeof window !== "undefined" ? window.location.origin : ""
-    const viewerSrc = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(
-      `${origin}${proxyUrl}`
-    )}`
+    if (!viewerSrc) {
+      return (
+        <div
+          className="mt-2 rounded-lg border border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center"
+          style={{ height: "500px" }}
+        >
+          <div className="text-center text-gray-500">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
+            <p>ビューワを準備中...</p>
+          </div>
+        </div>
+      )
+    }
 
     return (
       <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden">
         <iframe
-          key={refreshedUrl}
+          key={viewerSrc}
           src={viewerSrc}
           width="100%"
           height="500px"
@@ -157,7 +174,6 @@ export function DocumentViewer({ pdfUrl, pdfName }: DocumentViewerProps) {
         className="w-full"
         style={{ minHeight: "500px" }}
       >
-        {/* フォールバック: PDFが表示できない場合 */}
         <div className="p-8 text-center bg-gray-50">
           <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
           <p className="text-gray-600 mb-4">PDFを表示できませんでした</p>
