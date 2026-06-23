@@ -1,71 +1,58 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
 
 // Office Online ViewerがアクセスできるS3ファイルのプロキシAPI
-// Microsoft/Googleのサーバーは直接S3の署名付きURLにアクセスできないため、
-// このAPIがS3から取得してストリームで返す
+// MicrosoftのサーバーはS3の長い署名付きURLにアクセスできないため、
+// このAPIがS3から直接取得してストリームで返す
+// クライアントからはS3キー（短い文字列）のみ受け取る
 
-const ALLOWED_S3_HOSTS = ['.amazonaws.com']
+const BUCKET = 'yellc34dfecaeb3545229f8a541d9a04a2aec8ef5-main'
+const REGION = 'ap-northeast-1'
 
-function isAllowedS3Url(url: string): boolean {
-  try {
-    const parsed = new URL(url)
-    return (
-      parsed.protocol === 'https:' &&
-      ALLOWED_S3_HOSTS.some((host) => parsed.hostname.endsWith(host))
-    )
-  } catch {
-    return false
-  }
-}
+const s3Client = new S3Client({ region: REGION })
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl
-  const fileUrl = searchParams.get('url')
+  const key = searchParams.get('key')
 
-  if (!fileUrl) {
-    return NextResponse.json({ error: 'url パラメータが必要です' }, { status: 400 })
+  if (!key) {
+    return NextResponse.json({ error: 'key パラメータが必要です' }, { status: 400 })
   }
 
-  // S3のURLのみ許可（オープンプロキシ防止）
-  if (!isAllowedS3Url(fileUrl)) {
-    return NextResponse.json({ error: '許可されていないURLです' }, { status: 403 })
+  // パストラバーサル防止
+  if (key.includes('..') || key.startsWith('/')) {
+    return NextResponse.json({ error: '不正なキーです' }, { status: 400 })
   }
+
+  // Amplify Storageは public/ プレフィックス付きでS3に保存する
+  const s3Key = key.startsWith('public/') ? key : `public/${key}`
 
   try {
-    const s3Response = await fetch(fileUrl, {
-      headers: {
-        // S3へのリクエストにはブラウザヘッダーを送らない
-        'User-Agent': 'YeLL-Basketball-FileProxy/1.0',
-      },
-    })
+    const command = new GetObjectCommand({ Bucket: BUCKET, Key: s3Key })
+    const s3Response = await s3Client.send(command)
 
-    if (!s3Response.ok) {
-      return NextResponse.json(
-        { error: `S3からのファイル取得に失敗しました (${s3Response.status})` },
-        { status: s3Response.status }
-      )
+    if (!s3Response.Body) {
+      return NextResponse.json({ error: 'ファイルが見つかりません' }, { status: 404 })
     }
 
-    const contentType = s3Response.headers.get('content-type') || 'application/octet-stream'
-    const contentLength = s3Response.headers.get('content-length')
-    const contentDisposition = s3Response.headers.get('content-disposition')
+    const contentType = s3Response.ContentType || 'application/octet-stream'
+    const contentLength = s3Response.ContentLength
 
     const headers: Record<string, string> = {
       'Content-Type': contentType,
-      // Office Online ViewerがiframeでアクセスできるようCORSを許可
       'Access-Control-Allow-Origin': '*',
       'Cache-Control': 'private, max-age=3600',
     }
+    if (contentLength) headers['Content-Length'] = String(contentLength)
 
-    if (contentLength) headers['Content-Length'] = contentLength
-    if (contentDisposition) headers['Content-Disposition'] = contentDisposition
-
-    return new NextResponse(s3Response.body, {
-      status: 200,
-      headers,
-    })
-  } catch (error) {
-    console.error('[/api/file] S3プロキシエラー:', error)
+    // S3のBodyをWeb ReadableStreamに変換してストリームで返す
+    const stream = s3Response.Body.transformToWebStream()
+    return new NextResponse(stream, { status: 200, headers })
+  } catch (error: any) {
+    console.error('[/api/file] S3取得エラー:', { key: s3Key, error: error?.message })
+    if (error?.name === 'NoSuchKey') {
+      return NextResponse.json({ error: 'ファイルが見つかりません' }, { status: 404 })
+    }
     return NextResponse.json({ error: 'ファイルの取得中にエラーが発生しました' }, { status: 500 })
   }
 }

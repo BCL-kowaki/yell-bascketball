@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { FileText, Loader2 } from "lucide-react"
-import { refreshS3Url } from "@/lib/storage"
+import { refreshS3Url, extractS3KeyFromUrl } from "@/lib/storage"
 
 /**
  * 投稿に添付されたドキュメント（PDF / Word / Excel / PowerPoint）を表示する共通ビューワ。
@@ -119,11 +119,15 @@ export function DocumentViewer({ pdfUrl, pdfName }: DocumentViewerProps) {
       )
     }
 
-    // S3の署名付きURLはMicrosoftのサーバーから直接アクセスできないため、
-    // /api/file プロキシ経由でファイルを配信する
-    const proxyUrl = `/api/file?url=${encodeURIComponent(refreshedUrl)}`
+    // S3の署名付きURLはURLが長すぎてOffice Online Viewerが処理できないため、
+    // /api/file プロキシにS3キー（短い文字列）のみ渡してサーバー側で取得する
+    const s3Key = extractS3KeyFromUrl(refreshedUrl)
+    const proxyUrl = s3Key
+      ? `/api/file?key=${encodeURIComponent(s3Key)}`
+      : `/api/file?key=${encodeURIComponent(refreshedUrl)}`
+    const origin = typeof window !== "undefined" ? window.location.origin : ""
     const viewerSrc = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(
-      `${typeof window !== "undefined" ? window.location.origin : ""}${proxyUrl}`
+      `${origin}${proxyUrl}`
     )}`
 
     return (
