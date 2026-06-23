@@ -118,11 +118,19 @@ export function DocumentViewer({ pdfUrl, pdfName }: DocumentViewerProps) {
         </div>
       )
     }
+
+    // S3の署名付きURLはMicrosoftのサーバーから直接アクセスできないため、
+    // /api/file プロキシ経由でファイルを配信する
+    const proxyUrl = `/api/file?url=${encodeURIComponent(refreshedUrl)}`
+    const viewerSrc = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(
+      `${typeof window !== "undefined" ? window.location.origin : ""}${proxyUrl}`
+    )}`
+
     return (
       <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden">
         <iframe
           key={refreshedUrl}
-          src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(refreshedUrl)}`}
+          src={viewerSrc}
           width="100%"
           height="500px"
           className="w-full"
