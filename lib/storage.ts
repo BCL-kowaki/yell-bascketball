@@ -888,25 +888,25 @@ export async function refreshS3Url(url: string | null | undefined, useDownload: 
   const key = extractS3KeyFromUrl(url)
   if (!key) return url
 
-  // 認証状態を確認し、認証済みなら署名付きURLを試行
+  // 認証状態を確認し、認証済みなら新しい署名付きURLを生成
   try {
     const { fetchAuthSession } = await import('aws-amplify/auth')
     const session = await fetchAuthSession()
     if (session.credentials) {
-      // 認証済み: 署名付きURLを試行
       try {
         const signedUrl = await getS3UrlFromKey(key, 3600 * 24 * 365, false)
         return signedUrl
       } catch (signedError) {
-        // 署名付きURL失敗時はパブリックURLにフォールバック
+        // 新しい署名付きURL生成失敗 → 元のURLをそのまま返す（1年有効の署名付きURL）
       }
     }
   } catch {
-    // 認証情報取得失敗: パブリックURLにフォールバック
+    // 認証情報取得失敗 → 元のURLをそのまま返す
   }
 
-  // パブリック直アクセスURL（認証不要）
-  return buildS3PublicUrl(key)
+  // 新しい署名付きURL生成に失敗した場合は元のURL（アップロード時に1年有効で発行）を返す
+  // ※ buildS3PublicUrl は署名なしのため非公開バケットでは403になるため使用しない
+  return url
 }
 
 /**
