@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { FileText, Loader2 } from "lucide-react"
-import { refreshS3Url, extractS3KeyFromUrl } from "@/lib/storage"
+import { extractS3KeyFromUrl } from "@/lib/storage"
 
 // ファイル選択(input accept)で受け付けるドキュメント形式
 export const DOCUMENT_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
 
-// Officeファイルの拡張子
 const OFFICE_EXTENSIONS = ["doc", "docx", "xls", "xlsx", "ppt", "pptx"]
+const S3_BUCKET = "yellc34dfecaeb3545229f8a541d9a04a2aec8ef5-main"
+const S3_REGION = "ap-northeast-1"
 
 /** ファイル名またはURLから拡張子（小文字・ドットなし）を取得 */
 export function getFileExtension(nameOrUrl?: string | null): string {
@@ -23,72 +24,55 @@ export function isOfficeDocument(nameOrUrl?: string | null): boolean {
   return OFFICE_EXTENSIONS.includes(getFileExtension(nameOrUrl))
 }
 
+/**
+ * S3キーから公開URLを生成する
+ * バケットポリシーで public/* への GetObject を全員に許可済みのため有効期限なし
+ */
+function buildPublicS3Url(key: string): string {
+  const fullKey = key.startsWith("public/") ? key : `public/${key}`
+  return `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/${fullKey}`
+}
+
 interface DocumentViewerProps {
-  /** ドキュメントのURL（S3署名付きURL / data: / blob:） */
   pdfUrl: string
-  /** ファイル名（拡張子判定・表示に使用） */
   pdfName?: string | null
 }
 
 export function DocumentViewer({ pdfUrl, pdfName }: DocumentViewerProps) {
   const [viewerSrc, setViewerSrc] = useState<string | null>(null)
-  const [refreshedUrl, setRefreshedUrl] = useState<string | null>(null)
+  const [publicUrl, setPublicUrl] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const load = async () => {
-      if (!pdfUrl) {
-        setIsLoading(false)
-        return
-      }
-
-      // Base64 / Blob URL はそのまま使用（S3再取得不要）
-      if (pdfUrl.startsWith("data:") || pdfUrl.startsWith("blob:")) {
-        setRefreshedUrl(pdfUrl)
-        setIsLoading(false)
-        return
-      }
-
-      // S3の署名付きURLを再取得（期限切れ対策）
-      let finalUrl = pdfUrl
-      try {
-        const newUrl = await refreshS3Url(pdfUrl)
-        finalUrl = newUrl || pdfUrl
-      } catch (error) {
-        console.error("DocumentViewer: URLの再取得に失敗しました:", error)
-      }
-
-      setRefreshedUrl(finalUrl)
-
-      // Officeファイルの場合はトークンを取得してOffice Viewerのsrcを設定
-      if (isOfficeDocument(pdfName || finalUrl) && !finalUrl.startsWith("data:") && !finalUrl.startsWith("blob:")) {
-        try {
-          // S3キーも送ることでサーバー側がGetObjectCommand（IAMロール）で取得できる
-          // IAM権限がない場合は署名付きURL（finalUrl）でフォールバック
-          const s3Key = extractS3KeyFromUrl(finalUrl)
-          const res = await fetch("/api/file", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url: finalUrl, key: s3Key }),
-          })
-          if (res.ok) {
-            const { token } = await res.json()
-            const proxyUrl = `${window.location.origin}/api/file?token=${token}`
-            setViewerSrc(
-              `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(proxyUrl)}`
-            )
-          } else {
-            console.error("DocumentViewer: トークン取得失敗", res.status)
-          }
-        } catch (error) {
-          console.error("DocumentViewer: トークン取得エラー:", error)
-        }
-      }
-
+    if (!pdfUrl) {
       setIsLoading(false)
+      return
     }
 
-    load()
+    // Base64 / Blob URL はプレビュー不可
+    if (pdfUrl.startsWith("data:") || pdfUrl.startsWith("blob:")) {
+      setPublicUrl(pdfUrl)
+      setIsLoading(false)
+      return
+    }
+
+    // S3キーを抽出して公開URLを生成（有効期限なし・署名不要）
+    const key = extractS3KeyFromUrl(pdfUrl)
+    if (key) {
+      const url = buildPublicS3Url(key)
+      setPublicUrl(url)
+
+      if (isOfficeDocument(pdfName || pdfUrl)) {
+        // Office Online Viewerに公開URLを直接渡す（短いURL・有効期限なし）
+        setViewerSrc(
+          `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`
+        )
+      }
+    } else {
+      setPublicUrl(pdfUrl)
+    }
+
+    setIsLoading(false)
   }, [pdfUrl, pdfName])
 
   if (isLoading) {
@@ -105,7 +89,7 @@ export function DocumentViewer({ pdfUrl, pdfName }: DocumentViewerProps) {
     )
   }
 
-  if (!refreshedUrl) {
+  if (!publicUrl) {
     return (
       <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden bg-gray-50 p-4 text-center text-gray-500">
         <p>ファイルを読み込めませんでした</p>
@@ -113,19 +97,18 @@ export function DocumentViewer({ pdfUrl, pdfName }: DocumentViewerProps) {
     )
   }
 
-  const isOffice = isOfficeDocument(pdfName || refreshedUrl)
-  const isLocal = refreshedUrl.startsWith("data:") || refreshedUrl.startsWith("blob:")
+  const isOffice = isOfficeDocument(pdfName || pdfUrl)
+  const isLocal = publicUrl.startsWith("data:") || publicUrl.startsWith("blob:")
 
-  // Officeファイル：Microsoft Office Online Viewer で表示
+  // Officeファイル
   if (isOffice) {
-    // data:/blob: は外部ビューワで取得できないためダウンロードのみ
     if (isLocal) {
       return (
         <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden bg-gray-50 p-8 text-center">
           <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
           <p className="text-gray-600 mb-4">このファイルはプレビュー表示できません</p>
           <a
-            href={refreshedUrl}
+            href={publicUrl}
             download={pdfName || "document"}
             className="text-[#e84b8a] hover:underline inline-flex items-center gap-2 font-medium"
           >
@@ -165,12 +148,12 @@ export function DocumentViewer({ pdfUrl, pdfName }: DocumentViewerProps) {
     )
   }
 
-  // PDF：ブラウザネイティブの <object> で直接表示
+  // PDF
   return (
     <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden">
       <object
-        key={refreshedUrl}
-        data={refreshedUrl}
+        key={publicUrl}
+        data={publicUrl}
         type="application/pdf"
         width="100%"
         height="500px"
@@ -181,7 +164,7 @@ export function DocumentViewer({ pdfUrl, pdfName }: DocumentViewerProps) {
           <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
           <p className="text-gray-600 mb-4">PDFを表示できませんでした</p>
           <a
-            href={refreshedUrl}
+            href={publicUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="text-[#e84b8a] hover:underline inline-flex items-center gap-2 font-medium"
