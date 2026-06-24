@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { FileText, Loader2 } from "lucide-react"
+import { FileText, Loader2, Download } from "lucide-react"
 import { extractS3KeyFromUrl } from "@/lib/storage"
 
 // ファイル選択(input accept)で受け付けるドキュメント形式
@@ -135,6 +135,16 @@ export function DocumentViewer({ pdfUrl, pdfName }: DocumentViewerProps) {
 
     return (
       <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden">
+        <div className="flex justify-end px-3 py-2 bg-gray-50 border-b border-gray-200">
+          <a
+            href={publicUrl}
+            download={pdfName || "document"}
+            className="inline-flex items-center gap-1.5 text-sm text-[#e84b8a] hover:underline font-medium"
+          >
+            <Download className="w-4 h-4" />
+            ダウンロード
+          </a>
+        </div>
         <iframe
           key={viewerSrc}
           src={viewerSrc}
@@ -151,6 +161,16 @@ export function DocumentViewer({ pdfUrl, pdfName }: DocumentViewerProps) {
   // PDF
   return (
     <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden">
+      <div className="flex justify-end px-3 py-2 bg-gray-50 border-b border-gray-200">
+        <a
+          href={publicUrl}
+          download={pdfName || "document.pdf"}
+          className="inline-flex items-center gap-1.5 text-sm text-[#e84b8a] hover:underline font-medium"
+        >
+          <Download className="w-4 h-4" />
+          ダウンロード
+        </a>
+      </div>
       <object
         key={publicUrl}
         data={publicUrl}
