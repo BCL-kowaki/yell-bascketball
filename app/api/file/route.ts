@@ -1,29 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
+import * as jose from 'jose'
 
 // Office Online ViewerがアクセスできるS3ファイルのプロキシAPI
 //
 // 【設計】
-// クライアント（ブラウザ）はCognito Identity Poolでs3に対して署名付きURLを生成できるが、
-// MicrosoftのサーバーはそのURLに直接アクセスできない（URLが長すぎる問題）。
-// そのため以下の2ステップで解決する:
-//   1. POST /api/file: クライアントがS3署名付きURLを登録 → 短いトークンを取得
-//   2. GET  /api/file?token=xxx: Office ViewerがトークンURLを要求 → プロキシがS3から取得して返す
+// トークンはサーバーメモリではなくJWT署名で管理する。
+// JWT内にS3署名付きURLを埋め込むことで、Lambdaのインスタンス間共有や
+// コールドスタートによるメモリ消失の問題を回避する。
+//
+//   1. POST /api/file: S3署名付きURLをJWTトークンに変換（有効期限付き）
+//   2. GET  /api/file?token=xxx: JWTを検証してS3からファイルをプロキシ
 
-type TokenEntry = { url: string; expiresAt: number }
-const tokenStore = new Map<string, TokenEntry>()
-
-// 期限切れトークンを定期的に削除
-function cleanExpiredTokens() {
-  const now = Date.now()
-  for (const [key, entry] of tokenStore.entries()) {
-    if (entry.expiresAt < now) tokenStore.delete(key)
-  }
-}
-
-function generateToken(): string {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
-  return Array.from({ length: 16 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
-}
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || 'your-secure-jwt-secret-key-goes-here'
+)
 
 const ALLOWED_S3_HOSTS = ['.amazonaws.com']
 
@@ -39,7 +29,7 @@ function isAllowedS3Url(url: string): boolean {
   }
 }
 
-// Step1: S3署名付きURLをトークンに変換
+// Step1: S3署名付きURLをJWTトークンに変換
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -53,11 +43,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '許可されていないURLです' }, { status: 403 })
     }
 
-    cleanExpiredTokens()
-
-    const token = generateToken()
-    // 10分間有効（Office Viewerがファイルを取得するのに十分な時間）
-    tokenStore.set(token, { url, expiresAt: Date.now() + 10 * 60 * 1000 })
+    // S3署名付きURLをJWTに埋め込む（30分有効）
+    // JWTはサーバーのどのインスタンスでも検証できるため、Lambda複数インスタンス問題を回避
+    const token = await new jose.SignJWT({ s3url: url })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('30m')
+      .sign(JWT_SECRET)
 
     return NextResponse.json({ token })
   } catch (error) {
@@ -66,7 +58,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Step2: トークンを使ってS3からファイルをプロキシ
+// Step2: JWTトークンを検証してS3からファイルをプロキシ
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl
   const token = searchParams.get('token')
@@ -75,20 +67,23 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'token パラメータが必要です' }, { status: 400 })
   }
 
-  const entry = tokenStore.get(token)
-  if (!entry) {
-    return NextResponse.json({ error: 'トークンが無効または期限切れです' }, { status: 404 })
-  }
-  if (entry.expiresAt < Date.now()) {
-    tokenStore.delete(token)
-    return NextResponse.json({ error: 'トークンが期限切れです' }, { status: 410 })
+  let s3Url: string
+  try {
+    const { payload } = await jose.jwtVerify(token, JWT_SECRET)
+    s3Url = payload.s3url as string
+    if (!s3Url || !isAllowedS3Url(s3Url)) {
+      return NextResponse.json({ error: 'トークンが不正です' }, { status: 400 })
+    }
+  } catch (error: any) {
+    console.error('[/api/file GET] JWT検証エラー:', error?.message)
+    return NextResponse.json({ error: 'トークンが無効または期限切れです' }, { status: 401 })
   }
 
   try {
-    const s3Response = await fetch(entry.url)
+    const s3Response = await fetch(s3Url)
 
     if (!s3Response.ok) {
-      console.error('[/api/file GET] S3エラー:', s3Response.status, s3Response.statusText)
+      console.error('[/api/file GET] S3エラー:', s3Response.status)
       return NextResponse.json(
         { error: `S3からのファイル取得に失敗しました (${s3Response.status})` },
         { status: s3Response.status }
@@ -101,7 +96,7 @@ export async function GET(request: NextRequest) {
     const headers: Record<string, string> = {
       'Content-Type': contentType,
       'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 'private, max-age=600',
+      'Cache-Control': 'private, max-age=1800',
     }
     if (contentLength) headers['Content-Length'] = contentLength
 
