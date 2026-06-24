@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { FileText, Loader2 } from "lucide-react"
-import { refreshS3Url } from "@/lib/storage"
+import { refreshS3Url, extractS3KeyFromUrl } from "@/lib/storage"
 
 // ファイル選択(input accept)で受け付けるドキュメント形式
 export const DOCUMENT_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
@@ -63,10 +63,13 @@ export function DocumentViewer({ pdfUrl, pdfName }: DocumentViewerProps) {
       // Officeファイルの場合はトークンを取得してOffice Viewerのsrcを設定
       if (isOfficeDocument(pdfName || finalUrl) && !finalUrl.startsWith("data:") && !finalUrl.startsWith("blob:")) {
         try {
+          // S3キーも送ることでサーバー側がGetObjectCommand（IAMロール）で取得できる
+          // IAM権限がない場合は署名付きURL（finalUrl）でフォールバック
+          const s3Key = extractS3KeyFromUrl(finalUrl)
           const res = await fetch("/api/file", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url: finalUrl }),
+            body: JSON.stringify({ url: finalUrl, key: s3Key }),
           })
           if (res.ok) {
             const { token } = await res.json()
