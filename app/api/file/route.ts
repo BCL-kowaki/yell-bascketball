@@ -43,12 +43,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '許可されていないURLです' }, { status: 403 })
     }
 
-    // S3署名付きURLをJWTに埋め込む（30分有効）
+    // S3署名付きURLをJWTに埋め込む（1時間有効）
     // JWTはサーバーのどのインスタンスでも検証できるため、Lambda複数インスタンス問題を回避
     const token = await new jose.SignJWT({ s3url: url })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
-      .setExpirationTime('30m')
+      .setExpirationTime('1h')
       .sign(JWT_SECRET)
 
     return NextResponse.json({ token })
